@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a reproducible repository or implemented integration problem.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The SDK is not implemented yet. Report only behavior that exists. Never include credentials or customer data. Security vulnerabilities must follow SECURITY.md. Provider acceptance is not proof of delivery or attribution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected behavior
+      description: What happened, and what should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Runtime and versions
+      description: Include SignalKit commit/version, OS, Node.js, Next.js, Bun, browser, and package manager as applicable. Mark irrelevant runtimes as N/A.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide reproducible steps or a small synthetic example. Include consent state and changes, enabled providers, and whether existing instrumentation is installed.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics and verification
+      description: Include safe logs or screenshots, or explain why none exist. State whether evidence shows local validation, dispatch, provider acceptance, or provider-side verification. Remove secrets, personal data, URLs with sensitive query parameters, and real identifiers.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and removed sensitive data from this report.
+          required: true
