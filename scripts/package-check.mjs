@@ -43,7 +43,7 @@ try {
     }),
   );
   await writeFile(join(directory, '.npmrc'), 'auto-install-peers=false\n');
-  run('pnpm', ['install', '--offline'], directory);
+  run('pnpm', ['install', '--prefer-offline'], directory);
   await writeFile(
     join(directory, 'proof.mjs'),
     `import {createSignals} from '@signalkit/core';

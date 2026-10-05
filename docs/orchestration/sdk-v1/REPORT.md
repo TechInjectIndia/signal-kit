@@ -33,7 +33,7 @@ Named Claude executors were unavailable; inherited native agents substituted. Op
 - Seven packed tarballs installed in independent temporary directory using local unpublished package overrides. Public imports and dispatch pass; declarations/license present; tests/env/node_modules excluded.
 - Production dependency audit reports no known vulnerabilities at check time.
 - Browser bundle: 31,464 bytes minified / 10,625 bytes gzip against 30,000 byte budget; named Zod Mini imports removed full-runtime overhead. Vendor scripts/React excluded.
-- Final CI outcome will be recorded after remote execution.
+- First clean Linux CI passed builds/types/tests/Next collector, then exposed missing offline registry metadata in the standalone install verifier. Verifier now permits normal registry resolution with local SDK tarball overrides; clean-runner final outcome follows.
 
 Mocked/jsdom provider calls are not GA4/Meta/Clarity acceptance, delivery, attribution or dedup verification. Bun signatures/order data are synthetic, not Razorpay test-mode/live evidence. Local OTLP recorder is not a SigNoz deployment. No independent developer setup-time study yet.
 
