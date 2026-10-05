@@ -1,0 +1,37 @@
+{
+  "name": "@signalkit/browser",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@signalkit/core": "workspace:*",
+    "@signalkit/contracts": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TechInjectIndia/signal-kit.git",
+    "directory": "packages/features/signals/browser"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {},
+  "description": "SignalKit browser consent-aware telemetry package"
+}

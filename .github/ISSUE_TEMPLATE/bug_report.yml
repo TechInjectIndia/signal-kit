@@ -1,6 +1,6 @@
 name: Bug report
 description: Report a reproducible repository or implemented integration problem.
-title: "[Bug]: "
+title: '[Bug]: '
 body:
   - type: markdown
     attributes:

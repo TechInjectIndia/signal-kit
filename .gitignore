@@ -16,3 +16,9 @@ test-results/
 !.env.*.example
 *.pem
 *.key
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.tsbuildinfo
+playwright-report/
+test-results/

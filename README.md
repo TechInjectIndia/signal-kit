@@ -1,56 +1,70 @@
 # SignalKit
 
-Open-source telemetry for Next.js and Bun: automatic page and API instrumentation, typed ecommerce events, and configurable provider adapters.
+A consent-aware ecommerce telemetry SDK for Next.js and Bun. Shared typed events, automatic page/request instrumentation and provider adapters, with a platform-independent core.
 
-**Status: repository foundation. SDK implementation has not started. No packages have been published and no runtime compatibility has been certified.**
+**Status: working local v1, unpublished.** Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
 
-## Purpose
-
-Make tracking easier to integrate, verify, and reuse across ecommerce projects. Keep framework dependencies out of the shared core so future integrations can reuse the same event contracts.
-
-## First release scope
-
-| Area | Planned behavior |
-| --- | --- |
-| Next.js | Initial page views, client navigation, browser fetch/XHR telemetry, and server request instrumentation |
-| Bun | Request instrumentation through a Bun.serve integration and server-side business events |
-| Ecommerce | Typed product_view, add_to_cart, begin_checkout, and purchase events |
-| Marketing | GA4 and coordinated Meta Pixel + Conversions API; optional Clarity |
-| Observability | OpenTelemetry/OTLP and browser-to-server correlation; Bun compatibility must be verified |
-| Privacy | Explicit consent input, allowlisted payloads, secret isolation, and configurable exclusions |
-| Diagnostics | Explain validation, consent decisions, routing, and dispatch outcomes |
-
-Automatic technical capture does not infer successful purchases. Purchase events come from verified payment/order state. Provider acceptance is not proof of delivery, attribution, or deduplication.
-
-No hosted account is planned for the SDK. Receiving backends and marketing services retain their own accounts, terms, and costs.
-
-## Work on the repository
-
-Use Node.js 22 and pnpm 10.24.0. These commands validate repository hygiene and documentation, not an SDK:
+## Try the local labs
 
 ```sh
+# Node 22, pnpm 10.24.0, Bun 1.3.4
 pnpm install --frozen-lockfile
-pnpm check
-pnpm format:check
+pnpm build
+pnpm --filter @signalkit/example-nextjs dev
+# http://localhost:3100 — consent controls and local inspector
+pnpm --filter @signalkit/example-bun dev
+# http://localhost:3200 — API and signed payment fixture
 ```
 
-`pnpm format` normalizes text whitespace and final newlines. It is not a TypeScript code formatter. Package build, lint, and runtime tests will be added with implementation.
+The examples use local recorders and synthetic data. The Next lab starts with all consent denied. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
 
-## Project documents
+## What is included
 
-- [Product requirements](docs/PRD.md)
-- [Proposed architecture](docs/ARCHITECTURE.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Runtime compatibility](docs/COMPATIBILITY.md)
-- [Maintainer and release checklist](docs/MAINTAINING.md)
-- [Changelog](CHANGELOG.md)
+- Typed product_view, add_to_cart, begin_checkout and purchase events; runtime payload validation.
+- Browser initial/navigation pages and fetch/XHR failures, status and duration.
+- Bun incoming handler and server outbound fetch instrumentation with trace correlation.
+- Next React root provider and separate Node OpenTelemetry registration for automatic framework requests.
+- GA4, Meta Pixel/CAPI stable event IDs, optional Clarity and OTLP HTTP JSON.
+- Denied consent defaults, withdrawal hooks, safe fields/routes, bounded dispatch and per-provider diagnostics.
+- Signed Razorpay reference webhook, trusted order checks and durable replay-tested outbox.
 
-## Participate
+Marketing providers receive page/business events; technical requests go to configured observability. Purchases must come from verified host state. Runtime tracking is best effort; the host owns consent, durable retry and business correctness. Third-party scripts require their own privacy/masking settings. No credentials belong browser configuration.
 
-Read [Contributing](CONTRIBUTING.md), [Governance](GOVERNANCE.md), and the [Code of Conduct](CODE_OF_CONDUCT.md). See [Support](SUPPORT.md) for questions and [Security](SECURITY.md) for private vulnerability reporting.
+```ts
+await signals.track({
+  name: 'purchase',
+  eventId: persistedOrder.eventId,
+  properties: {
+    transaction_id: persistedOrder.id,
+    currency: 'INR',
+    value: 450,
+    items: [{ item_id: 'notebook', price: 450, quantity: 1 }],
+  },
+});
+```
 
-The project is stewarded by the Tech Inject project team. The public repository is [TechInjectIndia/signal-kit](https://github.com/TechInjectIndia/signal-kit). Maintainer identities will be recorded as responsibility is assigned. Sponsorship and response-time commitments are not currently offered.
+Package names @signalkit/\* are provisional and not reserved/published. Install from the workspace or locally packed tarballs. See [integration guide](packages/features/signals/INTEGRATION.md) for exact Next/Bun wiring, provider settings and limitations.
 
-## License
+## Verify and contribute
 
-[MIT](LICENSE). Third-party SDKs, services, trademarks, and APIs retain their own licenses and terms.
+```sh
+pnpm check
+pnpm format:check
+pnpm build
+pnpm typecheck
+pnpm test
+pnpm test:boundaries
+pnpm test:packages
+pnpm test:bundle
+pnpm exec playwright install chromium
+pnpm test:e2e
+pnpm test:next-otel
+```
+
+Local socket tests require permission to listen on localhost. Each leaf owns build, types and tests. Root Turbo delegates and caches builds; runtime tests are uncached. Prettier enforces consistent source and documentation formatting; the text-format script remains available for basic text hygiene. Read [contributing](CONTRIBUTING.md), [maintenance](docs/MAINTAINING.md) and [governance](GOVERNANCE.md).
+
+[PRD](docs/PRD.md) · [architecture](docs/ARCHITECTURE.md) · [FRD](docs/frd/signals.md) · [design](packages/features/signals/DESIGN.md) · [roadmap](docs/ROADMAP.md)
+
+Report bugs through issue templates. For vulnerabilities use [private vulnerability reporting](https://github.com/TechInjectIndia/signal-kit/security/advisories/new); never post credentials or customer payloads. [Security policy](SECURITY.md) · [support](SUPPORT.md) · [code of conduct](CODE_OF_CONDUCT.md)
+
+MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their providers' terms. No live attribution, provider dedup or universal framework support claim.

@@ -1,6 +1,6 @@
 # Contributing
 
-SignalKit is an early project foundation. The SDK and integrations are not implemented yet. Start with a focused issue describing a real tracking or instrumentation problem; discuss substantial API or scope changes before implementing them.
+SignalKit has a local SDK implementation and Next/Bun fixtures; npm publication and live-provider certification remain pending. Start with a focused issue describing a real tracking or instrumentation problem; discuss substantial API or scope changes before implementing them.
 
 ## Local workflow
 
@@ -9,11 +9,15 @@ Use Node.js 22 and pnpm 10.
 ```sh
 pnpm install --frozen-lockfile
 pnpm check
+pnpm build
+pnpm typecheck
+pnpm test
+pnpm test:boundaries
 pnpm format:check
 pnpm format
 ```
 
-These commands validate repository structure and formatting. They do not establish SDK functionality, provider delivery, or production compatibility.
+These commands cover repository hygiene, builds, types and local/unit runtime behavior. Use pnpm test:e2e and pnpm test:next-otel for Next browser and local collector verification. They do not establish live provider delivery, attribution or universal production compatibility.
 
 ## Pull requests
 

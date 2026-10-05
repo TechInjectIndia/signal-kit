@@ -1,3 +1,5 @@
+> Historical foundation report. Superseded for implementation status by [SDK build report](orchestration/sdk-v1/REPORT.md).
+
 # Repository setup report
 
 Date: 2026-10-05.
