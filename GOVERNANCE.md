@@ -1,6 +1,6 @@
 # Governance
 
-The Tech Inject project team is the initial maintainer. SignalKit is maintained as an open-source project under the MIT license.
+The Tech Inject project team stewards the project; [@TechInjectIndia](https://github.com/TechInjectIndia) is the initial repository administrator and code owner. Independent review is currently unavailable because only one maintainer account is assigned. SignalKit is maintained as an open-source project under the MIT license.
 
 ## Decisions and roles
 

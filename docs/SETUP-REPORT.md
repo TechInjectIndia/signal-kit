@@ -20,4 +20,4 @@ Community documents/forms were delegated to a native subagent and reviewed by th
 
 ## Remaining
 
-Confirm public CI after push; apply main-branch protection after a successful check. Assign actual maintainer accounts before CODEOWNERS or mandatory independent reviews. PRD details and architecture remain in review/draft. No SDK code, npm publication, runtime compatibility certification, or release exists.
+Initial public CI passed. Main-branch protection and CODEOWNERS are configured; one maintainer (@TechInjectIndia) is assigned, so administrator bypass remains and no independent approval is required. Assign a backup maintainer before tightening review requirements. PRD details and architecture remain in review/draft. No SDK code, npm publication, runtime compatibility certification, or release exists.

@@ -39,3 +39,11 @@ Before every release:
 ## Sustainability
 
 Track internal hours saved against maintenance/support hours. Accept a new provider only with documented demand, a maintainer, safe mappings, contract/runtime evidence and a provider verification plan. No SLA, sponsorship account or paid support is implied by this repository.
+
+## Verified repository settings (2026-10-05)
+
+Public repository: TechInjectIndia/signal-kit. Private vulnerability reporting, dependency alerts and security-update requests are enabled. Issues are enabled; wiki is disabled; merged branches are automatically deleted.
+
+Main requires the Repository checks CI context, up-to-date branches, pull requests and resolved conversations. Force pushes and branch deletion are disabled. Administrator bypass is enabled and independent approving reviews are not required because only @TechInjectIndia is assigned as a maintainer. Add a second trusted reviewer before requiring independent approval or enforcing protection for administrators.
+
+The initial GitHub CI run passed. These settings are a dated snapshot; verify them after repository ownership or policy changes.
