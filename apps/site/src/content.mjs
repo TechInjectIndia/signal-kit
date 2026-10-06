@@ -11,7 +11,7 @@ export const faq = [
   ],
   [
     'Which frameworks does SignalKit support?',
-    'Next.js App Router on the Node runtime and Bun are the initial integrations. Next Edge is unsupported. Coming soon: SvelteKit, Hono, Astro, standalone Node.js, HTML/vanilla JavaScript, Django, Laravel, FastAPI, Spring Boot, Express, NestJS, CodeIgniter, Vue and Angular. Their dedicated integrations are pending development, with no committed release dates.',
+    'Next.js App Router on the Node runtime and Bun are the initial integrations. Next Edge is unsupported. Coming soon: SvelteKit, Hono, Astro, standalone Node.js, HTML/vanilla JavaScript, Django, Laravel, FastAPI, Spring Boot, Express, Fastify, NestJS, CodeIgniter, Vue and Angular. Their dedicated integrations are pending development, with no committed release dates.',
   ],
   [
     'Does SignalKit automatically track every page and API?',
