@@ -24,3 +24,24 @@ for (const button of document.querySelectorAll('[data-copy-code]')) {
     }, 2500);
   });
 }
+
+const filters = document.querySelector('[data-platform-filters]');
+if (filters) {
+  filters.hidden = false;
+  const cards = [...document.querySelectorAll('[data-platform-categories]')];
+  const status = document.querySelector('[data-platform-filter-status]');
+  for (const button of filters.querySelectorAll('[data-platform-filter]')) {
+    button.addEventListener('click', () => {
+      const category = button.dataset.platformFilter;
+      for (const option of filters.querySelectorAll('button'))
+        option.setAttribute('aria-pressed', String(option === button));
+      let count = 0;
+      for (const card of cards) {
+        card.hidden =
+          category !== 'all' && !card.dataset.platformCategories.split(' ').includes(category);
+        if (!card.hidden) count++;
+      }
+      status.textContent = `Showing ${count} ${category === 'all' ? '' : category + ' '}platforms.`;
+    });
+  }
+}
