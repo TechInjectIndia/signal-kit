@@ -821,3 +821,72 @@ td:last-child {
   overflow: hidden;
   clip-path: inset(50%);
 }
+
+.platform-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 24px;
+}
+.platform-tabs a,
+.platform-tabs > span {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: 12px var(--mono);
+}
+.platform-tabs a[aria-current] {
+  background: var(--ink);
+  color: var(--lime);
+}
+.platform-tabs small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 28px;
+}
+.platform-card {
+  border: 1px solid var(--line);
+  padding: 26px;
+}
+.platform-card h3 {
+  font-size: 28px;
+  margin: 16px 0;
+}
+.platform-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: var(--ink);
+  color: var(--lime);
+  font: 24px var(--mono);
+  margin-bottom: 24px;
+}
+.platform-pending {
+  background: #efeee7;
+}
+.platform-pending .platform-mark {
+  background: #dce1d5;
+  color: var(--ink);
+}
+@media (max-width: 900px) {
+  .platform-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .platform-grid {
+    grid-template-columns: 1fr;
+  }
+  .platform-card {
+    padding: 22px;
+  }
+}
