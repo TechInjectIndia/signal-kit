@@ -75,7 +75,7 @@ The portable browser/server building blocks already exist, but that does not est
 
 ## Integration examples
 
-[Web quickstart and examples](https://techinjectindia.github.io/signal-kit/docs/#examples) · [Complete integration guide](packages/features/signals/INTEGRATION.md) · [Next.js lab](examples/nextjs) · [Bun lab](examples/bun)
+[Choose your platform](https://techinjectindia.github.io/signal-kit/docs/) · [Next.js guide](https://techinjectindia.github.io/signal-kit/docs/nextjs/) · [Bun guide](https://techinjectindia.github.io/signal-kit/docs/bun/) · [Complete integration guide](packages/features/signals/INTEGRATION.md) · [Next.js lab](examples/nextjs) · [Bun lab](examples/bun)
 
 Build the workspace first using the commands above. For a fresh external test project, run `pnpm release:prepare`, then `node artifacts/0.1.0-alpha.1/install-local.mjs /path/to/fresh-consumer`. That installer refuses to overwrite an existing package.json; existing applications need the seven local tarballs and matching local package overrides described in the [alpha install plan](docs/releases/0.1.0-alpha.1.md). No registry install is available yet.
 

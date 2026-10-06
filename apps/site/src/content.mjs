@@ -56,10 +56,10 @@ export const pages = [
   },
   {
     path: 'docs/',
-    title: 'SignalKit quickstart — Next.js and Bun integration guide',
+    title: 'SignalKit documentation — choose your platform integration',
     description:
       'Build SignalKit locally, connect a Next.js root provider or Bun request wrapper, and understand consent, verified purchases and server-only credentials.',
-    label: 'Quickstart',
+    label: 'Documentation',
   },
   {
     path: 'integrations/',

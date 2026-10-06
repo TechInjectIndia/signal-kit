@@ -93,8 +93,8 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
       assert.equal(sourceRef, 'main', 'source links follow merged SDK main');
       assert.equal(
         pages.length,
-        8,
-        'overview, docs, integrations, FAQ, guides index and three articles',
+        10,
+        'overview, platform hub, two platform guides, integrations, FAQ and four guide pages',
       );
       for (const guide of guides) {
         const html = await readFile(join(output, guide.path, 'index.html'), 'utf8');
