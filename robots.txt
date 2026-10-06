@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://techinjectindia.github.io/signal-kit/sitemap.xml

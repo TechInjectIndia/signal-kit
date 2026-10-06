@@ -1,0 +1,16 @@
+# SignalKit
+
+> Open-source, consent-aware ecommerce telemetry SDK for Next.js and Bun.
+
+Local v1 packages are unpublished. Marketing events and technical telemetry use separate destinations. Browser consent defaults to denied. Host applications own verified purchases, consent and durable retries.
+
+## Guides
+- [Overview](https://techinjectindia.github.io/signal-kit/): An open-source ecommerce telemetry SDK with typed events, automatic pages and request tracking, consent controls, and GA4, Meta and OTLP integrations.
+- [Quickstart](https://techinjectindia.github.io/signal-kit/docs/): Build SignalKit locally, connect a Next.js root provider or Bun request wrapper, and understand consent, verified purchases and server-only credentials.
+- [Integrations](https://techinjectindia.github.io/signal-kit/integrations/): Explore SignalKit analytics and observability adapters, supported Next.js and Bun runtimes, setup requirements, and current verification limits.
+- [FAQ](https://techinjectindia.github.io/signal-kit/faq/): Clear answers about SignalKit framework support, consent defaults, purchase tracking, Meta event IDs, npm availability and compatibility evidence.
+- [Source and license](https://github.com/TechInjectIndia/signal-kit): MIT licensed TypeScript workspace.
+- [Compatibility evidence](https://github.com/TechInjectIndia/signal-kit/blob/9f07183/docs/COMPATIBILITY.md): Local runtime and fixture checks; no live attribution guarantees.
+
+## Boundaries
+Next Node and Bun are first targets. Next Edge is unsupported. Other framework and native Python/PHP adapters are future work. No hosted dashboard or automatic browser exception capture. GA4, Meta Pixel/CAPI, optional Clarity and OTLP HTTP JSON adapters are included. This summary does not guarantee discovery or use by AI systems.
