@@ -9,8 +9,12 @@ Local v1 packages are unpublished. Marketing events and technical telemetry use 
 - [Quickstart](https://techinjectindia.github.io/signal-kit/docs/): Build SignalKit locally, connect a Next.js root provider or Bun request wrapper, and understand consent, verified purchases and server-only credentials.
 - [Integrations](https://techinjectindia.github.io/signal-kit/integrations/): Explore SignalKit analytics and observability adapters, supported Next.js and Bun runtimes, setup requirements, and current verification limits.
 - [FAQ](https://techinjectindia.github.io/signal-kit/faq/): Clear answers about SignalKit framework support, consent defaults, purchase tracking, Meta event IDs, npm availability and compatibility evidence.
+- [Guides](https://techinjectindia.github.io/signal-kit/guides/): Practical guides to verified Next.js purchases, coordinated Meta Pixel and CAPI IDs, and Bun API tracing with runnable local examples.
+- [Verified purchases in Next.js](https://techinjectindia.github.io/signal-kit/guides/nextjs-purchase-tracking/): Track purchases from verified order state in Next.js, preserve event IDs across browser and server copies, and test consent and durable retries locally.
+- [Meta Pixel and CAPI event IDs](https://techinjectindia.github.io/signal-kit/guides/meta-pixel-capi-event-ids/): Use a persisted purchase event ID for Meta Pixel and CAPI copies, keep access tokens server-only, and distinguish payload checks from live deduplication.
+- [Bun API tracing](https://techinjectindia.github.io/signal-kit/guides/bun-api-tracing/): Wrap Bun request handlers, capture status and duration, correlate outbound fetches, and keep sensitive paths and raw bodies out of technical telemetry.
 - [Source and license](https://github.com/TechInjectIndia/signal-kit): MIT licensed TypeScript workspace.
-- [Compatibility evidence](https://github.com/TechInjectIndia/signal-kit/blob/9f07183/docs/COMPATIBILITY.md): Local runtime and fixture checks; no live attribution guarantees.
+- [Compatibility evidence](https://github.com/TechInjectIndia/signal-kit/blob/main/docs/COMPATIBILITY.md): Local runtime and fixture checks; no live attribution guarantees.
 
 ## Boundaries
 Next Node and Bun are first targets. Next Edge is unsupported. Other framework and native Python/PHP adapters are future work. No hosted dashboard or automatic browser exception capture. GA4, Meta Pixel/CAPI, optional Clarity and OTLP HTTP JSON adapters are included. This summary does not guarantee discovery or use by AI systems.

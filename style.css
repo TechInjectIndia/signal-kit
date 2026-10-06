@@ -750,3 +750,36 @@ td:last-child {
 .breadcrumbs + .page-hero {
   padding-top: 38px;
 }
+
+.guide-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  padding: 35px 0 80px;
+}
+.guide-list article {
+  border-top: 2px solid var(--ink);
+  padding-top: 24px;
+}
+.guide-list h2 {
+  font-size: 32px;
+}
+.guide-list h2 a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 6px;
+}
+.guide-hero h1 {
+  max-width: 950px;
+  font-size: clamp(44px, 6vw, 82px);
+}
+@media (max-width: 760px) {
+  .guide-list {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding-bottom: 40px;
+  }
+  .breadcrumbs {
+    flex-wrap: wrap;
+  }
+}
