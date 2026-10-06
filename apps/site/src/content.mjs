@@ -7,7 +7,7 @@ export const faq = [
   ],
   [
     'Is SignalKit available on npm?',
-    'Not yet. The local v1 implementation is unpublished. Clone the repository and build its workspace, or use locally packed packages. The owner-selected @techinject scope is prepared for an alpha release; publication and npm ownership have not been verified.',
+    'Not yet. Alpha 0.1.0-alpha.1 is available from source and locally packed tarballs. Clone the repository and build its workspace, or use locally packed packages. The owner-selected @techinject scope is prepared for an alpha release; publication and npm ownership have not been verified.',
   ],
   [
     'Which frameworks does SignalKit support?',
