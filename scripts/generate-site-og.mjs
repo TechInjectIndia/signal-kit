@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { readFile, copyFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 const directory = new URL('../apps/site/public/', import.meta.url);
 const svg = await readFile(new URL('og.svg', directory), 'utf8');
@@ -16,4 +16,5 @@ try {
 } finally {
   await browser.close();
 }
+await copyFile(new URL('og.png', directory), new URL('og-alpha-0.1.0-alpha.1.png', directory));
 console.log('Generated apps/site/public/og.png from checked-in SVG');

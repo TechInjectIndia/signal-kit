@@ -24,7 +24,7 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
     try {
       const { config } = await build({ output, siteUrl });
       const canonicals = new Set();
-      const social = await readFile(join(output, 'og.png'));
+      const social = await readFile(join(output, 'og-alpha-0.1.0-alpha.1.png'));
       assert.equal(social.readUInt32BE(16), 1200);
       assert.equal(social.readUInt32BE(20), 630);
       for (const page of pages) {
@@ -68,7 +68,7 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
           await access(target);
           if (fragment) assert.ok((await readFile(target, 'utf8')).includes(`id="${fragment}"`));
         }
-        assert.match(html, /og:image.*?og\.png/);
+        assert.match(html, /og:image.*?og-alpha-0\.1\.0-alpha\.1\.png/);
         assert.doesNotMatch(html, /blob\/9f07183/);
         if (page.path === 'docs/')
           assert.ok(html.includes('/blob/main/packages/features/signals/INTEGRATION.md'));
