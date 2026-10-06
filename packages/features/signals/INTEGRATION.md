@@ -2,6 +2,24 @@
 
 These packages are local workspace packages, not yet available on npm. Build the cloned repo first. ESM exports/declarations live in each dist directory. Pack them with pnpm pack to test outside this workspace; do not publish before the release checklist.
 
+## Platform availability
+
+The SDK is designed around platform-independent contracts. Next.js and Bun are the current alpha integrations; the dedicated integrations below are **coming soon**, pending development. No release dates are committed. Planned platforms do not yet have verified installation recipes or native SDKs.
+
+| Platform                          | Status             | Integration scope                                                     |
+| --------------------------------- | ------------------ | --------------------------------------------------------------------- |
+| Next.js App Router (Node runtime) | Available in alpha | Browser provider and separate Node instrumentation; examples below    |
+| Bun                               | Available in alpha | Wrapped incoming handlers and explicit outbound fetch; examples below |
+| SvelteKit                         | Coming soon        | Framework adapter and integration examples                            |
+| Hono                              | Coming soon        | Framework adapter and integration examples                            |
+| Astro                             | Coming soon        | Framework adapter and integration examples                            |
+| Node.js (standalone)              | Coming soon        | Dedicated generic server integration and examples                     |
+| HTML / vanilla JavaScript         | Coming soon        | Standalone browser setup and integration examples                     |
+| Django (Python)                   | Coming soon        | Native Python SDK and framework adapter                               |
+| Laravel (PHP)                     | Coming soon        | Native PHP SDK and framework adapter                                  |
+
+The portable browser/server building blocks already exist, but that does not establish support for the coming-soon hosts. Next Edge remains deferred and unsupported.
+
 ## Next.js browser
 
 ```tsx
