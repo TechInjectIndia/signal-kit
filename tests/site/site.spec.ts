@@ -102,3 +102,35 @@ test.describe('documentation copy enhancement', () => {
     await expect(page.locator('[data-copy-code]').first()).toBeVisible();
   });
 });
+
+test.describe('platform filters', () => {
+  test.use({ javaScriptEnabled: true });
+  test('frontend/backend filters preserve available and coming-soon cards', async ({ page }) => {
+    await page.goto('docs/');
+    const filters = page.getByRole('group', { name: 'Filter platforms' });
+    await filters.getByRole('button', { name: /^Frontend/ }).click();
+    await expect(page.locator('.platform-card:visible')).toHaveCount(6);
+    await expect(page.locator('.platform-card:visible')).toContainText([
+      'Next.js',
+      'SvelteKit',
+      'Astro',
+      'HTML / JavaScript',
+      'Vue',
+      'Angular',
+    ]);
+    await filters.getByRole('button', { name: /^Backend/ }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.platform-card:visible')).toHaveCount(14);
+    await expect(page.locator('.platform-card:visible').filter({ hasText: 'Fastify' })).toHaveCount(
+      1,
+    );
+    await expect(filters.getByRole('button', { name: /^Backend/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await filters.getByRole('button', { name: /^All/ }).click();
+    await expect(page.locator('.platform-card:visible')).toHaveCount(17);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
+  });
+});
