@@ -2,7 +2,7 @@
 
 > Open-source, consent-aware ecommerce telemetry SDK for Next.js and Bun.
 
-Local v1 packages are unpublished. Marketing events and technical telemetry use separate destinations. Browser consent defaults to denied. Host applications own verified purchases, consent and durable retries.
+Alpha 0.1.0-alpha.1 is available from source and local tarballs; npm publication is pending. Marketing events and technical telemetry use separate destinations. Browser consent defaults to denied. Host applications own verified purchases, consent and durable retries.
 
 ## Guides
 - [Overview](https://techinjectindia.github.io/signal-kit/): An open-source ecommerce telemetry SDK with typed events, automatic pages and request tracking, consent controls, and GA4, Meta and OTLP integrations.
