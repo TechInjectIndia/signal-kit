@@ -68,3 +68,7 @@ Local socket tests require permission to listen on localhost. Each leaf owns bui
 Report bugs through issue templates. For vulnerabilities use [private vulnerability reporting](https://github.com/TechInjectIndia/signal-kit/security/advisories/new); never post credentials or customer payloads. [Security policy](SECURITY.md) · [support](SUPPORT.md) · [code of conduct](CODE_OF_CONDUCT.md)
 
 MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their providers' terms. No live attribution, provider dedup or universal framework support claim.
+
+## Public website
+
+[SignalKit website](https://techinjectindia.github.io/signal-kit/) explains the SDK, quickstart, integrations and FAQs. Static HTML/CSS source lives in apps/site, separate from the local noindex lab. Build/preview with pnpm --filter @signalkit/site build/dev. See [site operations](docs/PUBLIC-SITE.md) for canonical URL, deployment and discovery details.

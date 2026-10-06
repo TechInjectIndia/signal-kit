@@ -42,6 +42,7 @@ console.log('SDK dependency and source boundaries passed');
 for (const [consumer, forbidden] of [
   ['@signalkit/nextjs', /server|bun/],
   ['@signalkit/server', /browser|nextjs|example/],
+  ['@signalkit/site', /@signalkit\/(contracts|core|browser|server|bun|nextjs|example)/],
 ]) {
   const result = spawnSync(
     'pnpm',

@@ -21,7 +21,10 @@
     "test:boundaries": "node scripts/boundary-check.mjs",
     "test:next-otel": "node scripts/next-otel-smoke.mjs",
     "test:packages": "node scripts/package-check.mjs",
-    "test:bundle": "node scripts/bundle-check.mjs"
+    "test:bundle": "node scripts/bundle-check.mjs",
+    "test:site:e2e": "playwright test --config playwright.site.config.ts",
+    "site:og": "node scripts/generate-site-og.mjs",
+    "site:publish": "node scripts/publish-site.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

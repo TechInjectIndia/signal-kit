@@ -55,3 +55,7 @@ Hosted dashboards, hosted collection service, universal identity/group APIs, ext
 ## Implementation defaults and remaining evidence
 
 Implemented defaults: three denied-by-default consent categories, dropped preconsent events with no replay, bounded best-effort dispatch, explicit typed business events, automatic page/fetch/XHR tracking, and separate browser/server adapters. Package names are provisional and unpublished. See architecture, FRD, compatibility and integration guide for exact behavior. Live provider delivery/attribution, real SigNoz collector ingestion, independent developer setup-time remain release evidence requirements. Browser SDK bundle now has a measured 30kB gzip budget; see compatibility.
+
+## Public website amendment — 2026-10-06
+
+User authorized a static site for organic discovery. Developer visitors should understand what SignalKit is, supported use cases, how to try it, provider/consent boundaries and current evidence. Public overview, quickstart, integrations and FAQ are crawlable complete HTML with metadata and semantic structured data. Search rankings, indexing and generated-answer citations are not promised. Public canonical URL remains owner-configurable. Local labs remain noindex. No lead form, account, tracking scripts or new backend is needed.

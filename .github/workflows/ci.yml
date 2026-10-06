@@ -50,3 +50,4 @@ jobs:
         run: |
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
+          pnpm test:site:e2e

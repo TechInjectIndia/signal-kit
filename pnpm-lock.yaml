@@ -39,6 +39,8 @@ importers:
         specifier: 3.2.7
         version: 3.2.7(@types/node@22.20.5)(jsdom@26.1.0)
 
+  apps/site: {}
+
   examples/bun:
     dependencies:
       '@signalkit/bun':
