@@ -16,7 +16,7 @@ Set SITE_URL to the final HTTPS URL before building, including project path and 
 
 ## Discovery and content
 
-Four complete pages: overview, docs/quickstart, integrations, FAQs. Answer-first definitions/use cases, visible FAQs, current support matrix and repository source links help readers and answer engines understand the project. Metadata includes unique title/description/canonical, OG/Twitter and valid semantic JSONLD; robots/sitemap are generated. No artificial ratings, testimonials or pricing promises. llms.txt is optional explanatory content, not a required ranking mechanism.
+The site includes the overview, docs/ platform chooser, separate Next.js and Bun platform guides, integrations, FAQs and technical implementation guides. Answer-first definitions/use cases, visible FAQs, current support matrix and repository source links help readers and answer engines understand the project. Metadata includes unique title/description/canonical, OG/Twitter and valid semantic JSONLD; robots/sitemap are generated. No artificial ratings, testimonials or pricing promises. llms.txt is optional explanatory content, not a required ranking mechanism.
 
 [Google AI-feature guidance](https://developers.google.com/search/docs/appearance/ai-features) applies ordinary search foundations; structured data must match visible content. Search visibility and AI citations require public crawlable publication and are not guaranteed by markup. For GitHub project sites, robots.txt resides under the project path; user.github.io/robots.txt at the origin is GitHub's/owner-site policy. The project sitemap remains directly available for Search Console submission.
 
