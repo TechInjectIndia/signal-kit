@@ -890,3 +890,17 @@ td:last-child {
     padding: 22px;
   }
 }
+
+/* Keep vendor logo shapes intact on a neutral background. */
+.platform-mark,
+.platform-pending .platform-mark {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.platform-mark img {
+  display: block;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}

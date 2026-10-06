@@ -1,0 +1,4 @@
+Platform logo SVGs from Simple Icons, CC0-1.0.
+Pinned source: https://github.com/simple-icons/simple-icons/tree/98820a4dc8c363ca72fa2c0d294ea4a0a9bba75d
+Brand names and marks identify integration targets; no endorsement implied.
+HTML / JavaScript uses the JavaScript logo.

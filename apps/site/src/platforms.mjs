@@ -4,19 +4,27 @@ export const platforms = [
   {
     name: 'Next.js',
     path: 'docs/nextjs/',
-    mark: 'N',
+    logo: 'nextdotjs',
     description: 'App Router storefront, consent, ecommerce events and Node request telemetry.',
   },
   {
     name: 'Bun',
     path: 'docs/bun/',
-    mark: 'B',
+    logo: 'bun',
     description: 'Incoming API handlers, safe routes, outbound fetch and OTLP export.',
   },
   ...['SvelteKit', 'Hono', 'Astro', 'Node.js', 'HTML / JavaScript', 'Django', 'Laravel'].map(
     (name) => ({
       name,
-      mark: name.slice(0, 1),
+      logo: {
+        SvelteKit: 'svelte',
+        Hono: 'hono',
+        Astro: 'astro',
+        'Node.js': 'nodedotjs',
+        'HTML / JavaScript': 'javascript',
+        Django: 'django',
+        Laravel: 'laravel',
+      }[name],
       description: 'Dedicated integration and examples pending development.',
     }),
   ),
