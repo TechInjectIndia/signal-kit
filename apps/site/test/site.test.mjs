@@ -52,7 +52,11 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
           for (const question of data.mainEntity)
             assert.ok(html.includes(question.acceptedAnswer.text));
         }
-        assert.equal((html.match(/<script/g) || []).length, 1, 'only inert structured data script');
+        assert.equal(
+          (html.match(/<script/g) || []).length,
+          page.path === 'docs/' || page.sections ? 2 : 1,
+          'structured data plus optional local copy enhancement',
+        );
         assert.doesNotMatch(html, /https:\/\/(?:fonts|cdn)\./);
         for (const [, href] of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
           if (href.startsWith('#')) {

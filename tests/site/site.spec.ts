@@ -42,3 +42,43 @@ test('public content is crawlable, navigable and responsive without JavaScript',
   await expect(page.locator('main')).toContainText(/npm|published/i);
   expect(external).toEqual([]);
 });
+
+test.describe('documentation copy enhancement', () => {
+  test.use({ javaScriptEnabled: true });
+  test('copies only code, supports keyboard and selects code when clipboard fails', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            (window as Window & { copiedCode?: string }).copiedCode = text;
+          },
+        },
+      });
+    });
+    await page.goto('docs/');
+    const figure = page.locator('figure.code').first();
+    const button = figure.getByRole('button');
+    const expected = await figure.locator('pre code').textContent();
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(button).toHaveText('Copied!');
+    expect(await page.evaluate(() => (window as Window & { copiedCode?: string }).copiedCode)).toBe(
+      expected,
+    );
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = async () => {
+        throw new Error('Denied');
+      };
+    });
+    await button.click();
+    await expect(figure.getByRole('status')).toContainText('Code selected');
+    expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(expected);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
+    await page.goto('guides/bun-api-tracing/');
+    await expect(page.locator('[data-copy-code]').first()).toBeVisible();
+  });
+});
