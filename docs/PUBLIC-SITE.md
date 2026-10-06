@@ -1,5 +1,7 @@
 # Public site operation
 
+Live site: [SignalKit](https://techinjectindia.github.io/signal-kit/), verified2026-10-06.
+
 Source: apps/site. Static HTML/CSS, complete dist output, no runtime JavaScript or external font/script requests. The local SDK labs remain noindex.
 
 ## Build and preview
