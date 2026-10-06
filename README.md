@@ -53,6 +53,26 @@ await signals.track({
 
 The owner-selected package scope is `@techinject`; packages are not published yet. Use the workspace or verified local alpha tarballs. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
 
+## Platform availability
+
+The SDK is designed around platform-independent contracts. Next.js and Bun are the current alpha integrations; the dedicated integrations below are **coming soon**, pending development. No release dates are committed. Planned platforms do not yet have verified installation recipes or native SDKs.
+
+| Platform                          | Status             | Integration scope                                                     |
+| --------------------------------- | ------------------ | --------------------------------------------------------------------- |
+| Next.js App Router (Node runtime) | Available in alpha | Browser provider and separate Node instrumentation; examples below    |
+| Bun                               | Available in alpha | Wrapped incoming handlers and explicit outbound fetch; examples below |
+| SvelteKit                         | Coming soon        | Framework adapter and integration examples                            |
+| Hono                              | Coming soon        | Framework adapter and integration examples                            |
+| Astro                             | Coming soon        | Framework adapter and integration examples                            |
+| Node.js (standalone)              | Coming soon        | Dedicated generic server integration and examples                     |
+| HTML / vanilla JavaScript         | Coming soon        | Standalone browser setup and integration examples                     |
+| Django (Python)                   | Coming soon        | Native Python SDK and framework adapter                               |
+| Laravel (PHP)                     | Coming soon        | Native PHP SDK and framework adapter                                  |
+
+The portable browser/server building blocks already exist, but that does not establish support for the coming-soon hosts. Next Edge remains deferred and unsupported.
+
+[Web integrations and platform roadmap](https://techinjectindia.github.io/signal-kit/integrations/) · [Full integration documentation](packages/features/signals/INTEGRATION.md)
+
 ## Integration examples
 
 [Web quickstart and examples](https://techinjectindia.github.io/signal-kit/docs/#examples) · [Complete integration guide](packages/features/signals/INTEGRATION.md) · [Next.js lab](examples/nextjs) · [Bun lab](examples/bun)
