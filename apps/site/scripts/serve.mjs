@@ -9,6 +9,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error('PORT must be a valid integer');
 const types = {
   '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
@@ -68,7 +69,7 @@ createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'",
     );
     res.end(req.method === 'HEAD' ? undefined : body);
   } catch {
