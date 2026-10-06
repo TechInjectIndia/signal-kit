@@ -41,13 +41,13 @@ test('public content is crawlable, navigable and responsive without JavaScript',
     await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
   }
   await page.goto('docs/');
-  await expect(page.locator('.platform-card')).toHaveCount(16);
+  await expect(page.locator('.platform-card')).toHaveCount(17);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.screenshot({ path: 'test-results/platform-hub-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: 'test-results/platform-hub-mobile.png', fullPage: true });
   await expect(page.locator('.platform-pending a')).toHaveCount(0);
-  await expect(page.locator('.platform-tabs [aria-disabled=true]')).toHaveCount(14);
+  await expect(page.locator('.platform-tabs [aria-disabled=true]')).toHaveCount(15);
   await page
     .locator('.platform-card')
     .first()

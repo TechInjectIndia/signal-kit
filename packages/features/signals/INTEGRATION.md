@@ -24,6 +24,7 @@ The SDK is designed around platform-independent contracts. Next.js and Bun are t
 | CodeIgniter                       | Coming soon        | Dedicated integration and examples pending development                |
 | Vue                               | Coming soon        | Dedicated integration and examples pending development                |
 | Angular                           | Coming soon        | Dedicated integration and examples pending development                |
+| Fastify                           | Coming soon        | Dedicated integration and examples pending development                |
 
 The portable browser/server building blocks already exist, but that does not establish support for the coming-soon hosts. Next Edge remains deferred and unsupported.
 
