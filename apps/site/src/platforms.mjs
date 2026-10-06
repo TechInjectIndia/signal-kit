@@ -166,3 +166,9 @@ return result;`,
     ],
   },
 ];
+
+export function platformCategories(name) {
+  if (['Next.js', 'SvelteKit', 'Astro'].includes(name)) return ['frontend', 'backend'];
+  if (['HTML / JavaScript', 'Vue', 'Angular'].includes(name)) return ['frontend'];
+  return ['backend'];
+}

@@ -29,3 +29,5 @@ GitHub Pages can publish static output via a dedicated gh-pages source branch wi
 ## Platform documentation
 
 /docs/ is the platform chooser. /docs/nextjs/ and /docs/bun/ are separate current-alpha guides with platform navigation and copyable snippets. Planned platforms are visibly coming soon, without generated pages or links until their integrations exist. The hub and available guide navigation work without JavaScript.
+
+Platform chooser filters: All, Frontend and Backend. Next.js, SvelteKit and Astro appear in both; HTML/JavaScript, Vue and Angular are frontend, and other current roadmap entries are backend. Counts derive from the platform list. Filtering is a local progressive enhancement; without JavaScript all platforms stay visible.

@@ -904,3 +904,35 @@ td:last-child {
   height: 36px;
   object-fit: contain;
 }
+
+.platform-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0 12px;
+}
+.platform-filters[hidden],
+.platform-card[hidden] {
+  display: none;
+}
+.platform-filters button {
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font: 12px var(--mono);
+  cursor: pointer;
+}
+.platform-filters button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--lime);
+}
+.platform-filters button span {
+  margin-left: 8px;
+  opacity: 0.75;
+}
+.platform-filters button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
