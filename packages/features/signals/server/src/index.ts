@@ -1,6 +1,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { createSignals, safeRoute } from '@signalkit/core';
-import type { Consent, Observer, RequestRecord, SignalEvent, Provider } from '@signalkit/contracts';
+import { createSignals, safeRoute, parseTraceparent } from '@techinject/core';
+import type {
+  Consent,
+  Observer,
+  RequestRecord,
+  SignalEvent,
+  Provider,
+} from '@techinject/contracts';
 
 export type ServerConfig = Parameters<typeof createSignals>[0] & {
   observer?: Observer;
@@ -63,10 +69,19 @@ export function createServerSignals(config: ServerConfig = {}) {
       return transport(input, init);
     const request = new Request(input, init);
     const parent = context.getStore();
-    const span = parent
-      ? { ...parent, parentSpanId: parent.spanId, spanId: randomHex(8) }
-      : trace(null);
     const headers = new Headers(request.headers);
+    const existingHeader = headers.get('traceparent');
+    const existing = parseTraceparent(existingHeader);
+    // The outgoing record identifies the span actually propagated on the wire.
+    const span: Trace = existing
+      ? {
+          traceId: existing.traceId,
+          spanId: existing.spanId,
+          flags: existingHeader!.split('-')[3]!,
+        }
+      : parent
+        ? { ...parent, parentSpanId: parent.spanId, spanId: randomHex(8) }
+        : trace(null);
     if (
       (config.traceOrigins ?? []).includes(new URL(request.url).origin) &&
       !headers.has('traceparent')
@@ -321,7 +336,7 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
             },
             scopeSpans: [
               {
-                scope: { name: '@signalkit/server', version: '0.1.0' },
+                scope: { name: '@techinject/server', version: '0.1.0-alpha.1' },
                 spans: [
                   {
                     traceId: record.traceId ?? randomHex(16),

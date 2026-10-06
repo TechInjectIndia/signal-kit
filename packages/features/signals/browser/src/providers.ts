@@ -1,5 +1,5 @@
-import { safeRoute } from '@signalkit/core';
-import type { Consent, Provider, SignalEvent } from '@signalkit/contracts';
+import { safeRoute } from '@techinject/core';
+import type { Consent, Provider, SignalEvent } from '@techinject/contracts';
 type ConsentProvider = Provider & { setConsent(consent: Consent): void };
 type ScriptConfig = { nonce?: string; timeoutMs?: number };
 type Globals = Window & {

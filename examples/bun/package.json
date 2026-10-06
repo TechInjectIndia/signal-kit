@@ -11,9 +11,9 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@signalkit/server": "workspace:*",
-    "@signalkit/bun": "workspace:*",
-    "@signalkit/contracts": "workspace:*"
+    "@techinject/server": "workspace:*",
+    "@techinject/bun": "workspace:*",
+    "@techinject/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

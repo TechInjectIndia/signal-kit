@@ -6,7 +6,7 @@ These packages are local workspace packages, not yet available on npm. Build the
 
 ```tsx
 'use client';
-import { SignalKitProvider, createGA4Provider, createMetaPixelProvider } from '@signalkit/nextjs';
+import { SignalKitProvider, createGA4Provider, createMetaPixelProvider } from '@techinject/nextjs';
 const config = {
   providers: [
     createGA4Provider({ measurementId: 'G-YOURID' }),
@@ -27,12 +27,12 @@ GA4 provider sends explicit pages; disable automatic history page changes in Enh
 
 ## Next Node automatic incoming telemetry
 
-Install/use @signalkit/nextjs-server separately from browser package. In instrumentation.ts:
+Install/use @techinject/nextjs-server separately from browser package. In instrumentation.ts:
 
 ```ts
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs' && process.env.SIGNALKIT_OTEL_ENABLED === 'true') {
-    const { registerNextInstrumentation } = await import('@signalkit/nextjs-server');
+    const { registerNextInstrumentation } = await import('@techinject/nextjs-server');
     registerNextInstrumentation({ serviceName: 'your-service' });
   }
 }
@@ -43,8 +43,8 @@ Configure OTEL_EXPORTER_OTLP_ENDPOINT/host credentials and collector filters. Th
 ## Bun server
 
 ```ts
-import { createServerSignals, createOTLPObserver } from '@signalkit/server';
-import { instrumentBunFetch } from '@signalkit/bun';
+import { createServerSignals, createOTLPObserver } from '@techinject/server';
+import { instrumentBunFetch } from '@techinject/bun';
 const signals = createServerSignals({
   consent: { analytics: false, marketing: false, observability: true },
   observer: createOTLPObserver({
@@ -57,7 +57,7 @@ const signals = createServerSignals({
 Bun.serve({ fetch: instrumentBunFetch(signals, async (req) => Response.json({ ok: true })) });
 ```
 
-Wrap every Bun routes-table handler too: routes bypass fallback fetch. Supply routeResolver for arbitrary dynamic/sensitive slugs. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Configure observer errors/onDiagnostic for overload/rejection visibility. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
+Wrap every Bun routes-table handler too: routes bypass fallback fetch. Supply routeResolver for arbitrary dynamic/sensitive slugs. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Browser flush now waits for bounded observer records and its optional flush hook; browser observer deadlines default to2s and use timeoutMs when supplied (clamped1–30,000ms), separately from the core default5s dispatch deadline. Server telemetry preserves valid existing outbound traceparent IDs in emitted records. Configure observer errors/onDiagnostic for overload/rejection visibility. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
 
 ## Verified purchase and provider delivery
 

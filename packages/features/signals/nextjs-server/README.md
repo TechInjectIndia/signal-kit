@@ -1,4 +1,4 @@
-# @signalkit/nextjs-server
+# @techinject/nextjs-server
 
 SignalKit nextjs-server adapter/package. MIT licensed, local v1.
 

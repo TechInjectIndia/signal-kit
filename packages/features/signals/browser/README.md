@@ -1,4 +1,4 @@
-# @signalkit/browser
+# @techinject/browser
 
 SignalKit browser adapter/package. MIT licensed, local v1.
 

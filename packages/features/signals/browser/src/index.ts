@@ -1,5 +1,5 @@
-import { createSignals, generateId, safeRoute, parseTraceparent } from '@signalkit/core';
-import type { Consent, Observer, RequestRecord } from '@signalkit/contracts';
+import { createSignals, generateId, safeRoute, parseTraceparent } from '@techinject/core';
+import type { Consent, Observer, RequestRecord } from '@techinject/contracts';
 export { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
 export type BrowserConfig = Parameters<typeof createSignals>[0] & {
   observer?: Observer;
@@ -12,7 +12,25 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   const core = createSignals(config);
   let running = false;
   const owner = {};
-  let pendingRecords = 0;
+  const pendingRecords = new Set<Promise<void>>();
+  const observationTimeout = Number.isFinite(config.timeoutMs)
+    ? Math.max(1, Math.min(30000, config.timeoutMs!))
+    : 2000;
+  async function boundedObservation(deliver: () => Promise<void> | void) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        Promise.resolve(deliver()),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, observationTimeout);
+        }),
+      ]);
+    } catch {
+      /* Observer failures cannot affect the host. */
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
   let lastPath = '';
   const restores: (() => void)[] = [];
   const excluded = (url: URL) =>
@@ -36,17 +54,11 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     });
   const record = (value: RequestRecord) => {
     if (!core.getConsent().observability || !running) return;
-    if (!config.observer || pendingRecords >= 32) return;
-    pendingRecords++;
-    try {
-      Promise.resolve(config.observer.record(value))
-        .catch(() => {})
-        .finally(() => {
-          pendingRecords--;
-        });
-    } catch {
-      pendingRecords--;
-    }
+    if (!config.observer || pendingRecords.size >= 32) return;
+    const operation = boundedObservation(() => config.observer!.record(value)).finally(() => {
+      pendingRecords.delete(operation);
+    });
+    pendingRecords.add(operation);
   };
   const navigation = () => {
     if (!running) return;
@@ -241,7 +253,19 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   try {
     config.observer?.setConsent?.(core.getConsent());
   } catch {}
-  const api = { ...core, setConsent, page, start, stop, dispose };
+  const api = {
+    ...core,
+    async flush() {
+      await core.flush();
+      await Promise.all([...pendingRecords]);
+      if (config.observer?.flush) await boundedObservation(() => config.observer!.flush!());
+    },
+    setConsent,
+    page,
+    start,
+    stop,
+    dispose,
+  };
   if (config.autoTrack !== false) start();
   return api;
 }

@@ -4,11 +4,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { root } from './files.mjs';
 import assert from 'node:assert/strict';
+import { build } from '../apps/site/scripts/build.mjs';
 function git(args, cwd = root) {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   return result.stdout.trim();
 }
+assert.equal(
+  git(['status', '--porcelain']),
+  '',
+  'Commit source changes before publishing; sourceCommit must describe the actual artifact',
+);
+await build({ siteUrl: 'https://techinjectindia.github.io/signal-kit/' });
 const dist = join(root, 'apps/site/dist');
 const homepage = await readFile(join(dist, 'index.html'), 'utf8');
 assert.ok(

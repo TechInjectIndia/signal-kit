@@ -1,10 +1,10 @@
 import type { NextConfig } from 'next';
 const config: NextConfig = {
   transpilePackages: [
-    '@signalkit/nextjs',
-    '@signalkit/browser',
-    '@signalkit/core',
-    '@signalkit/contracts',
+    '@techinject/nextjs',
+    '@techinject/browser',
+    '@techinject/core',
+    '@techinject/contracts',
   ],
 };
 export default config;

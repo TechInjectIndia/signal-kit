@@ -43,13 +43,13 @@ importers:
 
   examples/bun:
     dependencies:
-      '@signalkit/bun':
+      '@techinject/bun':
         specifier: workspace:*
         version: link:../../packages/features/signals/bun
-      '@signalkit/contracts':
+      '@techinject/contracts':
         specifier: workspace:*
         version: link:../../packages/features/signals/contracts
-      '@signalkit/server':
+      '@techinject/server':
         specifier: workspace:*
         version: link:../../packages/features/signals/server
     devDependencies:
@@ -62,16 +62,16 @@ importers:
 
   examples/nextjs:
     dependencies:
-      '@signalkit/browser':
+      '@techinject/browser':
         specifier: workspace:*
         version: link:../../packages/features/signals/browser
-      '@signalkit/contracts':
+      '@techinject/contracts':
         specifier: workspace:*
         version: link:../../packages/features/signals/contracts
-      '@signalkit/nextjs':
+      '@techinject/nextjs':
         specifier: workspace:*
         version: link:../../packages/features/signals/nextjs
-      '@signalkit/nextjs-server':
+      '@techinject/nextjs-server':
         specifier: workspace:*
         version: link:../../packages/features/signals/nextjs-server
       next:
@@ -99,16 +99,16 @@ importers:
 
   packages/features/signals/browser:
     dependencies:
-      '@signalkit/contracts':
+      '@techinject/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@signalkit/core':
+      '@techinject/core':
         specifier: workspace:*
         version: link:../core
 
   packages/features/signals/bun:
     dependencies:
-      '@signalkit/server':
+      '@techinject/server':
         specifier: workspace:*
         version: link:../server
 
@@ -120,16 +120,16 @@ importers:
 
   packages/features/signals/core:
     dependencies:
-      '@signalkit/contracts':
+      '@techinject/contracts':
         specifier: workspace:*
         version: link:../contracts
 
   packages/features/signals/nextjs:
     dependencies:
-      '@signalkit/browser':
+      '@techinject/browser':
         specifier: workspace:*
         version: link:../browser
-      '@signalkit/contracts':
+      '@techinject/contracts':
         specifier: workspace:*
         version: link:../contracts
       next:
@@ -151,13 +151,34 @@ importers:
 
   packages/features/signals/nextjs-server:
     dependencies:
-      '@signalkit/contracts':
+      '@opentelemetry/api':
+        specifier: 1.9.1
+        version: 1.9.1
+      '@opentelemetry/api-logs':
+        specifier: 0.222.0
+        version: 0.222.0
+      '@opentelemetry/instrumentation':
+        specifier: 0.222.0
+        version: 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources':
+        specifier: 2.11.0
+        version: 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-logs':
+        specifier: 0.222.0
+        version: 0.222.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-metrics':
+        specifier: 2.11.0
+        version: 2.11.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-base':
+        specifier: 2.11.0
+        version: 2.11.0(@opentelemetry/api@1.9.1)
+      '@techinject/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@signalkit/core':
+      '@techinject/core':
         specifier: workspace:*
         version: link:../core
-      '@signalkit/server':
+      '@techinject/server':
         specifier: workspace:*
         version: link:../server
       '@vercel/otel':
@@ -169,10 +190,10 @@ importers:
 
   packages/features/signals/server:
     dependencies:
-      '@signalkit/contracts':
+      '@techinject/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@signalkit/core':
+      '@techinject/core':
         specifier: workspace:*
         version: link:../core
 

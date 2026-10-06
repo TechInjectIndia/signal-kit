@@ -5,7 +5,7 @@ import {
   type DispatchResult,
   type EventInput,
   type Provider,
-} from '@signalkit/contracts';
+} from '@techinject/contracts';
 export type {
   Consent,
   DispatchResult,
@@ -18,8 +18,8 @@ export type {
   CommerceProperties,
   PurchaseProperties,
   PageViewProperties,
-} from '@signalkit/contracts';
-export { DENIED_CONSENT } from '@signalkit/contracts';
+} from '@techinject/contracts';
+export { DENIED_CONSENT } from '@techinject/contracts';
 
 export type SignalsOptions = {
   providers?: Provider[];

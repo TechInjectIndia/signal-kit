@@ -1,4 +1,4 @@
-# @signalkit/contracts
+# @techinject/contracts
 
 SignalKit contracts adapter/package. MIT licensed, local v1.
 

@@ -24,7 +24,10 @@
     "test:bundle": "node scripts/bundle-check.mjs",
     "test:site:e2e": "playwright test --config playwright.site.config.ts",
     "site:og": "node scripts/generate-site-og.mjs",
-    "site:publish": "node scripts/publish-site.mjs"
+    "site:publish": "node scripts/publish-site.mjs",
+    "release:prepare": "node scripts/prepare-alpha.mjs",
+    "demo:record": "node scripts/record-demo.mjs",
+    "test:alpha": "node scripts/test-alpha-installer.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

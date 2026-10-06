@@ -1,6 +1,6 @@
 {
-  "name": "@signalkit/nextjs",
-  "version": "0.1.0",
+  "name": "@techinject/nextjs",
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "license": "MIT",
   "files": [
@@ -21,8 +21,8 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@signalkit/browser": "workspace:*",
-    "@signalkit/contracts": "workspace:*"
+    "@techinject/browser": "workspace:*",
+    "@techinject/contracts": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18 <20",
@@ -40,7 +40,8 @@
     "directory": "packages/features/signals/nextjs"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "alpha"
   },
   "engines": {},
   "description": "SignalKit nextjs consent-aware telemetry package"

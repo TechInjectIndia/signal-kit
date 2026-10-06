@@ -1,4 +1,4 @@
-import { createServerSignals } from '@signalkit/server';
+import { createServerSignals } from '@techinject/server';
 import { instrumentBunFetch } from '../dist/index.js';
 const records = [];
 const signals = createServerSignals({

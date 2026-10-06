@@ -4,10 +4,10 @@ import { mkdtemp, readFile, rm, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build, siteConfig } from '../scripts/build.mjs';
-import { pages, faq } from '../src/content.mjs';
+import { pages, faq, guides, guideDate, sourceRef } from '../src/content.mjs';
 
 test('public canonical configuration rejects credential and non-public formats', () => {
-  assert.equal(siteConfig().base, '/signal-kit/');
+  assert.equal(siteConfig('https://techinjectindia.github.io/signal-kit/').base, '/signal-kit/');
   assert.equal(siteConfig('https://signals.example').url, 'https://signals.example/');
   for (const value of [
     'http://example.com',
@@ -66,6 +66,9 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
           );
         }
         assert.match(html, /og:image.*?og\.png/);
+        assert.doesNotMatch(html, /blob\/9f07183/);
+        if (page.path === 'docs/')
+          assert.ok(html.includes('/blob/main/packages/features/signals/INTEGRATION.md'));
       }
       assert.equal(canonicals.size, pages.length);
       const sitemap = await readFile(join(output, 'sitemap.xml'), 'utf8');
@@ -75,7 +78,33 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
         (await readFile(join(output, 'robots.txt'), 'utf8')).includes(`${siteUrl}sitemap.xml`),
       );
       assert.match(await readFile(join(output, '404.html'), 'utf8'), /content="noindex, follow"/);
-      assert.match(await readFile(join(output, 'docs/index.html'), 'utf8'), /git checkout 9f07183/);
+      assert.ok(
+        (await readFile(join(output, 'docs/index.html'), 'utf8')).includes(
+          `git clone --branch ${sourceRef}`,
+        ),
+      );
+      assert.equal(sourceRef, 'main', 'source links follow merged SDK main');
+      assert.equal(
+        pages.length,
+        8,
+        'overview, docs, integrations, FAQ, guides index and three articles',
+      );
+      for (const guide of guides) {
+        const html = await readFile(join(output, guide.path, 'index.html'), 'utf8');
+        const schema = JSON.parse(html.match(/application\/ld\+json">(.*?)<\/script>/s)[1]);
+        const article = schema.find((item) => item['@type'] === 'Article');
+        assert.equal(article.headline, guide.title);
+        assert.equal(article.author.name, 'SignalKit maintainers');
+        assert.equal(article.datePublished, guideDate);
+        assert.equal(article.mainEntityOfPage, new URL(guide.path, siteUrl).href);
+        assert.equal(
+          schema.find((item) => item['@type'] === 'BreadcrumbList').itemListElement.length,
+          3,
+        );
+        assert.match(html, /og:type" content="article/);
+        assert.ok(html.includes(`git clone --branch ${sourceRef}`));
+        assert.ok(guide.sections.length >= 6);
+      }
     } finally {
       await rm(output, { recursive: true, force: true });
     }

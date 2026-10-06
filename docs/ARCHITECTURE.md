@@ -6,15 +6,15 @@ Implementation baseline, 2026-10-05, under the founder's explicit end-to-end bui
 
 SignalKit ships embeddable libraries, no hosted service. Two independently runnable local consumer hosts: Next.js lab and Bun API/payment fixture. This is an explicit scope exception to a full application bootstrap: no empty standalone API/dashboard/database deployment. Hosts own identity, payment verification, storage, consent, retries, configuration and deployment.
 
-| Package                  | Consumer           | Responsibility                                  |
-| ------------------------ | ------------------ | ----------------------------------------------- |
-| @signalkit/contracts     | all                | independent Zod schemas and DTOs                |
-| @signalkit/core          | adapters           | consent, validation, dispatch, IDs, safe routes |
-| @signalkit/browser       | browser/HTML hosts | pages, fetch/XHR and public providers           |
-| @signalkit/server        | Node/Bun hosts     | request wrapper, outbound fetch, CAPI, OTLP     |
-| @signalkit/nextjs        | Next browser       | root React provider/useSignals                  |
-| @signalkit/nextjs-server | Next Node          | host OTel registration and safe error hook      |
-| @signalkit/bun           | Bun                | Bun.serve fetch wrapper                         |
+| Package                   | Consumer           | Responsibility                                  |
+| ------------------------- | ------------------ | ----------------------------------------------- |
+| @techinject/contracts     | all                | independent Zod schemas and DTOs                |
+| @techinject/core          | adapters           | consent, validation, dispatch, IDs, safe routes |
+| @techinject/browser       | browser/HTML hosts | pages, fetch/XHR and public providers           |
+| @techinject/server        | Node/Bun hosts     | request wrapper, outbound fetch, CAPI, OTLP     |
+| @techinject/nextjs        | Next browser       | root React provider/useSignals                  |
+| @techinject/nextjs-server | Next Node          | host OTel registration and safe error hook      |
+| @techinject/bun           | Bun                | Bun.serve fetch wrapper                         |
 
 Packages are one portable signals feature family, with framework dependencies confined to adapters. Core imports contracts only; contracts imports Zod only. Client and server Next packages are separate dependency graphs. Consumers import public exports; ESM builds and declarations belong each leaf. No process.env reads in SDK core/adapters: hosts inject config. Bun demo alone owns SQLite fixture persistence; production persistence is not an SDK feature.
 

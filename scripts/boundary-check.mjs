@@ -5,12 +5,24 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 const allowed = {
   contracts: ['zod'],
-  core: ['@signalkit/contracts'],
-  browser: ['@signalkit/core', '@signalkit/contracts'],
-  server: ['@signalkit/core', '@signalkit/contracts'],
-  nextjs: ['@signalkit/browser', '@signalkit/contracts'],
-  'nextjs-server': ['@signalkit/core', '@signalkit/contracts', '@signalkit/server', '@vercel/otel'],
-  bun: ['@signalkit/server', '@signalkit/contracts'],
+  core: ['@techinject/contracts'],
+  browser: ['@techinject/core', '@techinject/contracts'],
+  server: ['@techinject/core', '@techinject/contracts'],
+  nextjs: ['@techinject/browser', '@techinject/contracts'],
+  'nextjs-server': [
+    '@techinject/core',
+    '@techinject/contracts',
+    '@techinject/server',
+    '@vercel/otel',
+    '@opentelemetry/api',
+    '@opentelemetry/api-logs',
+    '@opentelemetry/instrumentation',
+    '@opentelemetry/resources',
+    '@opentelemetry/sdk-logs',
+    '@opentelemetry/sdk-metrics',
+    '@opentelemetry/sdk-trace-base',
+  ],
+  bun: ['@techinject/server', '@techinject/contracts'],
 };
 for (const [name, dependencies] of Object.entries(allowed)) {
   const path = join(root, 'packages/features/signals', name);
@@ -26,7 +38,7 @@ for (const [name, dependencies] of Object.entries(allowed)) {
     );
     if (['contracts', 'core', 'browser', 'nextjs'].includes(name))
       assert.ok(
-        !/from\s+['"](?:node:|@signalkit\/server|@signalkit\/bun|@signalkit\/nextjs-server)/.test(
+        !/from\s+['"](?:node:|@techinject\/server|@techinject\/bun|@techinject\/nextjs-server)/.test(
           source,
         ),
         `${name} imports server code`,
@@ -40,9 +52,12 @@ for (const [name, dependencies] of Object.entries(allowed)) {
 console.log('SDK dependency and source boundaries passed');
 
 for (const [consumer, forbidden] of [
-  ['@signalkit/nextjs', /server|bun/],
-  ['@signalkit/server', /browser|nextjs|example/],
-  ['@signalkit/site', /@signalkit\/(contracts|core|browser|server|bun|nextjs|example)/],
+  ['@techinject/nextjs', /server|bun/],
+  ['@techinject/server', /browser|nextjs|example/],
+  [
+    '@signalkit/site',
+    /@(?:techinject|signalkit)\/(contracts|core|browser|server|bun|nextjs|example)/,
+  ],
 ]) {
   const result = spawnSync(
     'pnpm',
