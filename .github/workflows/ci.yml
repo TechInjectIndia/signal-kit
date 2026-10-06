@@ -46,7 +46,10 @@ jobs:
           pnpm test:next-otel
           pnpm test:packages
           pnpm test:bundle
+          pnpm release:prepare
+          pnpm test:alpha
       - name: Browser runtime verification
         run: |
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
+          pnpm test:site:e2e

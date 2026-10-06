@@ -1,4 +1,4 @@
-# @signalkit/server
+# @techinject/server
 
 SignalKit server adapter/package. MIT licensed, local v1.
 

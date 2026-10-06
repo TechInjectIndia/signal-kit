@@ -2,12 +2,20 @@
 
 A consent-aware ecommerce telemetry SDK for Next.js and Bun. Shared typed events, automatic page/request instrumentation and provider adapters, with a platform-independent core.
 
-**Status: working local v1, unpublished.** Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
+**Status: alpha candidate `0.1.0-alpha.1`, not yet published to npm.** Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
+
+[![SignalKit demo: consent, navigation, cart and API outcomes](docs/assets/demo.gif)](https://techinjectindia.github.io/signal-kit/demo.mp4)
+
+The clip uses local recorders: grant consent, navigate, add to cart, call an API, then withdraw consent. No advertising provider receives these demo events.
+
+[Website](https://techinjectindia.github.io/signal-kit/) · [Technical guides](https://techinjectindia.github.io/signal-kit/guides/) · [First contributions](https://github.com/TechInjectIndia/signal-kit/labels/good%20first%20issue)
 
 ## Try the local labs
 
 ```sh
-# Node 22, pnpm 10.24.0, Bun 1.3.4
+# Node 22, pnpm 10.24.0, Bun 1.3.4 for Bun fixture
+git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
+cd signal-kit
 pnpm install --frozen-lockfile
 pnpm build
 pnpm --filter @signalkit/example-nextjs dev
@@ -68,3 +76,11 @@ Local socket tests require permission to listen on localhost. Each leaf owns bui
 Report bugs through issue templates. For vulnerabilities use [private vulnerability reporting](https://github.com/TechInjectIndia/signal-kit/security/advisories/new); never post credentials or customer payloads. [Security policy](SECURITY.md) · [support](SUPPORT.md) · [code of conduct](CODE_OF_CONDUCT.md)
 
 MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their providers' terms. No live attribution, provider dedup or universal framework support claim.
+
+## Public website
+
+[SignalKit website](https://techinjectindia.github.io/signal-kit/) explains the SDK, quickstart, integrations and FAQs. Static HTML/CSS source lives in apps/site, separate from the local noindex lab. Build/preview with pnpm --filter @signalkit/site build/dev. See [site operations](docs/PUBLIC-SITE.md) for canonical URL, deployment and discovery details.
+
+## Alpha and pilot participation
+
+[Alpha review and install plan](docs/releases/0.1.0-alpha.1.md) · [Pilot developer handoff](docs/growth/PILOT-GUIDE.md) · [Maintenance routine](docs/growth/MAINTAINER-SOP.md). Report a concrete installation problem; stars are welcome, but real usage and useful feedback matter more.

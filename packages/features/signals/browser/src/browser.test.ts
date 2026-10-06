@@ -11,6 +11,47 @@ afterEach(() => {
   document.head.innerHTML = '';
 });
 describe('browser lifecycle', () => {
+  it('flush waits for observer records and invokes its flush hook', async () => {
+    window.fetch = vi.fn(async () => new Response('ok'));
+    let finish!: () => void;
+    const flush = vi.fn(async () => {});
+    const sdk = createBrowserSignals({
+      consent,
+      observer: {
+        record: () =>
+          new Promise<void>((resolve) => {
+            finish = resolve;
+          }),
+        flush,
+      },
+    });
+    disposals.push(sdk.dispose);
+    await window.fetch('/api');
+    let done = false;
+    const pending = sdk.flush().then(() => {
+      done = true;
+    });
+    await Promise.resolve();
+    expect(done).toBe(false);
+    expect(flush).not.toHaveBeenCalled();
+    finish();
+    await pending;
+    expect(flush).toHaveBeenCalledOnce();
+  });
+  it('bounds hung observer records and flush hooks', async () => {
+    window.fetch = vi.fn(async () => new Response('ok'));
+    const sdk = createBrowserSignals({
+      consent,
+      timeoutMs: 5,
+      observer: {
+        record: () => new Promise<void>(() => {}),
+        flush: () => new Promise<void>(() => {}),
+      },
+    });
+    disposals.push(sdk.dispose);
+    await window.fetch('/api');
+    await sdk.flush();
+  });
   it('tracks initial and distinct navigation once, handles dynamic IDs and restores history', async () => {
     const events: unknown[] = [];
     const original = history.pushState;

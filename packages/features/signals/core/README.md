@@ -1,4 +1,4 @@
-# @signalkit/core
+# @techinject/core
 
 SignalKit core adapter/package. MIT licensed, local v1.
 

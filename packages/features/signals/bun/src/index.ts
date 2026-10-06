@@ -1,4 +1,4 @@
-import type { ServerSignals } from '@signalkit/server';
+import type { ServerSignals } from '@techinject/server';
 
 /** Wrap the fallback fetch handler. Bun route-table handlers must each be wrapped too. */
 export function instrumentBunFetch<TServer>(

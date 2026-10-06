@@ -12,13 +12,13 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@signalkit/browser": "workspace:*",
-    "@signalkit/contracts": "workspace:*",
-    "@signalkit/nextjs": "workspace:*",
+    "@techinject/browser": "workspace:*",
+    "@techinject/contracts": "workspace:*",
+    "@techinject/nextjs": "workspace:*",
     "next": "16.3.8",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@signalkit/nextjs-server": "workspace:*"
+    "@techinject/nextjs-server": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

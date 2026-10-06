@@ -1,6 +1,6 @@
 {
-  "name": "@signalkit/browser",
-  "version": "0.1.0",
+  "name": "@techinject/browser",
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "license": "MIT",
   "files": [
@@ -21,8 +21,8 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@signalkit/core": "workspace:*",
-    "@signalkit/contracts": "workspace:*"
+    "@techinject/core": "workspace:*",
+    "@techinject/contracts": "workspace:*"
   },
   "repository": {
     "type": "git",
@@ -30,7 +30,8 @@
     "directory": "packages/features/signals/browser"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "alpha"
   },
   "engines": {},
   "description": "SignalKit browser consent-aware telemetry package"

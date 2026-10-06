@@ -1,4 +1,4 @@
-# @signalkit/bun
+# @techinject/bun
 
 SignalKit bun adapter/package. MIT licensed, local v1.
 

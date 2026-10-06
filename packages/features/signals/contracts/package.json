@@ -1,6 +1,6 @@
 {
-  "name": "@signalkit/contracts",
-  "version": "0.1.0",
+  "name": "@techinject/contracts",
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -29,7 +29,8 @@
     "directory": "packages/features/signals/contracts"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "alpha"
   },
   "engines": {},
   "description": "SignalKit contracts consent-aware telemetry package"

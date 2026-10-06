@@ -1,11 +1,11 @@
 import { registerOTel } from '@vercel/otel';
-import type { Observer } from '@signalkit/contracts';
-import { safeRoute } from '@signalkit/core';
+import type { Observer } from '@techinject/contracts';
+import { safeRoute } from '@techinject/core';
 export {
   createServerSignals as createNextSignals,
   createMetaCapiProvider,
   createOTLPObserver,
-} from '@signalkit/server';
+} from '@techinject/server';
 /** Call once inside instrumentation.ts register, in the Node runtime only. This owns OTel registration; do not combine with an existing global provider. */
 export function registerNextInstrumentation(options: Parameters<typeof registerOTel>[0]) {
   registerOTel(options);

@@ -1,8 +1,34 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createServerSignals, createMetaCapiProvider, createOTLPObserver } from '../src/index.js';
-import type { RequestRecord } from '@signalkit/contracts';
+import type { RequestRecord } from '@techinject/contracts';
 const consent = { analytics: true, marketing: true, observability: true };
 describe('server instrumentation', () => {
+  it('records the valid existing outbound wire trace instead of unrelated local context', async () => {
+    const records: RequestRecord[] = [];
+    const header = `00-${'a'.repeat(32)}-${'b'.repeat(16)}-01`;
+    const signals = createServerSignals({
+      consent,
+      observer: {
+        record: (record) => {
+          records.push(record);
+        },
+      },
+      traceOrigins: ['https://app.test'],
+      fetch: async (input) => {
+        expect((input as Request).headers.get('traceparent')).toBe(header);
+        return new Response('ok');
+      },
+    });
+    await signals.handle(new Request('https://app.test/'), async () => {
+      await signals.fetch('https://app.test/outbound', { headers: { traceparent: header } });
+      return new Response('ok');
+    });
+    await signals.flush();
+    expect(records[0]).toMatchObject({ traceId: 'a'.repeat(32), spanId: 'b'.repeat(16) });
+    expect(records[0]?.parentSpanId).toBeUndefined();
+    expect(records[1]?.traceId).not.toBe(records[0]?.traceId);
+    signals.dispose();
+  });
   it('correlates concurrent requests and normalizes routes without queries', async () => {
     const records: RequestRecord[] = [];
     const seen: string[] = [];

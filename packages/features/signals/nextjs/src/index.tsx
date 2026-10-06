@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
-import { createBrowserSignals, type BrowserConfig, type BrowserSignals } from '@signalkit/browser';
+import { createBrowserSignals, type BrowserConfig, type BrowserSignals } from '@techinject/browser';
 const Context = createContext<BrowserSignals | null>(null);
 export function SignalKitProvider({
   config,
@@ -39,5 +39,5 @@ export {
   createGA4Provider,
   createMetaPixelProvider,
   createClarityProvider,
-} from '@signalkit/browser';
-export type { BrowserConfig, BrowserSignals } from '@signalkit/browser';
+} from '@techinject/browser';
+export type { BrowserConfig, BrowserSignals } from '@techinject/browser';

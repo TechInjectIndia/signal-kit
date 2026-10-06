@@ -22,3 +22,5 @@ test-results/
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+artifacts/

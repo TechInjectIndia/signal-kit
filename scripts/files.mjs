@@ -14,6 +14,7 @@ const ignored = new Set([
   'coverage',
   'playwright-report',
   'test-results',
+  'artifacts',
 ]);
 
 export async function files(directory = root) {

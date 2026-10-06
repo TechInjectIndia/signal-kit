@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Database } from 'bun:sqlite';
-import { createServerSignals } from '@signalkit/server';
-import { instrumentBunFetch } from '@signalkit/bun';
-import type { EventInput } from '@signalkit/contracts';
+import { createServerSignals } from '@techinject/server';
+import { instrumentBunFetch } from '@techinject/bun';
+import type { EventInput } from '@techinject/contracts';
 
 const records: unknown[] = [];
 const append = (value: unknown) => {

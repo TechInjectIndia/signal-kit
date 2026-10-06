@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { createServerSignals } from '@signalkit/server';
+import { createServerSignals } from '@techinject/server';
 import { instrumentBunFetch } from '../src/index.js';
 it('preserves Bun server argument and explicit route template', async () => {
   const records: unknown[] = [];

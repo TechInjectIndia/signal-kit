@@ -27,10 +27,14 @@ try {
   const dependencies = { react: '19.3.0' };
   const overrides = {};
   for (const name of names) {
-    const tarball = tarballs.find((file) => file === `signalkit-${name}-0.1.0.tgz`);
+    const manifest = JSON.parse(
+      await readFile(join(root, 'packages/features/signals', name, 'package.json'), 'utf8'),
+    );
+    const filename = `${manifest.name.replace(/^@/, '').replaceAll('/', '-')}-${manifest.version}.tgz`;
+    const tarball = tarballs.find((file) => file === filename);
     assert.ok(tarball, `Missing ${name} tarball`);
-    dependencies[`@signalkit/${name}`] = `file:${join(directory, tarball)}`;
-    overrides[`@signalkit/${name}`] = `file:${join(directory, tarball)}`;
+    dependencies[manifest.name] = `file:${join(directory, tarball)}`;
+    overrides[manifest.name] = `file:${join(directory, tarball)}`;
   }
   await writeFile(
     join(directory, 'package.json'),
@@ -46,15 +50,16 @@ try {
   run('pnpm', ['install', '--prefer-offline'], directory);
   await writeFile(
     join(directory, 'proof.mjs'),
-    `import {createSignals} from '@signalkit/core';
-import {createBrowserSignals} from '@signalkit/browser';
-import {createServerSignals} from '@signalkit/server';
-import {instrumentBunFetch} from '@signalkit/bun';
-import {SignalKitProvider} from '@signalkit/nextjs';
+    `import {createSignals} from '@techinject/core';
+import {createBrowserSignals} from '@techinject/browser';
+import {createServerSignals} from '@techinject/server';
+import {instrumentBunFetch} from '@techinject/bun';
+import {SignalKitProvider} from '@techinject/nextjs';
+import {createNextSignals} from '@techinject/nextjs-server';
 const events=[];const sdk=createSignals({consent:{analytics:true,marketing:false,observability:false},providers:[{name:'proof',category:'analytics',send(event){events.push(event)}}]});
 await sdk.track({name:'page_view',properties:{page_path:'/proof?private=1'}});
 if(events.length!==1||events[0].properties.page_path!=='/proof')throw new Error('Standalone dispatch failed');
-if(typeof createBrowserSignals!=='function'||typeof createServerSignals!=='function'||typeof instrumentBunFetch!=='function'||typeof SignalKitProvider!=='function')throw new Error('Exports failed');
+if(typeof createBrowserSignals!=='function'||typeof createServerSignals!=='function'||typeof instrumentBunFetch!=='function'||typeof SignalKitProvider!=='function'||typeof createNextSignals!=='function')throw new Error('Exports failed');
 console.log('Standalone tarball imports and dispatch passed');`,
   );
   console.log(run(process.execPath, ['proof.mjs'], directory).trim());

@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { SignalKitProvider, useSignals, type BrowserConfig } from '@signalkit/nextjs';
-import type { Consent, EventInput, DispatchResult } from '@signalkit/contracts';
+import { SignalKitProvider, useSignals, type BrowserConfig } from '@techinject/nextjs';
+import type { Consent, EventInput, DispatchResult } from '@techinject/contracts';
 
 type Demo = { track(input: EventInput): Promise<DispatchResult> };
 const Context = createContext<Demo | null>(null);
