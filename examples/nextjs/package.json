@@ -1,0 +1,29 @@
+{
+  "name": "@signalkit/example-nextjs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3100",
+    "build": "next build",
+    "start": "next start --port 3100",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/smoke.test.mjs",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@signalkit/browser": "workspace:*",
+    "@signalkit/contracts": "workspace:*",
+    "@signalkit/nextjs": "workspace:*",
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@signalkit/nextjs-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  }
+}

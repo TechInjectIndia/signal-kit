@@ -1,6 +1,6 @@
 name: Feature request
 description: Propose a focused feature backed by a concrete problem.
-title: "[Feature]: "
+title: '[Feature]: '
 body:
   - type: textarea
     id: problem

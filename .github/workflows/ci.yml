@@ -17,7 +17,7 @@ jobs:
   repository-checks:
     name: Repository checks
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -27,5 +27,26 @@ jobs:
           node-version-file: .nvmrc
       - name: Check repository and JavaScript syntax
         run: node scripts/repository-check.mjs
-      - name: Check text formatting
-        run: node scripts/text-format.mjs --check
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.4
+      - name: Install pinned pnpm and dependencies
+        run: |
+          npm install --global pnpm@10.24.0
+          pnpm install --frozen-lockfile
+      - name: Build, types, tests and boundaries
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: |
+          pnpm format:check
+          pnpm build
+          pnpm typecheck
+          pnpm test
+          pnpm test:boundaries
+          pnpm test:next-otel
+          pnpm test:packages
+          pnpm test:bundle
+      - name: Browser runtime verification
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e

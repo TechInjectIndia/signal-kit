@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: Proposed sequence. No delivery dates or completed SDK features are implied.
+Status: Local v1 built. Foundation/core/browser/Next/Bun/providers implemented; production release gates remain in compatibility and maintenance docs. Future integrations below remain proposals.
 
 ## Foundation
 

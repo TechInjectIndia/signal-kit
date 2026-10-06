@@ -26,7 +26,7 @@ Use semantic versions; pre-1.0 APIs are experimental and breaking changes need m
 Before every release:
 
 1. Define the package set, owner, version, compatibility matrix and release notes.
-2. Run package typecheck/lint/build, behavior tests, actual Next.js/Bun fixtures, and repository checks. Add these commands with implementation; they do not exist today.
+2. Run package typecheck/lint/build, behavior tests, actual Next.js/Bun fixtures, and repository checks. Commands now exist in README; run pnpm test:packages, test:bundle and test:next-otel too.
 3. Inspect package tarballs for exports, types, sourcemaps, LICENSE, README, unwanted files, and secrets.
 4. Verify consent, PII minimization, idempotency integration, failure bounds, performance, and duplicate instrumentation.
 5. Record provider verification separately from mocked/contract test results.

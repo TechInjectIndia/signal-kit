@@ -1,6 +1,6 @@
 # SignalKit product requirements
 
-Status: In review. Agreed scope below is recorded from founder decisions on 2026-10-05; detailed behavior and acceptance targets remain open.
+Status: Build baseline. Scope recorded from founder decisions and explicit end-to-end build authorization on 2026-10-05. Detailed implementation defaults are documented engineering decisions, not separately approved product requirements.
 Owner: SignalKit maintainer team / Sumeet Singh.
 
 ## Goal and users
@@ -52,6 +52,6 @@ Hosted dashboards, hosted collection service, universal identity/group APIs, ext
 - Another developer can install from documentation with recorded time and assistance.
 - Tests state whether they are contract, runtime, sandbox, or live-provider evidence.
 
-## Open decisions
+## Implementation defaults and remaining evidence
 
-Maintainers own: supported Next.js/Bun versions; consent categories and queue behavior; sampling/transport guarantees; browser instrumentation defaults; exact public API and package names; measurable bundle and setup-time budgets. These remain review items, not compatibility promises.
+Implemented defaults: three denied-by-default consent categories, dropped preconsent events with no replay, bounded best-effort dispatch, explicit typed business events, automatic page/fetch/XHR tracking, and separate browser/server adapters. Package names are provisional and unpublished. See architecture, FRD, compatibility and integration guide for exact behavior. Live provider delivery/attribution, real SigNoz collector ingestion, independent developer setup-time remain release evidence requirements. Browser SDK bundle now has a measured 30kB gzip budget; see compatibility.

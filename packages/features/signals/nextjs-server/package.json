@@ -1,0 +1,44 @@
+{
+  "name": "@signalkit/nextjs-server",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@signalkit/core": "workspace:*",
+    "@signalkit/contracts": "workspace:*",
+    "@signalkit/server": "workspace:*",
+    "@vercel/otel": "2.1.0"
+  },
+  "peerDependencies": {
+    "next": ">=15 <17"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TechInjectIndia/signal-kit.git",
+    "directory": "packages/features/signals/nextjs-server"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "SignalKit nextjs-server consent-aware telemetry package"
+}
