@@ -87,7 +87,7 @@ Default denied consent drops data without replay; resource limits drop overload.
 
 ## Copyable host examples
 
-The [web quickstart](https://techinjectindia.github.io/signal-kit/docs/#examples) and [README](../../../README.md#integration-examples) contain the same setup examples. Start with the Next provider above, then wire its layout and host events:
+The [Next.js guide](https://techinjectindia.github.io/signal-kit/docs/nextjs/), [Bun guide](https://techinjectindia.github.io/signal-kit/docs/bun/) and [README](../../../README.md#integration-examples) contain the same setup examples. Start with the Next provider above, then wire its layout and host events:
 
 ### Wire the Next.js root layout
 

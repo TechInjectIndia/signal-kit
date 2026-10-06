@@ -26,6 +26,8 @@ test('public content is crawlable, navigable and responsive without JavaScript',
   await page.screenshot({ path: 'test-results/public-site-mobile.png', fullPage: true });
   for (const route of [
     'docs/',
+    'docs/nextjs/',
+    'docs/bun/',
     'integrations/',
     'faq/',
     'guides/',
@@ -38,6 +40,24 @@ test('public content is crawlable, navigable and responsive without JavaScript',
     await expect(page.locator('main')).toContainText('SignalKit');
     await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
   }
+  await page.goto('docs/');
+  await expect(page.locator('.platform-card')).toHaveCount(9);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({ path: 'test-results/platform-hub-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: 'test-results/platform-hub-mobile.png', fullPage: true });
+  await expect(page.locator('.platform-pending a')).toHaveCount(0);
+  await expect(page.locator('.platform-tabs [aria-disabled=true]')).toHaveCount(7);
+  await page
+    .locator('.platform-card')
+    .first()
+    .getByRole('link', { name: 'Read integration guide' })
+    .click();
+  await expect(page).toHaveURL(/docs\/nextjs\//);
+  await expect(page.locator('.platform-tabs a[aria-current=page]')).toContainText('Next.js');
+  await page.locator('.platform-tabs').getByRole('link', { name: /^Bun/ }).click();
+  await expect(page).toHaveURL(/docs\/bun\//);
+  await expect(page.locator('.platform-tabs a[aria-current=page]')).toContainText('Bun');
   await page.goto('faq/');
   await expect(page.locator('main')).toContainText(/npm|published/i);
   expect(external).toEqual([]);

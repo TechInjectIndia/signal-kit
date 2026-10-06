@@ -25,3 +25,7 @@ Four complete pages: overview, docs/quickstart, integrations, FAQs. Answer-first
 Review rendered pages at desktop/mobile, verify links and truthful claims, run app tests and workspace checks. Keep docs content/compatibility/source links synchronized when SDK APIs or published package status changes. Generate social PNG from checked-in source; commit both for portable builds. The owner selected GitHub Pages. After verifying and committing the source, run pnpm site:publish to update the dedicated generated branch. The publisher refuses other repositories and unmanaged existing branches. Enable Pages once with gh-pages root as source; later pushes rebuild automatically. No Search Console account verification or sitemap submission is claimed unless performed with owner access.
 
 GitHub Pages can publish static output via a dedicated gh-pages source branch without merging SDK PR3; source-site PR remains reviewable. A publish is separate from npm release. Verify public HTTPS overview/inner pages/assets/sitemap after deployment before calling it live.
+
+## Platform documentation
+
+/docs/ is the platform chooser. /docs/nextjs/ and /docs/bun/ are separate current-alpha guides with platform navigation and copyable snippets. Planned platforms are visibly coming soon, without generated pages or links until their integrations exist. The hub and available guide navigation work without JavaScript.
