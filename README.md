@@ -68,6 +68,13 @@ The SDK is designed around platform-independent contracts. Next.js and Bun are t
 | HTML / vanilla JavaScript         | Coming soon        | Standalone browser setup and integration examples                     |
 | Django (Python)                   | Coming soon        | Native Python SDK and framework adapter                               |
 | Laravel (PHP)                     | Coming soon        | Native PHP SDK and framework adapter                                  |
+| FastAPI                           | Coming soon        | Dedicated integration and examples pending development                |
+| Spring Boot                       | Coming soon        | Dedicated integration and examples pending development                |
+| Express                           | Coming soon        | Dedicated integration and examples pending development                |
+| NestJS                            | Coming soon        | Dedicated integration and examples pending development                |
+| CodeIgniter                       | Coming soon        | Dedicated integration and examples pending development                |
+| Vue                               | Coming soon        | Dedicated integration and examples pending development                |
+| Angular                           | Coming soon        | Dedicated integration and examples pending development                |
 
 The portable browser/server building blocks already exist, but that does not establish support for the coming-soon hosts. Next Edge remains deferred and unsupported.
 
