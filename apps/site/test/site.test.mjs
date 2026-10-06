@@ -60,10 +60,13 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
             continue;
           }
           if (!href.startsWith(config.base)) continue;
-          const path = href.slice(config.base.length);
-          await access(
-            join(output, path.endsWith('/') || path === '' ? `${path}index.html` : path),
+          const [path, fragment] = href.slice(config.base.length).split('#');
+          const target = join(
+            output,
+            path.endsWith('/') || path === '' ? `${path}index.html` : path,
           );
+          await access(target);
+          if (fragment) assert.ok((await readFile(target, 'utf8')).includes(`id="${fragment}"`));
         }
         assert.match(html, /og:image.*?og\.png/);
         assert.doesNotMatch(html, /blob\/9f07183/);
