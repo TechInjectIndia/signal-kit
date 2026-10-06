@@ -783,3 +783,41 @@ td:last-child {
     flex-wrap: wrap;
   }
 }
+
+.code figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.code figcaption > span {
+  overflow-wrap: anywhere;
+}
+.copy-code {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #7e987b;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--lime);
+  font: 12px var(--mono);
+  cursor: pointer;
+}
+.copy-code:hover {
+  background: #284d38;
+}
+.copy-code:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 3px;
+}
+.copy-code[hidden] {
+  display: none;
+}
+.copy-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
