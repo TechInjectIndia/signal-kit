@@ -62,6 +62,7 @@ try {
     join(directory, 'proof.mjs'),
     `import {createSignals} from '@techinject/core';
 import {createBrowserSignals} from '@techinject/browser';
+import {mountConnectionsDashboard} from '@techinject/browser/dashboard';
 import {createServerSignals} from '@techinject/server';
 import {instrumentBunFetch} from '@techinject/bun';
 import {SignalKitProvider} from '@techinject/nextjs';
@@ -71,6 +72,7 @@ import {createNextSignals} from '@techinject/nextjs-server';
 const events=[];const sdk=createSignals({consent:{analytics:true,marketing:false,observability:false},providers:[{name:'proof',category:'analytics',send(event){events.push(event)}}]});
 await sdk.track({name:'page_view',properties:{page_path:'/proof?private=1'}});
 if(events.length!==1||events[0].properties.page_path!=='/proof')throw new Error('Standalone dispatch failed');
+if(typeof mountConnectionsDashboard!=='function'||sdk.getConnections()[0].sent!==1)throw new Error('Dashboard exports/status failed');
 if(typeof createSvelteKitClient!=='function'||typeof createSvelteKitHooks!=='function')throw new Error('SvelteKit exports failed');
 if(typeof createBrowserSignals!=='function'||typeof createServerSignals!=='function'||typeof instrumentBunFetch!=='function'||typeof SignalKitProvider!=='function'||typeof createNextSignals!=='function')throw new Error('Exports failed');
 console.log('Standalone tarball imports and dispatch passed');`,

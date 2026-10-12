@@ -179,3 +179,43 @@ export function platformCategories(name) {
   if (['HTML / JavaScript', 'Vue', 'Angular'].includes(name)) return ['frontend'];
   return ['backend'];
 }
+
+const connectionsExample = `// app/connections/page.tsx — under your existing SignalKitProvider
+'use client';
+import { useEffect, useRef } from 'react';
+import { useSignals } from '@techinject/nextjs';
+import { mountConnectionsDashboard } from '@techinject/browser/dashboard';
+export default function Connections() {
+  const signals = useSignals();
+  const element = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (element.current) return mountConnectionsDashboard(element.current, signals);
+  }, [signals]);
+  return <div ref={element} />;
+}`;
+for (const page of platformPages) {
+  page.sections.push({
+    title: 'In-app connections dashboard',
+    paragraphs: [
+      'Use the existing SDK instance to show configured event providers, consent blocks, recent outcomes and counters. Counts reset with the instance; send completion does not prove provider delivery or attribution. Technical observers and cross-request server aggregation are not included. Protect production diagnostics with your host authentication.',
+      page.path === 'docs/nextjs/'
+        ? 'The Next.js local lab includes /connections. Mount this page under your existing SignalKitProvider.'
+        : page.path === 'docs/sveltekit/'
+          ? 'Mount the portable renderer after the root client is mounted, using client.getSignals(). Return its cleanup on page unmount. The renderer is available from @techinject/browser/dashboard; add the browser package as a direct dependency.'
+          : 'Server instances expose getConnections() and subscribeConnections(). Server counts are per instance, often per request. Expose only safe snapshots through a host-authenticated endpoint if you need a server view; never ship server providers or credentials to a browser.',
+    ],
+    label: page.path === 'docs/nextjs/' ? 'app/connections/page.tsx' : 'Portable dashboard wiring',
+    code:
+      page.path === 'docs/nextjs/'
+        ? connectionsExample
+        : page.path === 'docs/sveltekit/'
+          ? `import { mountConnectionsDashboard } from '@techinject/browser/dashboard';
+// Inside the host client lifecycle, after client.mount():
+const cleanup = mountConnectionsDashboard(element, client.getSignals());
+// Call cleanup() when the dashboard unmounts.`
+          : `// On your existing server SDK instance:
+const snapshot = signals.getConnections();
+// Safe provider metadata and aggregate outcomes only.
+// Host authentication/aggregation are your application's responsibility.`,
+  });
+}

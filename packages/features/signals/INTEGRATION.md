@@ -278,3 +278,7 @@ Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfi
 [Next instrumentation](https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation), [Next OpenTelemetry](https://nextjs.org/docs/app/guides/open-telemetry), [Bun server](https://bun.sh/docs/runtime/http/server), [OTLP exporters](https://opentelemetry.io/docs/languages/js/exporters/), [Razorpay webhook validation](https://razorpay.com/docs/webhooks/validate-test/). Follow current provider documentation before enabling a live account; recorded fixture evidence is separate.
 
 [SvelteKit guide](https://techinjectindia.github.io/signal-kit/docs/sveltekit/) · [SvelteKit local lab](../../../examples/sveltekit/README.md)
+
+## In-app connections dashboard
+
+The optional browser renderer mounts against an existing SDK instance. See [dashboard setup](../../../docs/CONNECTIONS-DASHBOARD.md) for Next.js and portable wiring, server limitations and authentication responsibilities. The Next lab includes `/connections`.

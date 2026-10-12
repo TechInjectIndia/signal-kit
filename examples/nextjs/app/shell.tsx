@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
 import { SignalKitProvider, useSignals, type BrowserConfig } from '@techinject/nextjs';
 import type { Consent, EventInput, DispatchResult } from '@techinject/contracts';
 
@@ -72,7 +73,9 @@ function Lab({
         <span className="brand">
           signal-kit<span aria-hidden="true"> ◉</span>
         </span>
-        <span className="tag">LOCAL LAB / v0.1</span>
+        <Link className="tag" href="/connections">
+          Connections →
+        </Link>
       </header>
       <div className="grid">
         <main>{children}</main>

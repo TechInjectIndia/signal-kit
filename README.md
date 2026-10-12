@@ -26,6 +26,10 @@ pnpm --filter @signalkit/example-bun dev
 
 The examples use local recorders and synthetic data. The Next lab starts with all consent denied. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
 
+## Connections dashboard
+
+Open `/connections` in the Next.js lab to see configured event providers, consent blocks, send outcomes and counters. Embed the same portable view inside your app with `@techinject/browser/dashboard`. It reads the existing SDK instance and updates without polling. No credentials, payloads or extra provider requests are used. See [dashboard setup](docs/CONNECTIONS-DASHBOARD.md).
+
 ## What is included
 
 - Typed product_view, add_to_cart, begin_checkout and purchase events; runtime payload validation.

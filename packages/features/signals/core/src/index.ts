@@ -28,6 +28,20 @@ export type SignalsOptions = {
   maxPending?: number;
   onDiagnostic?: (result: DispatchResult) => void;
 };
+export type ConnectionStatus = {
+  name: string;
+  category: keyof Consent;
+  consent: boolean;
+  disposed: boolean;
+  attempts: number;
+  sent: number;
+  failed: number;
+  denied: number;
+  dropped: number;
+  invalid: number;
+  lastStatus?: DispatchResult['outcomes'][number]['status'];
+  lastUpdated?: number;
+};
 export type Signals = ReturnType<typeof createSignals>;
 export function generateId(): string {
   return globalThis.crypto.randomUUID();
@@ -86,6 +100,28 @@ export function createSignals(options: SignalsOptions = {}) {
   }
   let consent = normalizeConsent(options.consent);
   let disposed = false;
+  const connections: ConnectionStatus[] = providers.map((provider) => ({
+    name: provider.name,
+    category: provider.category,
+    consent: false,
+    disposed: false,
+    attempts: 0,
+    sent: 0,
+    failed: 0,
+    denied: 0,
+    dropped: 0,
+    invalid: 0,
+  }));
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of listeners) {
+      try {
+        listener();
+      } catch {
+        /* Status UI must not affect hosts. */
+      }
+    }
+  };
   const pending = new Set<Promise<DispatchResult>>();
   const active = new Map<AbortController, keyof Consent>();
   const timeoutMs = Number.isFinite(options.timeoutMs)
@@ -95,6 +131,16 @@ export function createSignals(options: SignalsOptions = {}) {
     ? Math.max(1, Math.min(Math.floor(options.maxPending!), 1000))
     : 100;
   function report(result: DispatchResult) {
+    // Outcomes retain provider order, including duplicate names. Never retain payloads or IDs.
+    result.outcomes.forEach((outcome, index) => {
+      const connection = connections[index];
+      if (!connection) return;
+      connection.attempts++;
+      connection[outcome.status]++;
+      connection.lastStatus = outcome.status;
+      connection.lastUpdated = Date.now();
+    });
+    notify();
     try {
       options.onDiagnostic?.(result);
     } catch {
@@ -186,6 +232,8 @@ export function createSignals(options: SignalsOptions = {}) {
   }
   function setConsent(next: Consent) {
     consent = normalizeConsent(next);
+    for (const connection of connections) connection.consent = consent[connection.category];
+    notify();
     for (const [controller, category] of active) if (!consent[category]) controller.abort();
     for (const provider of providers) {
       try {
@@ -200,11 +248,21 @@ export function createSignals(options: SignalsOptions = {}) {
     track,
     setConsent,
     getConsent: () => ({ ...consent }),
+    getConnections: (): ConnectionStatus[] => connections.map((connection) => ({ ...connection })),
+    subscribeConnections(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
     flush: async () => {
       await Promise.all([...pending]);
     },
     dispose: () => {
       disposed = true;
+      for (const connection of connections) connection.disposed = true;
+      notify();
+      listeners.clear();
       for (const controller of active.keys()) controller.abort();
       for (const provider of providers) {
         try {
