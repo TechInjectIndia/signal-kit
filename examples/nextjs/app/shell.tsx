@@ -70,9 +70,9 @@ function Lab({
   return (
     <Context.Provider value={{ track }}>
       <header className="top">
-        <span className="brand">
+        <Link className="brand" href="/" aria-label="SignalKit lab home">
           signal-kit<span aria-hidden="true"> ◉</span>
-        </span>
+        </Link>
         <Link className="tag" href="/connections">
           Connections →
         </Link>

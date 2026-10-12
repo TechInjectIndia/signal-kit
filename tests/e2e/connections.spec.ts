@@ -14,4 +14,8 @@ test('connections page follows real consent and SDK outcomes on mobile', async (
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
   await page.screenshot({ path: 'test-results/connections-mobile.png', fullPage: true });
+  await page.getByRole('link', { name: 'SignalKit lab home' }).click();
+  await expect(dashboard).toHaveCount(0);
+  await page.getByRole('link', { name: 'Connections' }).click();
+  await expect(dashboard.getByRole('article').first()).toContainText('1 completed');
 });
