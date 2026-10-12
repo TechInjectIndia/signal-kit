@@ -9,8 +9,15 @@ export function createSvelteKitHooks(
 ): { handle: Handle; handleFetch: HandleFetch } {
   const active = new AsyncLocalStorage<ServerSignals>();
   const handle: Handle = async ({ event, resolve }) => {
-    const config = await getConfig(event);
-    const signals = createServerSignals(config);
+    let config: ServerConfig;
+    let signals: ServerSignals;
+    try {
+      config = await getConfig(event);
+      signals = createServerSignals(config);
+    } catch {
+      // Fail closed for telemetry, without inheriting a parent request's policy.
+      return active.exit(() => resolve(event));
+    }
     try {
       return await active.run(signals, () =>
         signals.handle(event.request, () => resolve(event), {

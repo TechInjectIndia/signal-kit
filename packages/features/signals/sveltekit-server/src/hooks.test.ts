@@ -130,3 +130,32 @@ test('concurrent requests keep consent and trace state isolated', async () => {
   expect(records).toHaveLength(2);
   expect(records.every((r) => r.traceId === 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toBe(true);
 });
+
+test.each([false, true])(
+  'configuration failure skips telemetry and preserves the host response (async=%s)',
+  async (asyncFailure) => {
+    const policyError = new Error('private config error');
+    const hooks = createSvelteKitHooks(() => {
+      if (asyncFailure) return Promise.reject(policyError);
+      throw policyError;
+    });
+    const event = {
+      request: new Request('https://shop.example/api'),
+      route: { id: '/api' },
+    } as RequestEvent;
+    const response = await hooks.handle({
+      event,
+      resolve: async () => new Response('host still works'),
+    });
+    expect(await response.text()).toBe('host still works');
+    const hostError = new Error('host exception');
+    await expect(
+      hooks.handle({
+        event,
+        resolve: async () => {
+          throw hostError;
+        },
+      }),
+    ).rejects.toBe(hostError);
+  },
+);
