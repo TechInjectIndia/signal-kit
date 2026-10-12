@@ -23,6 +23,8 @@ const allowed = {
     '@opentelemetry/sdk-trace-base',
   ],
   bun: ['@techinject/server', '@techinject/contracts'],
+  sveltekit: ['@techinject/browser'],
+  'sveltekit-server': ['@techinject/server'],
 };
 for (const [name, dependencies] of Object.entries(allowed)) {
   const path = join(root, 'packages/features/signals', name);
@@ -36,9 +38,9 @@ for (const [name, dependencies] of Object.entries(allowed)) {
       !/from\s+['"](?:.*examples\/|.*apps\/|\.\.\/.*\/src\/)/.test(source),
       `${file}: internal cross-boundary import`,
     );
-    if (['contracts', 'core', 'browser', 'nextjs'].includes(name))
+    if (['contracts', 'core', 'browser', 'nextjs', 'sveltekit'].includes(name))
       assert.ok(
-        !/from\s+['"](?:node:|@techinject\/server|@techinject\/bun|@techinject\/nextjs-server)/.test(
+        !/from\s+['"](?:node:|@techinject\/server|@techinject\/bun|@techinject\/nextjs-server|@techinject\/sveltekit-server)/.test(
           source,
         ),
         `${name} imports server code`,
@@ -53,10 +55,11 @@ console.log('SDK dependency and source boundaries passed');
 
 for (const [consumer, forbidden] of [
   ['@techinject/nextjs', /server|bun/],
+  ['@techinject/sveltekit', /server|bun/],
   ['@techinject/server', /browser|nextjs|example/],
   [
     '@signalkit/site',
-    /@(?:techinject|signalkit)\/(contracts|core|browser|server|bun|nextjs|example)/,
+    /@(?:techinject|signalkit)\/(contracts|core|browser|server|bun|nextjs|sveltekit|example)/,
   ],
 ]) {
   const result = spawnSync(

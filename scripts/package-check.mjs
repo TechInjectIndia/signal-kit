@@ -11,7 +11,17 @@ function run(command, args, cwd) {
   return result.stdout;
 }
 try {
-  const names = ['contracts', 'core', 'browser', 'server', 'nextjs', 'nextjs-server', 'bun'];
+  const names = [
+    'contracts',
+    'core',
+    'browser',
+    'server',
+    'nextjs',
+    'nextjs-server',
+    'bun',
+    'sveltekit',
+    'sveltekit-server',
+  ];
   for (const name of names) {
     const leaf = join(root, 'packages/features/signals', name);
     run('pnpm', ['pack', '--pack-destination', directory], leaf);
@@ -55,10 +65,13 @@ import {createBrowserSignals} from '@techinject/browser';
 import {createServerSignals} from '@techinject/server';
 import {instrumentBunFetch} from '@techinject/bun';
 import {SignalKitProvider} from '@techinject/nextjs';
+import {createSvelteKitClient} from '@techinject/sveltekit';
+import {createSvelteKitHooks} from '@techinject/sveltekit-server';
 import {createNextSignals} from '@techinject/nextjs-server';
 const events=[];const sdk=createSignals({consent:{analytics:true,marketing:false,observability:false},providers:[{name:'proof',category:'analytics',send(event){events.push(event)}}]});
 await sdk.track({name:'page_view',properties:{page_path:'/proof?private=1'}});
 if(events.length!==1||events[0].properties.page_path!=='/proof')throw new Error('Standalone dispatch failed');
+if(typeof createSvelteKitClient!=='function'||typeof createSvelteKitHooks!=='function')throw new Error('SvelteKit exports failed');
 if(typeof createBrowserSignals!=='function'||typeof createServerSignals!=='function'||typeof instrumentBunFetch!=='function'||typeof SignalKitProvider!=='function'||typeof createNextSignals!=='function')throw new Error('Exports failed');
 console.log('Standalone tarball imports and dispatch passed');`,
   );

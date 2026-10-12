@@ -4,13 +4,13 @@ These packages are local workspace packages, not yet available on npm. Build the
 
 ## Platform availability
 
-The SDK is designed around platform-independent contracts. Next.js and Bun are the current alpha integrations; the dedicated integrations below are **coming soon**, pending development. No release dates are committed. Planned platforms do not yet have verified installation recipes or native SDKs.
+The SDK is designed around platform-independent contracts. Next.js, Bun and SvelteKit are the current alpha integrations; the dedicated integrations below are **coming soon**, pending development. No release dates are committed. Planned platforms do not yet have verified installation recipes or native SDKs.
 
 | Platform                          | Status             | Integration scope                                                     |
 | --------------------------------- | ------------------ | --------------------------------------------------------------------- |
 | Next.js App Router (Node runtime) | Available in alpha | Browser provider and separate Node instrumentation; examples below    |
 | Bun                               | Available in alpha | Wrapped incoming handlers and explicit outbound fetch; examples below |
-| SvelteKit                         | Coming soon        | Framework adapter and integration examples                            |
+| SvelteKit 3 / Svelte 5 (Node)     | Available in alpha | Browser lifecycle and isolated server hooks                           |
 | Hono                              | Coming soon        | Framework adapter and integration examples                            |
 | Astro                             | Coming soon        | Framework adapter and integration examples                            |
 | Node.js (standalone)              | Coming soon        | Dedicated generic server integration and examples                     |
@@ -229,6 +229,46 @@ process.on('SIGINT', async () => {
 });
 ```
 
+## SvelteKit 3 (Svelte 5, Node runtime)
+
+Use separate @techinject/sveltekit (client) and @techinject/sveltekit-server (server) packages. Both are source/local-tarball alpha packages, not npm releases. See the [runnable lab](../../../examples/sveltekit/README.md) and [web guide](https://techinjectindia.github.io/signal-kit/docs/sveltekit/).
+
+```svelte
+<script lang="ts">
+  import { onMount, setContext } from 'svelte';
+  import { createSvelteKitClient, createGA4Provider } from '@techinject/sveltekit';
+  let { children } = $props();
+  const client = createSvelteKitClient({
+    providers: [createGA4Provider({ measurementId: 'G-YOURID' })],
+    consent: { analytics: false, marketing: false, observability: false },
+  });
+  setContext('signals', client);
+  onMount(() => { client.mount(); return () => client.dispose(); });
+</script>
+{@render children()}
+```
+
+In a mounted child, obtain the layout client with getContext and apply the consent manager's real persisted choice using client.getSignals().setConsent(...). track accepts the same typed ecommerce inputs as the other browser adapters. Automatic initial/pathname pages are already enabled; do not duplicate them with an afterNavigate page call. After consent, page() is an explicit optional current-page event because denied pages are not replayed. Configure a browser observer for fetch/XHR technical telemetry.
+
+```ts
+// src/hooks.server.ts — server-only, Node runtime
+import { createSvelteKitHooks, createOTLPObserver } from '@techinject/sveltekit-server';
+const hooks = createSvelteKitHooks((event) => ({
+  // Replace with host-authorized policy for this request; denied by default.
+  consent: { analytics: false, marketing: false, observability: false },
+  observer: createOTLPObserver({
+    endpoint: 'http://localhost:4318/v1/traces',
+    serviceName: 'shop-sveltekit',
+  }),
+  excludeUrls: ['/v1/traces'],
+  traceOrigins: ['https://inventory.example'],
+}));
+export const handle = hooks.handle;
+export const handleFetch = hooks.handleFetch;
+```
+
+Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. SvelteKit 3 is verified; Kit 2 is not certified by this build.
+
 ## Development
 
 Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfile; pnpm build; pnpm test; pnpm typecheck; pnpm test:boundaries. pnpm --filter @signalkit/example-nextjs dev or pnpm --filter @signalkit/example-bun dev. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
@@ -236,3 +276,5 @@ Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfi
 ## Technical references
 
 [Next instrumentation](https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation), [Next OpenTelemetry](https://nextjs.org/docs/app/guides/open-telemetry), [Bun server](https://bun.sh/docs/runtime/http/server), [OTLP exporters](https://opentelemetry.io/docs/languages/js/exporters/), [Razorpay webhook validation](https://razorpay.com/docs/webhooks/validate-test/). Follow current provider documentation before enabling a live account; recorded fixture evidence is separate.
+
+[SvelteKit guide](https://techinjectindia.github.io/signal-kit/docs/sveltekit/) · [SvelteKit local lab](../../../examples/sveltekit/README.md)

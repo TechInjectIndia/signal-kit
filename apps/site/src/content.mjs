@@ -3,7 +3,7 @@ export const repository = 'https://github.com/TechInjectIndia/signal-kit';
 export const faq = [
   [
     'What is SignalKit?',
-    'SignalKit is an open-source, consent-aware ecommerce telemetry SDK. It gives Next.js and Bun projects shared typed events, page and request instrumentation, and adapters for analytics and observability providers.',
+    'SignalKit is an open-source, consent-aware ecommerce telemetry SDK. It gives Next.js, Bun and SvelteKit projects shared typed events, page and request instrumentation, and adapters for analytics and observability providers.',
   ],
   [
     'Is SignalKit available on npm?',
@@ -11,7 +11,7 @@ export const faq = [
   ],
   [
     'Which frameworks does SignalKit support?',
-    'Next.js App Router on the Node runtime and Bun are the initial integrations. Next Edge is unsupported. Coming soon: SvelteKit, Hono, Astro, standalone Node.js, HTML/vanilla JavaScript, Django, Laravel, FastAPI, Spring Boot, Express, Fastify, NestJS, CodeIgniter, Vue and Angular. Their dedicated integrations are pending development, with no committed release dates.',
+    'Next.js, Bun and SvelteKit 3 / Svelte 5 on the Node runtime are current alpha integrations. Next Edge is unsupported. Coming soon: Hono, Astro, standalone Node.js, HTML/vanilla JavaScript, Django, Laravel, FastAPI, Spring Boot, Express, Fastify, NestJS, CodeIgniter, Vue and Angular. Their dedicated integrations are pending development, with no committed release dates.',
   ],
   [
     'Does SignalKit automatically track every page and API?',

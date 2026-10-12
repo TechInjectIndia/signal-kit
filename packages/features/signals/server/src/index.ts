@@ -28,7 +28,6 @@ function trace(header: string | null): Trace {
 export function createServerSignals(config: ServerConfig = {}) {
   const signals = createSignals(config);
   const context = new AsyncLocalStorage<Trace>();
-  const transport = config.fetch ?? globalThis.fetch;
   let disposed = false;
   const observations = new Set<Promise<void>>();
   const maxObservations = Number.isFinite(config.maxPending)
@@ -63,54 +62,57 @@ export function createServerSignals(config: ServerConfig = {}) {
     });
     observations.add(pending);
   };
-  const instrumentedFetch: typeof globalThis.fetch = async (input, init) => {
-    const url = input instanceof Request ? input.url : String(input);
-    if (disposed || !signals.getConsent().observability || excluded(url))
-      return transport(input, init);
-    const request = new Request(input, init);
-    const parent = context.getStore();
-    const headers = new Headers(request.headers);
-    const existingHeader = headers.get('traceparent');
-    const existing = parseTraceparent(existingHeader);
-    // The outgoing record identifies the span actually propagated on the wire.
-    const span: Trace = existing
-      ? {
-          traceId: existing.traceId,
-          spanId: existing.spanId,
-          flags: existingHeader!.split('-')[3]!,
-        }
-      : parent
-        ? { ...parent, parentSpanId: parent.spanId, spanId: randomHex(8) }
-        : trace(null);
-    if (
-      (config.traceOrigins ?? []).includes(new URL(request.url).origin) &&
-      !headers.has('traceparent')
-    ) {
-      headers.set('traceparent', `00-${span.traceId}-${span.spanId}-${span.flags}`);
-    }
-    const start = performance.now();
-    const startTime = Date.now();
-    let status = 0;
-    try {
-      const response = await transport(new Request(request, { headers }));
-      status = response.status;
-      return response;
-    } finally {
-      observe({
-        kind: 'request',
-        route: safeRoute(request.url),
-        method: request.method,
-        status,
-        durationMs: performance.now() - start,
-        ...span,
-        error: status === 0 || status >= 400,
-        ...{ startTime, spanKind: 3 },
-      });
-    }
-  };
+  const instrumentFetch =
+    (transport: typeof globalThis.fetch): typeof globalThis.fetch =>
+    async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (disposed || !signals.getConsent().observability || excluded(url))
+        return transport(input, init);
+      const request = new Request(input, init);
+      const parent = context.getStore();
+      const headers = new Headers(request.headers);
+      const existingHeader = headers.get('traceparent');
+      const existing = parseTraceparent(existingHeader);
+      // The outgoing record identifies the span actually propagated on the wire.
+      const span: Trace = existing
+        ? {
+            traceId: existing.traceId,
+            spanId: existing.spanId,
+            flags: existingHeader!.split('-')[3]!,
+          }
+        : parent
+          ? { ...parent, parentSpanId: parent.spanId, spanId: randomHex(8) }
+          : trace(null);
+      if (
+        (config.traceOrigins ?? []).includes(new URL(request.url).origin) &&
+        !headers.has('traceparent')
+      ) {
+        headers.set('traceparent', `00-${span.traceId}-${span.spanId}-${span.flags}`);
+      }
+      const start = performance.now();
+      const startTime = Date.now();
+      let status = 0;
+      try {
+        const response = await transport(new Request(request, { headers }));
+        status = response.status;
+        return response;
+      } finally {
+        observe({
+          kind: 'request',
+          route: safeRoute(request.url),
+          method: request.method,
+          status,
+          durationMs: performance.now() - start,
+          ...span,
+          error: status === 0 || status >= 400,
+          ...{ startTime, spanKind: 3 },
+        });
+      }
+    };
   return {
     ...signals,
-    fetch: instrumentedFetch,
+    fetch: instrumentFetch(config.fetch ?? globalThis.fetch),
+    wrapFetch: instrumentFetch,
     setConsent(consent: Consent) {
       signals.setConsent(consent);
       try {

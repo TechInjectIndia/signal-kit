@@ -59,3 +59,7 @@ Implemented defaults: three denied-by-default consent categories, dropped precon
 ## Public website amendment — 2026-10-06
 
 User authorized a static site for organic discovery. Developer visitors should understand what SignalKit is, supported use cases, how to try it, provider/consent boundaries and current evidence. Public overview, quickstart, integrations and FAQ are crawlable complete HTML with metadata and semantic structured data. Search rankings, indexing and generated-answer citations are not promised. Public canonical URL remains owner-configurable. Local labs remain noindex. No lead form, account, tracking scripts or new backend is needed.
+
+## SvelteKit adapter extension
+
+Owner-authorized addition, 12 October 2026: separate SSR-safe browser lifecycle and Node server-hook packages, plus a SvelteKit 3/Svelte 5 consumer lab. Browser mount/dispose retains consent/page/request semantics. Server handle/handleFetch uses route templates, isolated per-request config and framework fetch transport. Preserve responses, errors and browser/server import boundaries; no new hosted application or provider support. Node only; Kit 2/Edge remain unverified. Acceptance: leaf tests, independent package exports, browser boundary, real production SSR/navigation/consent/API trace checks.

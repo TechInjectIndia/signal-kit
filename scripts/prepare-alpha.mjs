@@ -7,7 +7,17 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import { root } from './files.mjs';
 const version = '0.1.0-alpha.1';
-const names = ['contracts', 'core', 'browser', 'server', 'nextjs', 'nextjs-server', 'bun'];
+const names = [
+  'contracts',
+  'core',
+  'browser',
+  'server',
+  'nextjs',
+  'nextjs-server',
+  'bun',
+  'sveltekit',
+  'sveltekit-server',
+];
 const output = resolve(root, 'artifacts', version);
 function run(command, args, cwd = root) {
   const result = spawnSync(command, args, { cwd, encoding: 'utf8' });
@@ -88,7 +98,7 @@ console.log('Installed local alpha in '+target+'; registry publication is not im
 );
 await writeFile(
   join(output, 'README.txt'),
-  `SignalKit ${version} release candidate. NOT PUBLISHED.\n\nUse Node22 + pnpm10.24.0. In a fresh directory:\nnode install-local.mjs /path/to/fresh-consumer\n\nAll seven SDK tarballs use local overrides so no unpublished @techinject package is fetched from npm. External dependencies still use the normal registry. Browser-only JavaScript can import the bundled signalkit-browser.mjs with modern browser APIs. No framework or global JavaScript exception support beyond documented targets is implied.\n\nHuman review: inspect docs/releases/0.1.0-alpha.1.md and ALPHA-REVIEW.md. npm account/scope ownership, login, release authorization and provider account validation remain separate. Never store tokens in this folder.\n`,
+  `SignalKit ${version} release candidate. NOT PUBLISHED.\n\nUse Node22 + pnpm10.24.0. In a fresh directory:\nnode install-local.mjs /path/to/fresh-consumer\n\nAll nine SDK tarballs use local overrides so no unpublished @techinject package is fetched from npm. External dependencies still use the normal registry. Browser-only JavaScript can import the bundled signalkit-browser.mjs with modern browser APIs. No framework or global JavaScript exception support beyond documented targets is implied.\n\nHuman review: inspect docs/releases/0.1.0-alpha.1.md and ALPHA-REVIEW.md. npm account/scope ownership, login, release authorization and provider account validation remain separate. Never store tokens in this folder.\n`,
 );
 const files = (await readdir(output)).filter((name) => name !== 'SHA256SUMS.txt').sort();
 const sums = await Promise.all(

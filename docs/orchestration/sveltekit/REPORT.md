@@ -1,0 +1,9 @@
+# SvelteKit adapter verification
+
+Owner-authorized extension, 12 October 2026. Adds separate @techinject/sveltekit browser and @techinject/sveltekit-server Node adapters, both unpublished 0.1.0-alpha.1 packages, and a real SvelteKit 3.0.1/Svelte 5.57.2 Node consumer. Browser lifecycle preserves the portable SDK's consent/history/request behavior. Server hooks use request-specific configuration, route templates, async context isolation and host fetch transport. Flush has a capped request budget even if a custom observer never settles.
+
+Local Node 22 verification passed: workspace build/typecheck/tests, six adapter tests (SSR/mount/navigation, response/error preservation, trace correlation, concurrent consent/trace isolation, hung flush), nine fresh tarball imports/dispatch, alpha installer with 15 checksums and overwrite refusal, browser/Node boundaries, SvelteKit production SSR/hydration/navigation/cart/API/withdrawal test, static site tests, original Next browser flow and Next local OTel collector. Production dependency audit reported no known vulnerabilities. Packaging checks caught and excluded new compiled test files before final tarball verification.
+
+Framework toolchain is pinned independently: Kit 3.0.1, Svelte 5.57.2, adapter-node 6.0.0, Vite 8.3.4, plugin 7.3.1, TypeScript 6.0.3. SDK root remains on its existing toolchain. Kit 3 moved config to the Vite plugin and tsconfig to $app/tsconfig; the fixture uses those actual conventions. Real Kit fetch hooks required async request context rather than event-object identity; the production test establishes that correlation.
+
+No npm publication, release tag, provider writes, live attribution claim or client-project integration performed. SvelteKit 2 and Edge are not certified. Static/prerender assets and background/streaming work after resolve are outside the incoming request hook scope. Host owns policy, durable orders/retry and collector deployment.

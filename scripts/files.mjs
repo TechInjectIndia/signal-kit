@@ -15,6 +15,7 @@ const ignored = new Set([
   'playwright-report',
   'test-results',
   'artifacts',
+  '.svelte-kit',
 ]);
 
 export async function files(directory = root) {

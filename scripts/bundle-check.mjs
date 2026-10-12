@@ -23,3 +23,18 @@ assert.ok(
 console.log(
   `Browser SDK with all adapters: ${output.length} bytes minified, ${gzip} bytes gzip (30kB budget); no server imports`,
 );
+
+const svelte = await build({
+  entryPoints: [join(root, 'packages/features/signals/sveltekit/dist/index.js')],
+  bundle: true,
+  platform: 'browser',
+  write: false,
+  metafile: true,
+});
+assert.ok(
+  !Object.keys(svelte.metafile.inputs).some((path) =>
+    /\/server\/|sveltekit-server|node:/.test(path),
+  ),
+  'SvelteKit browser bundle imports server code',
+);
+console.log('SvelteKit browser entry bundles without server imports');

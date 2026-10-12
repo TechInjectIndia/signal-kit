@@ -1,6 +1,6 @@
 # SignalKit
 
-A consent-aware ecommerce telemetry SDK for Next.js and Bun. Shared typed events, automatic page/request instrumentation and provider adapters, with a platform-independent core.
+A consent-aware ecommerce telemetry SDK for Next.js, Bun and SvelteKit. Shared typed events, automatic page/request instrumentation and provider adapters, with a platform-independent core.
 
 **Status: alpha candidate `0.1.0-alpha.1`, not yet published to npm.** Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
 
@@ -55,13 +55,13 @@ The owner-selected package scope is `@techinject`; packages are not published ye
 
 ## Platform availability
 
-The SDK is designed around platform-independent contracts. Next.js and Bun are the current alpha integrations; the dedicated integrations below are **coming soon**, pending development. No release dates are committed. Planned platforms do not yet have verified installation recipes or native SDKs.
+The SDK is designed around platform-independent contracts. Next.js, Bun and SvelteKit are the current alpha integrations; the dedicated integrations below are **coming soon**, pending development. No release dates are committed. Planned platforms do not yet have verified installation recipes or native SDKs.
 
 | Platform                          | Status             | Integration scope                                                     |
 | --------------------------------- | ------------------ | --------------------------------------------------------------------- |
 | Next.js App Router (Node runtime) | Available in alpha | Browser provider and separate Node instrumentation; examples below    |
 | Bun                               | Available in alpha | Wrapped incoming handlers and explicit outbound fetch; examples below |
-| SvelteKit                         | Coming soon        | Framework adapter and integration examples                            |
+| SvelteKit 3 / Svelte 5 (Node)     | Available in alpha | Browser lifecycle and isolated Node request hooks                     |
 | Hono                              | Coming soon        | Framework adapter and integration examples                            |
 | Astro                             | Coming soon        | Framework adapter and integration examples                            |
 | Node.js (standalone)              | Coming soon        | Dedicated generic server integration and examples                     |
@@ -274,3 +274,5 @@ MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their p
 ## Alpha and pilot participation
 
 [Alpha review and install plan](docs/releases/0.1.0-alpha.1.md) · [Pilot developer handoff](docs/growth/PILOT-GUIDE.md) · [Maintenance routine](docs/growth/MAINTAINER-SOP.md). Report a concrete installation problem; stars are welcome, but real usage and useful feedback matter more.
+
+[SvelteKit guide](https://techinjectindia.github.io/signal-kit/docs/sveltekit/) · [SvelteKit local lab](examples/sveltekit/README.md)
