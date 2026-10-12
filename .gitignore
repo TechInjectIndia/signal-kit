@@ -24,3 +24,6 @@ playwright-report/
 test-results/
 
 artifacts/
+
+.svelte-kit/
+examples/sveltekit/build/

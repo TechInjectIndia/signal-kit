@@ -11,3 +11,7 @@ test-results
 **/next-env.d.ts
 
 artifacts/
+
+.svelte-kit/
+examples/sveltekit/build/
+examples/sveltekit/src/**/*.svelte

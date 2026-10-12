@@ -1,3 +1,4 @@
+import { sveltekitPage } from './sveltekit-docs.mjs';
 import { nextExample, bunExample, purchaseExample } from './content.mjs';
 import { integrationExamples } from './integration-examples.mjs';
 export const platforms = [
@@ -13,8 +14,13 @@ export const platforms = [
     logo: 'bun',
     description: 'Incoming API handlers, safe routes, outbound fetch and OTLP export.',
   },
+  {
+    name: 'SvelteKit',
+    path: 'docs/sveltekit/',
+    logo: 'svelte',
+    description: 'SvelteKit 3 / Svelte 5 browser lifecycle and isolated Node request hooks.',
+  },
   ...[
-    'SvelteKit',
     'Hono',
     'Astro',
     'Node.js',
@@ -62,6 +68,7 @@ const snippet = (x) => ({
   label: x.label,
 });
 export const platformPages = [
+  sveltekitPage,
   {
     path: 'docs/nextjs/',
     label: 'Next.js integration',

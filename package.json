@@ -27,7 +27,8 @@
     "site:publish": "node scripts/publish-site.mjs",
     "release:prepare": "node scripts/prepare-alpha.mjs",
     "demo:record": "node scripts/record-demo.mjs",
-    "test:alpha": "node scripts/test-alpha-installer.mjs"
+    "test:alpha": "node scripts/test-alpha-installer.mjs",
+    "test:sveltekit": "playwright test --config playwright.sveltekit.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

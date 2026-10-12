@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- SvelteKit 3/Svelte 5 browser lifecycle and Node request-hook adapters with a real consumer lab.
+- Server wrapFetch preserves host transport while instrumenting outgoing calls.
+
 Human-reviewed release notes will describe changes, migration steps, and verification limits. No SDK release exists yet.
 
 ## Unreleased

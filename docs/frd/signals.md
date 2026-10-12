@@ -36,3 +36,7 @@ Third-party scripts load only for allowed provider dispatch and use vendor revoc
 | CAPI event mapping/rejection           | injected transport tests; no live evidence               |
 | OTLP JSON/rejection/withdrawal         | transport tests; no real SigNoz evidence                 |
 | HMAC/order verification/durable replay | Bun synthetic signed webhook process restart test        |
+
+## SvelteKit adapter extension
+
+Owner-authorized addition, 12 October 2026: separate SSR-safe browser lifecycle and Node server-hook packages, plus a SvelteKit 3/Svelte 5 consumer lab. Browser mount/dispose retains consent/page/request semantics. Server handle/handleFetch uses route templates, isolated per-request config and framework fetch transport. Preserve responses, errors and browser/server import boundaries; no new hosted application or provider support. Node only; Kit 2/Edge remain unverified. Acceptance: leaf tests, independent package exports, browser boundary, real production SSR/navigation/consent/API trace checks.

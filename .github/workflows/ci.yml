@@ -53,3 +53,4 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
           pnpm test:site:e2e
+          pnpm test:sveltekit

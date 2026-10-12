@@ -28,6 +28,7 @@ test('public content is crawlable, navigable and responsive without JavaScript',
     'docs/',
     'docs/nextjs/',
     'docs/bun/',
+    'docs/sveltekit/',
     'integrations/',
     'faq/',
     'guides/',
@@ -47,10 +48,10 @@ test('public content is crawlable, navigable and responsive without JavaScript',
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: 'test-results/platform-hub-mobile.png', fullPage: true });
   await expect(page.locator('.platform-pending a')).toHaveCount(0);
-  await expect(page.locator('.platform-tabs [aria-disabled=true]')).toHaveCount(15);
+  await expect(page.locator('.platform-tabs [aria-disabled=true]')).toHaveCount(14);
   await page
     .locator('.platform-card')
-    .first()
+    .filter({ hasText: 'Next.js' })
     .getByRole('link', { name: 'Read integration guide' })
     .click();
   await expect(page).toHaveURL(/docs\/nextjs\//);
