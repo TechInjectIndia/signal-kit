@@ -2,7 +2,7 @@
 
 Use `pnpm changeset` for SDK changes. The nine public packages form one fixed group; apps/examples stay private. `pnpm release:version` updates manifests, dependency references, changelogs and the lockfile. Changesets alpha mode is enabled. Exit prerelease mode only after an explicit stable-release decision; pre-1.0 breaking changes require migration notes.
 
-The Releases workflow follows successful main CI. Pending changesets open a version PR. A reviewed version PR is merged under normal branch protections. With no pending changesets and `NPM_RELEASES_ENABLED=true`, the publish job rebuilds/tests clean main, prepares checksum artifacts, publishes in dependency order, and creates a GitHub release only after all package publications succeed. The `npm-release` environment should require a human maintainer reviewer. Configure GitHub Actions to allow creating PRs; token-created PRs may need a maintainer-triggered CI run.
+The Releases workflow follows successful main CI and checks out that exact tested commit; manual runs use the selected workflow commit. Pending changesets open a version PR. A reviewed version PR is merged under normal branch protections. With no pending changesets and `NPM_RELEASES_ENABLED=true`, the publish job rebuilds/tests clean main, prepares checksum artifacts, publishes in dependency order, and creates a GitHub release only after all package publications succeed. The `npm-release` environment should require a human maintainer reviewer. Configure GitHub Actions to allow creating PRs; token-created PRs may need a maintainer-triggered CI run.
 
 ## Initial npm setup and publication
 
