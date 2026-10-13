@@ -134,7 +134,7 @@ export const platformPages = [
       {
         title: 'Build and try the Bun lab',
         paragraphs: [
-          'Use Node 22, pnpm 10.24.0 and Bun 1.3.4 for the recorded setup. Alpha packages are available from source and local tarballs, not npm. The lab uses synthetic consent and local records.',
+          'Use Node 22, pnpm 10.24.0 and Bun 1.3.4 for the recorded setup. Alpha 0.1.0-alpha.1 is available on npm; pin installed @techinject packages to this exact version. The lab uses synthetic consent and local records.',
         ],
         code:
           setup +
