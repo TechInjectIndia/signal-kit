@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { releaseTag, shouldCleanupLatest } from './release-policy.mjs';
-import { mkdtemp, cp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, cp, mkdir, readFile, rm, symlink, writeFile, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { root } from './files.mjs';
+import { createHash } from 'node:crypto';
+import { registryField } from './registry-response.mjs';
 test('Changesets produces one numbered alpha and changelogs for all nine packages', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'signalkit-version-'));
   try {
@@ -112,4 +114,100 @@ test('cleanup removes an older alpha latest only when the current alpha tag is i
   assert.throws(() =>
     shouldCleanupLatest({ latest: '0.1.0-alpha.1', alpha: '0.1.0-alpha.1' }, current),
   );
+});
+
+async function registryFixture() {
+  const folder = await mkdtemp(join(tmpdir(), 'signalkit-registry-response-'));
+  await mkdir(join(folder, 'scripts'));
+  await mkdir(join(folder, 'bin'));
+  await mkdir(join(folder, 'packages/features/signals/core'), { recursive: true });
+  await writeFile(
+    join(folder, 'packages/features/signals/core/package.json'),
+    JSON.stringify({ version: '0.1.0-alpha.2' }),
+  );
+  for (const script of [
+    'files.mjs',
+    'release-policy.mjs',
+    'registry-response.mjs',
+    'cleanup-alpha-tags.mjs',
+    'publish-packages.mjs',
+  ])
+    await cp(join(root, 'scripts', script), join(folder, 'scripts', script));
+  return folder;
+}
+test('npm 12 wrapped tag response removes all nine stale alpha tags through the real helper', async () => {
+  const folder = await registryFixture();
+  try {
+    const log = join(folder, 'removed.txt');
+    const mock = join(folder, 'bin/npm');
+    await writeFile(
+      mock,
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] === 'view') console.log(JSON.stringify([{ latest: '0.1.0-alpha.1', alpha: '0.1.0-alpha.2' }]));
+else if (args[0] === 'dist-tag' && args[1] === 'rm' && args[3] === 'latest') fs.appendFileSync(${JSON.stringify(log)}, args[2]+'\\n');
+else process.exit(2);
+`,
+    );
+    await chmod(mock, 0o755);
+    const result = spawnSync(process.execPath, [join(folder, 'scripts/cleanup-alpha-tags.mjs')], {
+      cwd: folder,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: join(folder, 'bin') + ':' + process.env.PATH },
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const removed = (await readFile(log, 'utf8')).trim().split('\n');
+    assert.equal(removed.length, 9);
+    assert.equal(new Set(removed).size, 9);
+    assert.ok(removed.includes('@techinject/contracts'));
+    assert.ok(removed.includes('@techinject/sveltekit-server'));
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+test('npm 12 wrapped integrity response safely retries an already-published reviewed artifact', async () => {
+  const folder = await registryFixture();
+  try {
+    const artifact = Buffer.from('isolated reviewed fixture');
+    const filename = 'core.tgz';
+    const artifactFolder = join(folder, 'artifacts/0.1.0-alpha.2');
+    await mkdir(artifactFolder, { recursive: true });
+    await writeFile(join(artifactFolder, filename), artifact);
+    await writeFile(
+      join(artifactFolder, 'manifest.json'),
+      JSON.stringify({
+        sourceDirty: false,
+        packages: [{ name: '@techinject/core', version: '0.1.0-alpha.2', filename }],
+      }),
+    );
+    await writeFile(
+      join(artifactFolder, 'SHA256SUMS.txt'),
+      createHash('sha256').update(artifact).digest('hex') + '  ' + filename + '\n',
+    );
+    const integrity = 'sha512-' + createHash('sha512').update(artifact).digest('base64');
+    const mock = join(folder, 'bin/npm');
+    await writeFile(
+      mock,
+      `#!/usr/bin/env node
+if (process.argv[2] !== 'view') process.exit(2);
+console.log(JSON.stringify([${JSON.stringify(integrity)}]));
+`,
+    );
+    await chmod(mock, 0o755);
+    const result = spawnSync(process.execPath, [join(folder, 'scripts/publish-packages.mjs')], {
+      cwd: folder,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: join(folder, 'bin') + ':' + process.env.PATH },
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /Already published: @techinject\/core@0.1.0-alpha.2/);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+test('ambiguous npm registry responses fail closed', () => {
+  assert.throws(() => registryField('[]'));
+  assert.throws(() => registryField('["one","two"]'));
+  assert.throws(() => registryField('[["nested"]]'));
 });
