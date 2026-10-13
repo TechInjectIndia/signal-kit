@@ -24,3 +24,9 @@ References: [Changesets automation](https://changesets.dev/guide/automating), [n
 npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `pnpm release:cleanup-tags` and complete npm's authenticator prompt. Verify the alpha tag points to the current version before cleanup. The helper refuses cleanup without that matching prerelease tag and only removes latest when it points to the current or an older prerelease in the same channel and base version; an existing stable latest is preserved. Verify all nine dist-tags afterward.
 
 The first alpha is now published, so its bootstrap changeset is archived in `.changeset/pre` rather than generating an empty repeat release. Add a new changeset for the next SDK change.
+
+## Maintenance after a completed release
+
+The workflow skips rebuilding a version whose GitHub release already exists. Repacking an already published version can produce a different archive; partial-release retries retain the exact registry checksum guard.
+
+To clean stale alpha tags independently, manually run the Releases workflow with `cleanup_only=true`. This uses the same `npm-release` approval gate and scoped npm trusted publisher, performs no package publication, and retains the helper's stable/newer tag protections. Verify all nine registry tags afterward.

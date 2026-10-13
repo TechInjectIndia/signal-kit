@@ -5,6 +5,11 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      cleanup_only:
+        description: Remove stale prerelease latest tags without rebuilding or publishing packages
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -12,13 +17,14 @@ concurrency:
   cancel-in-progress: false
 jobs:
   version:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+    if: inputs.cleanup_only != true && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     outputs:
       pending: ${{ steps.mode.outputs.pending }}
+      released: ${{ steps.released.outputs.exists }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -32,6 +38,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - id: mode
         run: node -e "const fs=require('fs');fs.appendFileSync(process.env.GITHUB_OUTPUT,'pending='+fs.readdirSync('.changeset').some(f=>f.endsWith('.md')&&f!=='README.md')+'\n')"
+      - id: released
+        name: Check for a completed release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./packages/features/signals/core/package.json').version")
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Create or update the version PR
         if: steps.mode.outputs.pending == 'true'
         run: node scripts/version-pr.mjs
@@ -39,7 +56,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   publish:
     needs: version
-    if: needs.version.outputs.pending == 'false' && vars.NPM_RELEASES_ENABLED == 'true'
+    if: needs.version.outputs.pending == 'false' && needs.version.outputs.released != 'true' && vars.NPM_RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: npm-release
     permissions:
@@ -83,3 +100,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/github-release.mjs
+  cleanup:
+    if: github.event_name == 'workflow_dispatch' && inputs.cleanup_only == true && vars.NPM_RELEASES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.22.2
+      - name: Install isolated npm tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/signalkit-release-tools" --no-package-lock --ignore-scripts npm@12.2.0
+          echo "$RUNNER_TEMP/signalkit-release-tools/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Remove only stale prerelease latest tags
+        run: node scripts/cleanup-alpha-tags.mjs
