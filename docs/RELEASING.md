@@ -2,7 +2,7 @@
 
 Use `pnpm changeset` for SDK changes. The nine public packages form one fixed group; apps/examples stay private. `pnpm release:version` updates manifests, dependency references, changelogs and the lockfile. Changesets alpha mode is enabled. Exit prerelease mode only after an explicit stable-release decision; pre-1.0 breaking changes require migration notes.
 
-The Releases workflow follows successful main CI. Pending changesets open a version PR. A reviewed version PR is merged under normal branch protections. With no pending changesets and `NPM_RELEASES_ENABLED=true`, the publish job rebuilds/tests clean main, prepares checksum artifacts, publishes in dependency order, and creates a GitHub release only after all package publications succeed. The `npm-release` environment should require a human maintainer reviewer. Configure GitHub Actions to allow creating PRs; token-created PRs may need a maintainer-triggered CI run.
+The Releases workflow follows successful main CI and checks out that exact tested commit; manual runs use the selected workflow commit. Pending changesets open a version PR. A reviewed version PR is merged under normal branch protections. With no pending changesets and `NPM_RELEASES_ENABLED=true`, the publish job rebuilds/tests clean main, prepares checksum artifacts, publishes in dependency order, and creates a GitHub release only after all package publications succeed. The `npm-release` environment should require a human maintainer reviewer. Configure GitHub Actions to allow creating PRs; token-created PRs may need a maintainer-triggered CI run.
 
 ## Initial npm setup and publication
 
@@ -21,6 +21,6 @@ References: [Changesets automation](https://changesets.dev/guide/automating), [n
 
 ## First-publication channel cleanup
 
-npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `pnpm release:cleanup-tags` and complete npm's authenticator prompt. Verify the alpha tag points to the current version before cleanup. The helper refuses cleanup without that matching prerelease tag and only removes latest when it equals the current prerelease; an existing stable latest is preserved. Verify all nine dist-tags afterward.
+npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `pnpm release:cleanup-tags` and complete npm's authenticator prompt. Verify the alpha tag points to the current version before cleanup. The helper refuses cleanup without that matching prerelease tag and only removes latest when it points to the current or an older prerelease in the same channel and base version; an existing stable latest is preserved. Verify all nine dist-tags afterward.
 
 The first alpha is now published, so its bootstrap changeset is archived in `.changeset/pre` rather than generating an empty repeat release. Add a new changeset for the next SDK change.

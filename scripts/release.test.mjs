@@ -103,3 +103,13 @@ test('alpha tag cleanup preserves stable latest and refuses to remove the sole v
   assert.throws(() => shouldCleanupLatest({ latest: version }, version));
   assert.throws(() => shouldCleanupLatest({ latest: version, alpha: '0.1.0-alpha.0' }, version));
 });
+
+test('cleanup removes an older alpha latest only when the current alpha tag is intact', () => {
+  const current = '0.1.0-alpha.2';
+  assert.equal(shouldCleanupLatest({ latest: '0.1.0-alpha.1', alpha: current }, current), true);
+  for (const latest of ['0.1.0-alpha.3', '0.0.9-alpha.1', '0.1.0-beta.1', '0.1.0', 'unexpected'])
+    assert.equal(shouldCleanupLatest({ latest, alpha: current }, current), false);
+  assert.throws(() =>
+    shouldCleanupLatest({ latest: '0.1.0-alpha.1', alpha: '0.1.0-alpha.1' }, current),
+  );
+});

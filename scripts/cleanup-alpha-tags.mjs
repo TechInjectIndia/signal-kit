@@ -26,7 +26,7 @@ for (const name of names) {
   assert.equal(view.status, 0, 'Cannot verify registry tags');
   const tags = JSON.parse(view.stdout);
   if (!shouldCleanupLatest(tags, version)) continue;
-  // Never remove a previous stable latest tag, only this release's accidental alpha tag.
+  // Remove only this channel's current or older prerelease; preserve stable and newer tags.
   const result = spawnSync('npm', ['dist-tag', 'rm', pkg, 'latest'], { stdio: 'inherit' });
   assert.equal(result.status, 0, 'Complete npm 2FA in your own terminal, then retry');
 }
