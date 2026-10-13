@@ -32,8 +32,7 @@
     "directory": "packages/features/signals/bun"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {},
   "description": "SignalKit bun consent-aware telemetry package"

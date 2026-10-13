@@ -280,3 +280,7 @@ MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their p
 [Alpha review and install plan](docs/releases/0.1.0-alpha.1.md) · [Pilot developer handoff](docs/growth/PILOT-GUIDE.md) · [Maintenance routine](docs/growth/MAINTAINER-SOP.md). Report a concrete installation problem; stars are welcome, but real usage and useful feedback matter more.
 
 [SvelteKit guide](https://techinjectindia.github.io/signal-kit/docs/sveltekit/) · [SvelteKit local lab](examples/sveltekit/README.md)
+
+## Versioned releases and upgrades
+
+All nine @techinject packages share a Changesets version and changelog process. npm trusted publishing and the versioned browser CDN bundle are prepared; npm account access is verified; initial publication and trusted publisher setup are pending. Existing deployments never silently pull SDK updates. See [upgrade instructions for every platform](docs/UPGRADING.md) and [maintainer release setup](docs/RELEASING.md).

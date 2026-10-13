@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { root } from './files.mjs';
-const release = join(root, 'artifacts/0.1.0-alpha.1');
+const version = JSON.parse(
+  await readFile(join(root, 'packages/features/signals/core/package.json'), 'utf8'),
+).version;
+const release = join(root, 'artifacts', version);
 const checksums = (await readFile(join(release, 'SHA256SUMS.txt'), 'utf8')).trim().split('\n');
 for (const line of checksums) {
   const [hash, file] = line.split('  ');

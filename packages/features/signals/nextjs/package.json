@@ -40,8 +40,7 @@
     "directory": "packages/features/signals/nextjs"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {},
   "description": "SignalKit nextjs consent-aware telemetry package"

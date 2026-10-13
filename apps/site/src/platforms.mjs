@@ -211,3 +211,26 @@ for (const page of platformPages) {
   });
 }
 platformPages.push(createConnectionsPage(platforms));
+
+for (const page of platformPages) {
+  page.sections.push({
+    title: 'Upgrade SignalKit safely',
+    paragraphs: [
+      'Pin all installed @techinject packages to the same exact released version. Keep the lockfile, read release notes, test consent/navigation/API and dashboard behavior, then rebuild and redeploy. Current alpha packages are not published yet; the commands below apply after registry publication. Source installs require fetching the reviewed release and rebuilding first.',
+      'Coming-soon framework adapters remain unverified. Browser CDN updates require replacing the explicit version in your import URL; neither packages nor deployed apps silently pull updates.',
+    ],
+    label: 'After npm publication — replace VERSION with the reviewed release',
+    code:
+      page.path === 'docs/nextjs/'
+        ? 'pnpm add --save-exact @techinject/nextjs@VERSION @techinject/browser@VERSION\n# If using Node tracing, update @techinject/nextjs-server to VERSION too.'
+        : page.path === 'docs/sveltekit/'
+          ? 'pnpm add --save-exact @techinject/sveltekit@VERSION @techinject/browser@VERSION\n# If using server hooks, update @techinject/sveltekit-server to VERSION too.'
+          : 'pnpm add --save-exact @techinject/bun@VERSION\n# Update any directly installed core/server packages to VERSION too.',
+    links: [
+      [
+        'https://github.com/TechInjectIndia/signal-kit/blob/main/docs/UPGRADING.md',
+        'All framework upgrade paths and CDN instructions',
+      ],
+    ],
+  });
+}

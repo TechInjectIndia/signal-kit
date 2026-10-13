@@ -46,6 +46,7 @@ jobs:
           pnpm test:next-otel
           pnpm test:packages
           pnpm test:bundle
+          pnpm test:release
           pnpm release:prepare
           pnpm test:alpha
       - name: Browser runtime verification

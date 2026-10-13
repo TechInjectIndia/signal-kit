@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "baseBranch": "main",
+  "access": "public",
+  "fixed": [
+    [
+      "@techinject/contracts",
+      "@techinject/core",
+      "@techinject/browser",
+      "@techinject/server",
+      "@techinject/nextjs",
+      "@techinject/nextjs-server",
+      "@techinject/bun",
+      "@techinject/sveltekit",
+      "@techinject/sveltekit-server"
+    ]
+  ],
+  "linked": [],
+  "ignore": [],
+  "format": "auto",
+  "updateInternalDependencies": "patch",
+  "commit": false,
+  "changelog": "@changesets/cli/changelog"
+}

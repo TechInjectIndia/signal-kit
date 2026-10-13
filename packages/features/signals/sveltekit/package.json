@@ -29,8 +29,7 @@
     "directory": "packages/features/signals/sveltekit"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {},
   "description": "SignalKit SvelteKit browser lifecycle adapter"

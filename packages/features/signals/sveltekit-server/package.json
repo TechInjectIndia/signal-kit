@@ -29,8 +29,7 @@
     "directory": "packages/features/signals/sveltekit-server"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {
     "node": ">=22"
