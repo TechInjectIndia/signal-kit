@@ -45,6 +45,7 @@ input:focus-visible {
   font-size: 22px;
   font-weight: bold;
   letter-spacing: -1px;
+  text-decoration: none;
 }
 .tag,
 .eyebrow {
@@ -180,6 +181,25 @@ h2 {
 }
 .error {
   color: #993c22;
+}
+.signalkit-connections > p {
+  font: 13px/1.7 monospace;
+  color: var(--muted);
+}
+.signalkit-connections article {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 20px 0;
+  background: #e8ede5;
+  overflow-wrap: anywhere;
+}
+.signalkit-connections article h3 {
+  margin-top: 0;
+  font: bold 18px monospace;
+}
+.signalkit-connections article p {
+  font: 13px/1.7 monospace;
 }
 @media (max-width: 800px) {
   .grid {

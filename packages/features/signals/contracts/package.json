@@ -29,8 +29,7 @@
     "directory": "packages/features/signals/contracts"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {},
   "description": "SignalKit contracts consent-aware telemetry package"

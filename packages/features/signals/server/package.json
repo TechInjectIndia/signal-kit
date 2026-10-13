@@ -33,8 +33,7 @@
     "directory": "packages/features/signals/server"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {
     "node": ">=22"

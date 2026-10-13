@@ -278,3 +278,13 @@ Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfi
 [Next instrumentation](https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation), [Next OpenTelemetry](https://nextjs.org/docs/app/guides/open-telemetry), [Bun server](https://bun.sh/docs/runtime/http/server), [OTLP exporters](https://opentelemetry.io/docs/languages/js/exporters/), [Razorpay webhook validation](https://razorpay.com/docs/webhooks/validate-test/). Follow current provider documentation before enabling a live account; recorded fixture evidence is separate.
 
 [SvelteKit guide](https://techinjectindia.github.io/signal-kit/docs/sveltekit/) · [SvelteKit local lab](../../../examples/sveltekit/README.md)
+
+## In-app connections dashboard
+
+The optional browser renderer mounts against an existing SDK instance. See [dashboard setup](../../../docs/CONNECTIONS-DASHBOARD.md) for full Next.js and SvelteKit /connections routes, Bun server snapshots, portable HTML/JavaScript wiring, and the coming-soon status for all 14 planned platforms. The Next lab includes `/connections`.
+
+[Public dashboard setup guide](https://techinjectindia.github.io/signal-kit/docs/connections/) covers opening the route, status meanings, styling, consent checks and authentication. Technical observers and provider account health are not included.
+
+## Versioning and upgrades — all frameworks
+
+See [UPGRADING.md](../../../docs/UPGRADING.md) for exact package versions, Next.js/SvelteKit/Bun commands, source updates, CDN imports, rollback and all coming-soon platforms. Existing deployments do not automatically fetch SDK changes. npm/CDN publication is pending authenticated release; do not use registry commands until the version exists.

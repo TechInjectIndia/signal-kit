@@ -35,7 +35,7 @@ export const faq = [
   ],
   [
     'Do I need a SignalKit account or hosted collector?',
-    'No SignalKit account or hosted collector is required. Configure your own provider accounts and, when using OTLP, your own compatible collector. SignalKit does not include an analytics dashboard.',
+    'No SignalKit account or hosted collector is required. Configure your own provider accounts and, when using OTLP, your own compatible collector. An optional in-app connections dashboard shows SDK event-provider outcomes; it is not a hosted analytics reporting service.',
   ],
   [
     'What has been tested?',

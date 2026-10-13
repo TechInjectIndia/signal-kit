@@ -29,8 +29,7 @@
     "directory": "packages/features/signals/core"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {},
   "description": "SignalKit core consent-aware telemetry package"

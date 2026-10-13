@@ -42,8 +42,7 @@
     "directory": "packages/features/signals/nextjs-server"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {
     "node": ">=22"

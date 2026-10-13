@@ -21,7 +21,7 @@ Triage reproducible defects, privacy/security reports and runtime regressions fi
 
 ## Release policy
 
-Use semantic versions; pre-1.0 APIs are experimental and breaking changes need migration notes. Release packages independently only after package boundaries are decided. No npm publisher or automated publish workflow is configured yet.
+Use semantic versions; pre-1.0 APIs are experimental and breaking changes need migration notes. Release packages independently only after package boundaries are decided. Changesets manages a fixed group of nine packages. Releases workflow creates version PRs and publishes reviewed main builds through npm trusted publishing after account setup and NPM_RELEASES_ENABLED activation. See RELEASING.md.
 
 Before every release:
 

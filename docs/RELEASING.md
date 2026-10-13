@@ -1,0 +1,20 @@
+# SignalKit release operations
+
+Use `pnpm changeset` for SDK changes. The nine public packages form one fixed group; apps/examples stay private. `pnpm release:version` updates manifests, dependency references, changelogs and the lockfile. Changesets alpha mode is enabled. Exit prerelease mode only after an explicit stable-release decision; pre-1.0 breaking changes require migration notes.
+
+The Releases workflow follows successful main CI. Pending changesets open a version PR. A reviewed version PR is merged under normal branch protections. With no pending changesets and `NPM_RELEASES_ENABLED=true`, the publish job rebuilds/tests clean main, prepares checksum artifacts, publishes in dependency order, and creates a GitHub release only after all package publications succeed. The `npm-release` environment should require a human maintainer reviewer. Configure GitHub Actions to allow creating PRs; token-created PRs may need a maintainer-triggered CI run.
+
+## Initial npm setup and publication
+
+1. Sign in locally with `npm login`; verify membership/control of `@techinject`. Never paste credentials into chat or source.
+2. Review the exact clean candidate commit, manifest, tarballs, checksums, tests and release notes. Run `pnpm build`, `pnpm release:prepare`, `pnpm test:alpha` and the checklist in MAINTAINING.md.
+3. Bootstrap the reviewed release with `pnpm release:publish`. Interactive npm 2FA may be required. This publishes the nine public packages under the version's channel: alpha/beta/rc or latest for stable versions. The script verifies checksums, refuses dirty-source artifacts, and checks identical existing registry integrity when retrying a partial release.
+4. In each npm package's settings, add a GitHub trusted publisher: organization `TechInjectIndia`, repository `signal-kit`, workflow `release.yml`, environment `npm-release`. Use GitHub-hosted runners and npm >=11.5.1. No permanent npm token is needed by this workflow.
+5. Configure the GitHub `npm-release` environment with a human reviewer. Enable repository variable `NPM_RELEASES_ENABLED=true` only after all nine trusted publishers are verified. The workflow intentionally stays inactive for publishing while this bootstrap is incomplete.
+6. Verify fresh registry imports and the versioned jsDelivr CDN URL before switching website examples from unpublished/source installs. Create the reviewed GitHub release with `node scripts/github-release.mjs` after publication (requires gh access).
+
+The browser package ships `dist/cdn/signalkit.mjs` and bundled license notices. jsDelivr exposes it automatically after npm publication. Use exact versions as documented in [UPGRADING.md](UPGRADING.md); server adapters cannot run through a browser CDN.
+
+Publication is not atomic across npm packages. If interrupted, rerun using the same reviewed artifacts; existing versions must match SHA-512 integrity. Never overwrite a release or relabel an alpha as stable. Deprecate a broken version and publish a forward fix. Record live npm/CDN verification separately from local tests.
+
+References: [Changesets automation](https://changesets.dev/guide/automating), [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).

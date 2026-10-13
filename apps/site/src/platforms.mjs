@@ -1,3 +1,9 @@
+import {
+  createConnectionsPage,
+  nextConnectionsExample,
+  svelteConnectionsExample,
+  serverConnectionsExample,
+} from './connections-docs.mjs';
 import { sveltekitPage } from './sveltekit-docs.mjs';
 import { nextExample, bunExample, purchaseExample } from './content.mjs';
 import { integrationExamples } from './integration-examples.mjs';
@@ -178,4 +184,53 @@ export function platformCategories(name) {
   if (['Next.js', 'SvelteKit', 'Astro'].includes(name)) return ['frontend', 'backend'];
   if (['HTML / JavaScript', 'Vue', 'Angular'].includes(name)) return ['frontend'];
   return ['backend'];
+}
+
+for (const page of platformPages) {
+  page.sections.push({
+    title: 'Open the connections health dashboard',
+    paragraphs: [
+      'Add a /connections page inside your app, using its existing SDK instance. Add @techinject/browser as a direct dependency for the dashboard renderer. Alpha packages remain unpublished; use the workspace or local packages. Counts reset with the instance; SDK completion does not prove provider delivery or attribution. Protect production diagnostics with host authentication.',
+      page.path === 'docs/bun/'
+        ? 'Bun is a server integration. Read a safe snapshot on the server; an authenticated host frontend must render it. No automatic dashboard URL or cross-request collector is provided.'
+        : 'Open your app’s /connections URL after adding the page. Reuse the root client; do not initialize another SDK instance for the dashboard.',
+    ],
+    label:
+      page.path === 'docs/nextjs/'
+        ? 'app/connections/page.tsx'
+        : page.path === 'docs/sveltekit/'
+          ? 'src/routes/connections/+page.svelte'
+          : 'Server snapshot',
+    code:
+      page.path === 'docs/nextjs/'
+        ? nextConnectionsExample
+        : page.path === 'docs/sveltekit/'
+          ? svelteConnectionsExample
+          : serverConnectionsExample,
+    links: [['../connections/', 'Full dashboard guide: all platforms, setup and status meanings']],
+  });
+}
+platformPages.push(createConnectionsPage(platforms));
+
+for (const page of platformPages) {
+  page.sections.push({
+    title: 'Upgrade SignalKit safely',
+    paragraphs: [
+      'Pin all installed @techinject packages to the same exact released version. Keep the lockfile, read release notes, test consent/navigation/API and dashboard behavior, then rebuild and redeploy. Current alpha packages are not published yet; the commands below apply after registry publication. Source installs require fetching the reviewed release and rebuilding first.',
+      'Coming-soon framework adapters remain unverified. Browser CDN updates require replacing the explicit version in your import URL; neither packages nor deployed apps silently pull updates.',
+    ],
+    label: 'After npm publication — replace VERSION with the reviewed release',
+    code:
+      page.path === 'docs/nextjs/'
+        ? 'pnpm add --save-exact @techinject/nextjs@VERSION @techinject/browser@VERSION\n# If using Node tracing, update @techinject/nextjs-server to VERSION too.'
+        : page.path === 'docs/sveltekit/'
+          ? 'pnpm add --save-exact @techinject/sveltekit@VERSION @techinject/browser@VERSION\n# If using server hooks, update @techinject/sveltekit-server to VERSION too.'
+          : 'pnpm add --save-exact @techinject/bun@VERSION\n# Update any directly installed core/server packages to VERSION too.',
+    links: [
+      [
+        'https://github.com/TechInjectIndia/signal-kit/blob/main/docs/UPGRADING.md',
+        'All framework upgrade paths and CDN instructions',
+      ],
+    ],
+  });
 }
