@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { releaseTag } from './release-policy.mjs';
-import { mkdtemp, cp, mkdir, readFile, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, cp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -11,7 +11,16 @@ test('Changesets produces one numbered alpha and changelogs for all nine package
   try {
     for (const file of ['package.json', 'pnpm-workspace.yaml'])
       await cp(join(root, file), join(folder, file));
-    await cp(join(root, '.changeset'), join(folder, '.changeset'), { recursive: true });
+    await mkdir(join(folder, '.changeset'));
+    await cp(join(root, '.changeset/config.json'), join(folder, '.changeset/config.json'));
+    await writeFile(
+      join(folder, '.changeset/pre.json'),
+      JSON.stringify({ mode: 'pre', tag: 'alpha' }),
+    );
+    await writeFile(
+      join(folder, '.changeset/isolated-test.md'),
+      '---\n"@techinject/core": patch\n---\n\nIsolated versioning proof.\n',
+    );
     await symlink(join(root, 'node_modules'), join(folder, 'node_modules'));
     const names = [
       'contracts',

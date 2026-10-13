@@ -9,7 +9,7 @@ The Releases workflow follows successful main CI. Pending changesets open a vers
 1. Sign in locally with `npm login`; verify membership/control of `@techinject`. Never paste credentials into chat or source.
 2. Review the exact clean candidate commit, manifest, tarballs, checksums, tests and release notes. Run `pnpm build`, `pnpm release:prepare`, `pnpm test:alpha` and the checklist in MAINTAINING.md.
 3. Bootstrap the reviewed release with `pnpm release:publish`. Interactive npm 2FA may be required. This publishes the nine public packages under the version's channel: alpha/beta/rc or latest for stable versions. The script verifies checksums, refuses dirty-source artifacts, and checks identical existing registry integrity when retrying a partial release.
-4. In each npm package's settings, add a GitHub trusted publisher: organization `TechInjectIndia`, repository `signal-kit`, workflow `release.yml`, environment `npm-release`. Use GitHub-hosted runners and npm >=11.5.1. No permanent npm token is needed by this workflow.
+4. In each npm package's settings, add a GitHub trusted publisher: organization `TechInjectIndia`, repository `signal-kit`, workflow `release.yml`, environment `npm-release`; allow direct npm publishing and dist-tag management for alpha channel cleanup. Use GitHub-hosted runners and the release runner uses Node 22.22.2 and npm 12.2.0. No permanent npm token is needed by this workflow.
 5. Configure the GitHub `npm-release` environment with a human reviewer. Enable repository variable `NPM_RELEASES_ENABLED=true` only after all nine trusted publishers are verified. The workflow intentionally stays inactive for publishing while this bootstrap is incomplete.
 6. Verify fresh registry imports and the versioned jsDelivr CDN URL before switching website examples from unpublished/source installs. Create the reviewed GitHub release with `node scripts/github-release.mjs` after publication (requires gh access).
 
@@ -18,3 +18,9 @@ The browser package ships `dist/cdn/signalkit.mjs` and bundled license notices. 
 Publication is not atomic across npm packages. If interrupted, rerun using the same reviewed artifacts; existing versions must match SHA-512 integrity. Never overwrite a release or relabel an alpha as stable. Deprecate a broken version and publish a forward fix. Record live npm/CDN verification separately from local tests.
 
 References: [Changesets automation](https://changesets.dev/guide/automating), [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
+
+## First-publication channel cleanup
+
+npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `pnpm release:cleanup-tags` and complete npm's authenticator prompt. The helper only removes latest when it equals the current prerelease; an existing stable latest is preserved. Verify all nine dist-tags afterward.
+
+The first alpha is now published, so its bootstrap changeset is archived in `.changeset/pre` rather than generating an empty repeat release. Add a new changeset for the next SDK change.
