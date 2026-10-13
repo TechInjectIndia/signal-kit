@@ -84,9 +84,9 @@ Use your app bundler for bare package imports; this is not an unbundled standalo
 
 | Platform          | Dashboard integration                                                                                             |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Next.js           | Available in dashboard PR: full route above                                                                       |
-| SvelteKit         | Available in dashboard PR: full route above                                                                       |
-| Bun               | Available in dashboard PR: server snapshots, host frontend required                                               |
+| Next.js           | Available in alpha: full route above                                                                              |
+| SvelteKit         | Available in alpha: full route above                                                                              |
+| Bun               | Available in alpha: server snapshots, host frontend required                                                      |
 | Hono              | Dedicated integration coming soon; host-authenticated snapshot/frontend pattern planned; native wiring unverified |
 | Astro             | Dedicated integration coming soon; portable browser rendering pattern above, native wiring unverified             |
 | Node.js           | Dedicated integration coming soon; host-authenticated snapshot/frontend pattern planned; native wiring unverified |
