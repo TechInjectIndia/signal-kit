@@ -16,6 +16,7 @@ Alpha 0.1.0-alpha.1 is available from source and local tarballs; npm publication
 - [SvelteKit integration](https://techinjectindia.github.io/signal-kit/docs/sveltekit/): Integrate SignalKit with SvelteKit 3 and Svelte 5: SSR-safe browser lifecycle, consent-aware commerce events and isolated Node request tracing.
 - [Next.js integration](https://techinjectindia.github.io/signal-kit/docs/nextjs/): Set up SignalKit in Next.js App Router with a client provider, typed events, consent and separate Node instrumentation.
 - [Bun integration](https://techinjectindia.github.io/signal-kit/docs/bun/): Wrap Bun APIs, template safe routes, observe request outcomes and connect a compatible OTLP HTTP JSON collector.
+- [Connections health dashboard](https://techinjectindia.github.io/signal-kit/docs/connections/): Open an in-app connections dashboard with Next.js or SvelteKit, read Bun server snapshots, and see the planned dashboard integration for every coming-soon platform.
 - [Source and license](https://github.com/TechInjectIndia/signal-kit): MIT licensed TypeScript workspace.
 - [Compatibility evidence](https://github.com/TechInjectIndia/signal-kit/blob/main/docs/COMPATIBILITY.md): Local runtime and fixture checks; no live attribution guarantees.
 
