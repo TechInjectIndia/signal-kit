@@ -1,6 +1,6 @@
 # @techinject/browser
 
-SignalKit browser adapter/package. MIT licensed, alpha candidate; unpublished.
+SignalKit browser SDK. MIT licensed; experimental alpha API.
 
 Optional in-app connection status UI: import `mountConnectionsDashboard` from
 `@techinject/browser/dashboard`, then call it with an existing DOM element and SDK

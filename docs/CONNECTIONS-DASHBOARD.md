@@ -1,6 +1,6 @@
 # In-app connections health dashboard
 
-Add `/connections` inside your authenticated app. This is local SDK status, not verified vendor account health. Packages are unpublished; use the workspace or local alpha packages and add `@techinject/browser` directly to the host dependencies.
+Add `/connections` inside your authenticated app. This is local SDK status, not verified vendor account health. Packages are published as `0.1.0-alpha.1`; pin this version and add `@techinject/browser` directly to the host dependencies.
 
 ## Next.js
 

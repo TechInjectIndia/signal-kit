@@ -287,4 +287,4 @@ The optional browser renderer mounts against an existing SDK instance. See [dash
 
 ## Versioning and upgrades — all frameworks
 
-See [UPGRADING.md](../../../docs/UPGRADING.md) for exact package versions, Next.js/SvelteKit/Bun commands, source updates, CDN imports, rollback and all coming-soon platforms. Existing deployments do not automatically fetch SDK changes. npm/CDN publication is pending authenticated release; do not use registry commands until the version exists.
+See [UPGRADING.md](../../../docs/UPGRADING.md) for exact package versions, Next.js/SvelteKit/Bun commands, source updates, CDN imports, rollback and all coming-soon platforms. Existing deployments do not automatically fetch SDK changes. All nine npm packages and the browser CDN module are verified at version `0.1.0-alpha.1`.

@@ -6,3 +6,10 @@ export function releaseTag(version) {
   );
   return version.includes('-') ? version.split('-')[1].split('.')[0] : 'latest';
 }
+
+export function shouldCleanupLatest(tags, version) {
+  const channel = releaseTag(version);
+  if (channel === 'latest' || tags.latest !== version) return false;
+  assert.equal(tags[channel], version, `Refusing cleanup: retain ${channel}@${version}`);
+  return true;
+}

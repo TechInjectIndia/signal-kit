@@ -32,7 +32,8 @@
     "changeset": "changeset",
     "release:version": "changeset version && pnpm install --lockfile-only",
     "release:publish": "node scripts/publish-packages.mjs",
-    "test:release": "node --test scripts/release.test.mjs"
+    "test:release": "node --test scripts/release.test.mjs",
+    "release:cleanup-tags": "node scripts/cleanup-alpha-tags.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",
