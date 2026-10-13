@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { root } from './files.mjs';
 import { releaseTag } from './release-policy.mjs';
+import { registryField } from './registry-response.mjs';
 const version = JSON.parse(
   await readFile(join(root, 'packages/features/signals/core/package.json'), 'utf8'),
 ).version;
@@ -34,7 +35,7 @@ for (const pkg of manifest.packages) {
         .update(await readFile(join(folder, pkg.filename)))
         .digest('base64');
     assert.equal(
-      JSON.parse(info.stdout),
+      registryField(info.stdout),
       integrity,
       'Existing version differs from reviewed artifact',
     );
