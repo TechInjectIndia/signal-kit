@@ -23,6 +23,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: main
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -31,11 +32,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - id: mode
         run: node -e "const fs=require('fs');fs.appendFileSync(process.env.GITHUB_OUTPUT,'pending='+fs.readdirSync('.changeset').some(f=>f.endsWith('.md')&&f!=='README.md')+'\n')"
-      - uses: changesets/action/version@615034bb14e5d240e559f941ce9769beb5e14fb0
+      - name: Create or update the version PR
         if: steps.mode.outputs.pending == 'true'
-        with:
-          script: pnpm release:version
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/version-pr.mjs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   publish:
     needs: version
     if: needs.version.outputs.pending == 'false' && vars.NPM_RELEASES_ENABLED == 'true'
