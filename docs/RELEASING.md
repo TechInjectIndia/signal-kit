@@ -21,6 +21,6 @@ References: [Changesets automation](https://changesets.dev/guide/automating), [n
 
 ## First-publication channel cleanup
 
-npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `pnpm release:cleanup-tags` and complete npm's authenticator prompt. Verify the alpha tag points to the current version before cleanup. The helper refuses cleanup without that matching prerelease tag and only removes latest when it equals the current prerelease; an existing stable latest is preserved. Verify all nine dist-tags afterward.
+npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `pnpm release:cleanup-tags` and complete npm's authenticator prompt. Verify the alpha tag points to the current version before cleanup. The helper refuses cleanup without that matching prerelease tag and only removes latest when it points to the current or an older prerelease in the same channel and base version; an existing stable latest is preserved. Verify all nine dist-tags afterward.
 
 The first alpha is now published, so its bootstrap changeset is archived in `.changeset/pre` rather than generating an empty repeat release. Add a new changeset for the next SDK change.
