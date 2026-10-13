@@ -99,6 +99,9 @@ importers:
 
   examples/sveltekit:
     dependencies:
+      '@techinject/browser':
+        specifier: workspace:*
+        version: link:../../packages/features/signals/browser
       '@techinject/contracts':
         specifier: workspace:*
         version: link:../../packages/features/signals/contracts

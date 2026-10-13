@@ -1,3 +1,9 @@
+import {
+  createConnectionsPage,
+  nextConnectionsExample,
+  svelteConnectionsExample,
+  serverConnectionsExample,
+} from './connections-docs.mjs';
 import { sveltekitPage } from './sveltekit-docs.mjs';
 import { nextExample, bunExample, purchaseExample } from './content.mjs';
 import { integrationExamples } from './integration-examples.mjs';
@@ -180,42 +186,28 @@ export function platformCategories(name) {
   return ['backend'];
 }
 
-const connectionsExample = `// app/connections/page.tsx — under your existing SignalKitProvider
-'use client';
-import { useEffect, useRef } from 'react';
-import { useSignals } from '@techinject/nextjs';
-import { mountConnectionsDashboard } from '@techinject/browser/dashboard';
-export default function Connections() {
-  const signals = useSignals();
-  const element = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (element.current) return mountConnectionsDashboard(element.current, signals);
-  }, [signals]);
-  return <div ref={element} />;
-}`;
 for (const page of platformPages) {
   page.sections.push({
-    title: 'In-app connections dashboard',
+    title: 'Open the connections health dashboard',
     paragraphs: [
-      'Use the existing SDK instance to show configured event providers, consent blocks, recent outcomes and counters. Counts reset with the instance; send completion does not prove provider delivery or attribution. Technical observers and cross-request server aggregation are not included. Protect production diagnostics with your host authentication.',
-      page.path === 'docs/nextjs/'
-        ? 'The Next.js local lab includes /connections. Mount this page under your existing SignalKitProvider.'
-        : page.path === 'docs/sveltekit/'
-          ? 'Mount the portable renderer after the root client is mounted, using client.getSignals(). Return its cleanup on page unmount. The renderer is available from @techinject/browser/dashboard; add the browser package as a direct dependency.'
-          : 'Server instances expose getConnections() and subscribeConnections(). Server counts are per instance, often per request. Expose only safe snapshots through a host-authenticated endpoint if you need a server view; never ship server providers or credentials to a browser.',
+      'Add a /connections page inside your app, using its existing SDK instance. Add @techinject/browser as a direct dependency for the dashboard renderer. Alpha packages remain unpublished; use the workspace or local packages. Counts reset with the instance; SDK completion does not prove provider delivery or attribution. Protect production diagnostics with host authentication.',
+      page.path === 'docs/bun/'
+        ? 'Bun is a server integration. Read a safe snapshot on the server; an authenticated host frontend must render it. No automatic dashboard URL or cross-request collector is provided.'
+        : 'Open your app’s /connections URL after adding the page. Reuse the root client; do not initialize another SDK instance for the dashboard.',
     ],
-    label: page.path === 'docs/nextjs/' ? 'app/connections/page.tsx' : 'Portable dashboard wiring',
+    label:
+      page.path === 'docs/nextjs/'
+        ? 'app/connections/page.tsx'
+        : page.path === 'docs/sveltekit/'
+          ? 'src/routes/connections/+page.svelte'
+          : 'Server snapshot',
     code:
       page.path === 'docs/nextjs/'
-        ? connectionsExample
+        ? nextConnectionsExample
         : page.path === 'docs/sveltekit/'
-          ? `import { mountConnectionsDashboard } from '@techinject/browser/dashboard';
-// Inside the host client lifecycle, after client.mount():
-const cleanup = mountConnectionsDashboard(element, client.getSignals());
-// Call cleanup() when the dashboard unmounts.`
-          : `// On your existing server SDK instance:
-const snapshot = signals.getConnections();
-// Safe provider metadata and aggregate outcomes only.
-// Host authentication/aggregation are your application's responsibility.`,
+          ? svelteConnectionsExample
+          : serverConnectionsExample,
+    links: [['../connections/', 'Full dashboard guide: all platforms, setup and status meanings']],
   });
 }
+platformPages.push(createConnectionsPage(platforms));

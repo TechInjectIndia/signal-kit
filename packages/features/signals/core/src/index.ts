@@ -262,7 +262,9 @@ export function createSignals(options: SignalsOptions = {}) {
       disposed = true;
       for (const connection of connections) connection.disposed = true;
       notify();
-      listeners.clear();
+      // Keep observers through aborted in-flight outcomes, then release them.
+      if (pending.size) void Promise.all([...pending]).then(() => listeners.clear());
+      else listeners.clear();
       for (const controller of active.keys()) controller.abort();
       for (const provider of providers) {
         try {

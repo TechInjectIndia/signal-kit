@@ -2,6 +2,38 @@ import { describe, expect, it } from 'vitest';
 import { createSignals } from './index.js';
 
 describe('connection status', () => {
+  it('notifies the final dropped outcome when disposed during a send', async () => {
+    let started!: () => void;
+    const sending = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const signals = createSignals({
+      consent: { analytics: true, marketing: false, observability: false },
+      providers: [
+        {
+          name: 'pending',
+          category: 'analytics',
+          send() {
+            started();
+            return new Promise(() => {});
+          },
+        },
+      ],
+    });
+    let last = signals.getConnections();
+    signals.subscribeConnections(() => {
+      last = signals.getConnections();
+    });
+    const operation = signals.track({ name: 'page_view', properties: { page_path: '/' } });
+    await sending;
+    signals.dispose();
+    await operation;
+    await signals.flush();
+    expect(last[0]).toMatchObject({ disposed: true, dropped: 1, attempts: 1 });
+    const previous = last;
+    await signals.track({ name: 'page_view', properties: { page_path: '/' } });
+    expect(last).toBe(previous);
+  });
   it('reports actual outcomes, consent and disposal without retaining identities', async () => {
     const signals = createSignals({
       providers: [
