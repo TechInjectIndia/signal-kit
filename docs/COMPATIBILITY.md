@@ -1,6 +1,6 @@
 # Compatibility and evidence
 
-SDK v1 local implementation, 2026-10-05. Package version0.1.0 is unpublished. Peer ranges are integration declarations, not proof of every version in range.
+SDK v1 local implementation, 2026-10-05. All nine packages are published on npm as `0.1.0-alpha.2` (`alpha` tag); `latest` still points to `0.1.0-alpha.1`. Peer ranges are integration declarations, not proof of every version in range.
 
 | Target                            | Recorded version                               | Evidence                                                                     |
 | --------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------- |

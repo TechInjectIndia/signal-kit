@@ -2,7 +2,7 @@
 
 A consent-aware ecommerce telemetry SDK for Next.js, Bun and SvelteKit. Shared typed events, automatic page/request instrumentation and provider adapters, with a platform-independent core.
 
-**Status: published alpha `0.1.0-alpha.1`.** Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
+**Status: published alpha `0.1.0-alpha.2`** (npm `alpha` tag; `latest` still points to `0.1.0-alpha.1` until tag cleanup). Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
 
 [![SignalKit demo: consent, navigation, cart and API outcomes](docs/assets/demo.gif)](https://techinjectindia.github.io/signal-kit/demo.mp4)
 
@@ -55,7 +55,7 @@ await signals.track({
 });
 ```
 
-The owner-selected package scope is `@techinject`; all nine packages are published as `0.1.0-alpha.1`. Pin this exact version or use the workspace. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
+The owner-selected package scope is `@techinject`; all nine packages are published as `0.1.0-alpha.2` on the `alpha` tag. Pin this exact version or use the workspace. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
 
 ## Platform availability
 
@@ -89,7 +89,7 @@ The portable browser/server building blocks already exist, but that does not est
 
 [Choose your platform](https://techinjectindia.github.io/signal-kit/docs/) · [Next.js guide](https://techinjectindia.github.io/signal-kit/docs/nextjs/) · [Bun guide](https://techinjectindia.github.io/signal-kit/docs/bun/) · [Complete integration guide](packages/features/signals/INTEGRATION.md) · [Next.js lab](examples/nextjs) · [Bun lab](examples/bun)
 
-Build the workspace first using the commands above. For a fresh external test project, run `pnpm release:prepare`, then `node artifacts/0.1.0-alpha.1/install-local.mjs /path/to/fresh-consumer`. That installer refuses to overwrite an existing package.json; existing applications need the seven local tarballs and matching local package overrides described in the [alpha install plan](docs/releases/0.1.0-alpha.1.md). No registry install is available yet.
+Build the workspace first using the commands above. For a fresh external test project, run `pnpm release:prepare`, then `node artifacts/<version>/install-local.mjs /path/to/fresh-consumer`, where `<version>` is the workspace package version. That installer refuses to overwrite an existing package.json; existing applications need the nine local tarballs and matching local package overrides described in the [alpha install plan](docs/releases/0.1.0-alpha.1.md). To install from the registry instead, pin the exact published version.
 
 ### Configure the Next.js client provider
 

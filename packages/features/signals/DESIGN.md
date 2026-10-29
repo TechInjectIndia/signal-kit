@@ -23,7 +23,7 @@ Bun SQLite stores trusted synthetic order and an outbox with unique order_id/eve
 
 ## Proof and portability
 
-Runtime/unit/compile-time tests live with each leaf. Consumer examples build independently. Boundary script checks declared dependencies and source imports; Turbo graph ensures Next browser adapter excludes server. Real Bun/socket restart and Playwright Next navigation tests are separate from vendor sandbox/live evidence. Package tarballs include dist and MIT/community metadata; package names provisional/unpublished. Copy this family plus workspace tooling and declared dependencies; consumers supply runtime wiring/config.
+Runtime/unit/compile-time tests live with each leaf. Consumer examples build independently. Boundary script checks declared dependencies and source imports; Turbo graph ensures Next browser adapter excludes server. Real Bun/socket restart and Playwright Next navigation tests are separate from vendor sandbox/live evidence. Package tarballs include dist and MIT/community metadata; packages published under `@techinject` as npm alphas. Copy this family plus workspace tooling and declared dependencies; consumers supply runtime wiring/config.
 
 ## SvelteKit adapter extension
 

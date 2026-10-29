@@ -1,6 +1,6 @@
 # Upgrade SignalKit in every framework
 
-All nine packages are published as `0.1.0-alpha.1`, and the versioned CDN module is verified. During alpha APIs can change; inspect the release notes before upgrading.
+All nine packages are published as `0.1.0-alpha.2`, and the versioned CDN module is verified. During alpha APIs can change; inspect the release notes before upgrading.
 
 All nine `@techinject` packages share one exact version. Install only the packages your app needs, keep your lockfile committed, and update all directly installed SignalKit packages together. Deployed apps retain their bundled SDK until rebuilt and redeployed.
 
@@ -18,11 +18,11 @@ Current published release:
 
 ```sh
 # Next.js
-pnpm add --save-exact @techinject/nextjs@0.1.0-alpha.1 @techinject/browser@0.1.0-alpha.1
+pnpm add --save-exact @techinject/nextjs@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2
 # SvelteKit
-pnpm add --save-exact @techinject/sveltekit@0.1.0-alpha.1 @techinject/browser@0.1.0-alpha.1
+pnpm add --save-exact @techinject/sveltekit@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2
 # Bun
-pnpm add --save-exact @techinject/bun@0.1.0-alpha.1
+pnpm add --save-exact @techinject/bun@0.1.0-alpha.2
 ```
 
 Update optional server adapters and other directly installed SDK packages to the same version. Check the release's framework/runtime compatibility, run your app's tests, check consent withdrawal, page/API instrumentation and the connections dashboard, then rebuild and deploy. Never send fake purchases to verify an upgrade. Dependabot or Renovate can open update PRs in consumer repositories; consumers must configure these separately.
@@ -36,10 +36,10 @@ jsDelivr serves the bundled browser module from:
 import {
   createBrowserSignals,
   mountConnectionsDashboard,
-} from 'https://cdn.jsdelivr.net/npm/@techinject/browser@0.1.0-alpha.1/dist/cdn/signalkit.mjs';
+} from 'https://cdn.jsdelivr.net/npm/@techinject/browser@0.1.0-alpha.2/dist/cdn/signalkit.mjs';
 ```
 
-The CDN module includes the browser SDK and dashboard without external package imports. Its accompanying `dist/cdn/LICENSES.txt` contains MIT notices for SignalKit and bundled Zod. Keep the version in the URL; do not use an unversioned/latest URL in production. Update the URL, test and redeploy to upgrade. npm publication supplies CDN distribution; there is no separate uploaded CDN service. This URL returned HTTP 200 and matched the local bundle SHA-256 on 13 October 2026. Your host controls CSP and authentication.
+The CDN module includes the browser SDK and dashboard without external package imports. Its accompanying `dist/cdn/LICENSES.txt` contains MIT notices for SignalKit and bundled Zod. Keep the version in the URL; do not use an unversioned/latest URL in production. Update the URL, test and redeploy to upgrade. npm publication supplies CDN distribution; there is no separate uploaded CDN service. The `0.1.0-alpha.1` URL returned HTTP 200 and matched the local bundle SHA-256 on 13 October 2026; the `0.1.0-alpha.2` URL returned HTTP 200 on 29 October 2026. Your host controls CSP and authentication.
 
 ## Source / local packages
 

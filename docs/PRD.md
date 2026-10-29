@@ -54,7 +54,7 @@ Hosted dashboards, hosted collection service, universal identity/group APIs, ext
 
 ## Implementation defaults and remaining evidence
 
-Implemented defaults: three denied-by-default consent categories, dropped preconsent events with no replay, bounded best-effort dispatch, explicit typed business events, automatic page/fetch/XHR tracking, and separate browser/server adapters. Package names are provisional and unpublished. See architecture, FRD, compatibility and integration guide for exact behavior. Live provider delivery/attribution, real SigNoz collector ingestion, independent developer setup-time remain release evidence requirements. Browser SDK bundle now has a measured 30kB gzip budget; see compatibility.
+Implemented defaults: three denied-by-default consent categories, dropped preconsent events with no replay, bounded best-effort dispatch, explicit typed business events, automatic page/fetch/XHR tracking, and separate browser/server adapters. Packages use the owner-selected `@techinject` scope and are published as npm alphas. See architecture, FRD, compatibility and integration guide for exact behavior. Live provider delivery/attribution, real SigNoz collector ingestion, independent developer setup-time remain release evidence requirements. Browser SDK bundle now has a measured 30kB gzip budget; see compatibility.
 
 ## Public website amendment — 2026-10-06
 
