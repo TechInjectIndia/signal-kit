@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createSignals,
   createTraceContext,
@@ -60,6 +60,39 @@ describe('dispatch lifecycle', () => {
     expect(calls).toBe(0);
     expect((await signals.track(event)).eventId).toBe('stable');
     expect(calls).toBe(1);
+  });
+  it('does not replay a denied provider copy or duplicate a sent copy after consent changes', async () => {
+    const analyticsSend = vi.fn();
+    const marketingSend = vi.fn();
+    const options = {
+      queueBeforeConsent: true,
+      consent: { analytics: true, marketing: false, observability: false },
+      providers: [
+        { name: 'analytics', category: 'analytics' as const, send: analyticsSend },
+        { name: 'marketing', category: 'marketing' as const, send: marketingSend },
+      ],
+    };
+    const signals = createSignals(options);
+
+    expect((await signals.track(event)).outcomes.map((outcome) => outcome.status)).toEqual([
+      'sent',
+      'denied',
+    ]);
+    expect(analyticsSend).toHaveBeenCalledOnce();
+    expect(marketingSend).not.toHaveBeenCalled();
+
+    signals.setConsent({ analytics: false, marketing: false, observability: false });
+    signals.setConsent({ analytics: true, marketing: false, observability: false });
+    signals.setConsent({ analytics: true, marketing: true, observability: false });
+    await signals.flush();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(analyticsSend).toHaveBeenCalledOnce();
+    expect(marketingSend).not.toHaveBeenCalled();
+    expect('replayConsentQueue' in signals).toBe(false);
+
+    await signals.track({ ...event, eventId: 'new-event' });
+    expect(analyticsSend).toHaveBeenCalledTimes(2);
+    expect(marketingSend).toHaveBeenCalledOnce();
   });
   it('isolates failures, diagnostics and event mutation', async () => {
     const signals = createSignals({

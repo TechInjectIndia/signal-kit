@@ -27,7 +27,6 @@ export type SignalsOptions = {
   timeoutMs?: number;
   maxPending?: number;
   onDiagnostic?: (result: DispatchResult) => void;
-  queueBeforeConsent?: boolean;
   persistKey?: string;
 };
 export type ConnectionStatus = {
@@ -153,8 +152,6 @@ export function createSignals(options: SignalsOptions = {}) {
       }
     } catch {}
   }
-  const consentQueue: Array<{ event: NonNullable<ReturnType<typeof sanitizeEvent>> }> = [];
-  const queueBeforeConsent = options.queueBeforeConsent === true;
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of listeners) {
@@ -201,11 +198,6 @@ export function createSignals(options: SignalsOptions = {}) {
     event: NonNullable<ReturnType<typeof sanitizeEvent>>,
   ): Promise<DispatchResult['outcomes'][number]> {
     if (!consent[provider.category]) {
-      if (queueBeforeConsent && consentQueue.length < 100) {
-        if (!consentQueue.some((q) => q.event.eventId === event.eventId)) {
-          consentQueue.push({ event: structuredClone(event) });
-        }
-      }
       return { provider: provider.name, status: 'denied', reason: 'consent' };
     }
     const controller = new AbortController();
@@ -285,7 +277,6 @@ export function createSignals(options: SignalsOptions = {}) {
     return operation;
   }
   function setConsent(next: Consent) {
-    const previous = { ...consent };
     consent = normalizeConsent(next);
     for (const connection of connections) connection.consent = consent[connection.category];
     notify();
@@ -297,25 +288,6 @@ export function createSignals(options: SignalsOptions = {}) {
         /* Host isolation. */
       }
     }
-    if (queueBeforeConsent && consentQueue.length > 0) {
-      const newlyGrantedCategories = (['analytics', 'marketing', 'observability'] as const).filter(
-        (cat) => !previous[cat] && consent[cat],
-      );
-      if (newlyGrantedCategories.length > 0) {
-        const toReplay = [...consentQueue];
-        consentQueue.length = 0;
-        for (const item of toReplay) {
-          const eligibleProviders = providers.filter((p) =>
-            newlyGrantedCategories.includes(p.category),
-          );
-          if (eligibleProviders.length > 0) {
-            void Promise.all(eligibleProviders.map((p) => send(p, item.event))).then((outcomes) =>
-              report({ eventId: item.event.eventId, outcomes }),
-            );
-          }
-        }
-      }
-    }
   }
   setConsent(consent);
   return {
@@ -323,16 +295,6 @@ export function createSignals(options: SignalsOptions = {}) {
     setConsent,
     getConsent: () => ({ ...consent }),
     getConnections: (): ConnectionStatus[] => connections.map((connection) => ({ ...connection })),
-    replayConsentQueue: () => {
-      const toReplay = [...consentQueue];
-      consentQueue.length = 0;
-      const tasks = toReplay.map((item) =>
-        Promise.all(
-          providers.filter((p) => consent[p.category]).map((p) => send(p, item.event)),
-        ).then((outcomes) => report({ eventId: item.event.eventId, outcomes })),
-      );
-      return Promise.all(tasks);
-    },
     subscribeConnections(listener: () => void) {
       listeners.add(listener);
       return () => {
