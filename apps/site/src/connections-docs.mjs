@@ -33,7 +33,7 @@ export function createConnectionsPage(platforms) {
         title: 'What connection health means here',
         paragraphs: [
           'The dashboard shows configured event providers, current consent, last SDK outcome/time and per-instance counters. It makes no provider probes and retains no payloads, event IDs, raw errors or credentials. Technical observers, provider account health, delivery, attribution and persistent server history are not included.',
-          'Add @techinject/browser directly to the host dependencies for the optional dashboard subpath. Packages are published as 0.1.0-alpha.1; pin this exact version or use the workspace. Style .signalkit-connections with host CSS. Protect the route with host authentication; noindex is not access control.',
+          'Add @techinject/browser directly to the host dependencies for the optional dashboard subpath. Packages are published as 0.1.0-alpha.2; pin this exact version or use the workspace. Style .signalkit-connections with host CSS. Protect the route with host authentication; noindex is not access control.',
           'Blocked by consent means the current category is denied. Configured means no outcome has completed yet. SDK send completed means the adapter returned, possibly after queueing work. Failed, dropped/interrupted and invalid describe local dispatch outcomes. Counts reset with the SDK instance.',
         ],
       },

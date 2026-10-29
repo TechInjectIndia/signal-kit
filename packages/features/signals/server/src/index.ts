@@ -410,3 +410,6 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
     },
   };
 }
+
+export { createSentryObserver, combineObservers } from './observers.js';
+export type { SentryClient, SentryEvent, SentryOptions } from './observers.js';

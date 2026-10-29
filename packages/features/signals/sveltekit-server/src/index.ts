@@ -54,3 +54,6 @@ export function createSvelteKitHooks(
 }
 export { createOTLPObserver } from '@techinject/server';
 export type { ServerConfig } from '@techinject/server';
+
+export { createSentryObserver, combineObservers } from '@techinject/server';
+export type { SentryClient, SentryEvent, SentryOptions } from '@techinject/server';

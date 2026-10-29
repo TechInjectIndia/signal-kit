@@ -23,7 +23,7 @@ Bun SQLite stores trusted synthetic order and an outbox with unique order_id/eve
 
 ## Proof and portability
 
-Runtime/unit/compile-time tests live with each leaf. Consumer examples build independently. Boundary script checks declared dependencies and source imports; Turbo graph ensures Next browser adapter excludes server. Real Bun/socket restart and Playwright Next navigation tests are separate from vendor sandbox/live evidence. Package tarballs include dist and MIT/community metadata; package names provisional/unpublished. Copy this family plus workspace tooling and declared dependencies; consumers supply runtime wiring/config.
+Runtime/unit/compile-time tests live with each leaf. Consumer examples build independently. Boundary script checks declared dependencies and source imports; Turbo graph ensures Next browser adapter excludes server. Real Bun/socket restart and Playwright Next navigation tests are separate from vendor sandbox/live evidence. Package tarballs include dist and MIT/community metadata; packages published under `@techinject` as npm alphas. Copy this family plus workspace tooling and declared dependencies; consumers supply runtime wiring/config.
 
 ## SvelteKit adapter extension
 
@@ -32,3 +32,13 @@ Owner-authorized addition, 12 October 2026: separate SSR-safe browser lifecycle 
 ## Host connections dashboard — 12 October 2026
 
 Owner requested a simple dashboard inside each consuming app. Reuse the existing SDK instance: core exposes copied connection snapshots and isolated subscriptions; an optional browser/dashboard subpath renders them without polling or provider probes. Show event-provider configuration, current consent, bounded aggregate counters, latest SDK outcome and time. Never retain payloads, event IDs, raw errors, endpoints or credentials. Configuration is not connectivity; completed sends do not prove delivery or attribution. Counts are per instance, in memory; technical Observer status and cross-request/server aggregation are outside this first version. The host owns authentication and any server-to-browser snapshot endpoint. Next lab includes a noindex /connections consumer page. Verify failure/timeout/denial, duplicate names, mutation isolation, cleanup, safe rendering and real mobile navigation.
+
+## Observability backend design — 13 October 2026
+
+Reuse createOTLPObserver({ endpoint, serviceName, headers, ...bounds }) without changing its exact-endpoint contract. The host supplies the complete /v1/traces URL, retaining any gateway prefix such as /otlp. SigNoz Cloud uses signoz-ingestion-key; Grafana Cloud uses its supplied Authorization header; local collectors use their configured authentication or no headers. No credentials are read from process.env by the library. There are no provider-specific cloud factories.
+
+The Sentry bridge constructs only approved synthetic exception/request fields and uses captureEvent plus bounded flush from a host-owned client. Native SDK enrichment is outside this sanitation boundary. Correlation IDs are tags rather than replacement Sentry trace context. Composite observers isolate exceptions, rejected promises, per-record mutation and stalled operations.
+
+## Local connections observability catalog — 13 October 2026
+
+Owner requested visibility of the new integrations on the local /connections page. The portable dashboard accepts optional host-declared observability metadata and renders Sentry, Grafana and SigNoz separately from event-provider outcomes. Next.js and SvelteKit labs list these as not configured because their observers are synthetic. Backend labels and setup guidance are fixed, while configuration/policy flags are supplied by the host. No credentials, endpoints, provider objects, health probes or invented delivery counters are exposed. Existing two-argument dashboard calls remain supported. Configuration is unverified host information, not evidence of a connection.

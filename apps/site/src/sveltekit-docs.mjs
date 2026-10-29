@@ -36,7 +36,7 @@ export const sveltekitPage = {
     {
       title: 'Build and try the local lab',
       paragraphs: [
-        'Alpha 0.1.0-alpha.1 is published on npm. Pin @techinject/sveltekit, @techinject/browser and any server adapter to this version, or use the source lab with Node 22 and pnpm 10.24.0. The fixture uses SvelteKit 3.0.1, Svelte 5.57.2 and adapter-node 6.0.0. Kit 2 and Edge are not certified by this build.',
+        'Alpha 0.1.0-alpha.2 is published on npm. Pin @techinject/sveltekit, @techinject/browser and any server adapter to this version, or use the source lab with Node 22 and pnpm 10.24.0. The fixture uses SvelteKit 3.0.1, Svelte 5.57.2 and adapter-node 6.0.0. Kit 2 and Edge are not certified by this build.',
       ],
       code: `git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
