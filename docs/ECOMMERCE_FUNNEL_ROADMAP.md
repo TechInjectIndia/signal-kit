@@ -7,7 +7,9 @@ A comprehensive, production-grade guide for implementing multi-platform e-commer
 ## 1. Executive Summary & Core Objective
 
 ### What We Are Building
+
 A **Universal Funnel Tracking Architecture** embedded inside `signal-kit` that captures:
+
 1. **Traffic Attribution:** Where did the user arrive from? (Google Ads, Meta Ads, organic search, referral, or direct).
 2. **Navigation & Routes:** Which pages, routes, and URLs did the user visit (SPA soft routes, hybrid navigation, and MPA hard loads)?
 3. **Product Catalog Engagement:** Which items were viewed (`product_view` $\rightarrow$ GA4 `view_item`)?
@@ -16,12 +18,15 @@ A **Universal Funnel Tracking Architecture** embedded inside `signal-kit` that c
 6. **Conversion / Purchase:** Final order confirmation (`purchase`), transaction ID, and revenue.
 
 ### The Hybrid Tech Challenge
+
 Projects differ in tech stack:
-* **SPAs:** Next.js, React, Vue, SvelteKit, Angular.
-* **Server-Rendered / MPAs:** PHP (Laravel, CodeIgniter), Python (Django), WordPress/WooCommerce.
-* **E-commerce CMS:** Shopify (Liquid), Magento, Custom HTML/CSS/JS.
+
+- **SPAs:** Next.js, React, Vue, SvelteKit, Angular.
+- **Server-Rendered / MPAs:** PHP (Laravel, CodeIgniter), Python (Django), WordPress/WooCommerce.
+- **E-commerce CMS:** Shopify (Liquid), Magento, Custom HTML/CSS/JS.
 
 **The Architectural Solution:** A **two-tier telemetry architecture**:
+
 - **Layer 1 (Core Engine):** A platform-independent browser engine (`window.signals`) and declarative HTML `data-*` listeners that run identically in any browser regardless of framework.
 - **Layer 2 (Framework Adapters):** Dedicated wrappers (`useSignals()` for Next.js/React, server hooks for Bun/Node/PHP) for native developer experience.
 
@@ -31,12 +36,12 @@ Projects differ in tech stack:
 
 Before writing code or configuring funnels, the following accounts and IDs are required per project:
 
-| Platform | Required Identifier | Format / Example | Where to Find in Admin UI |
-| :--- | :--- | :--- | :--- |
-| **Google Analytics 4** | GA4 Measurement ID | `G-XXXXXXXXXX` | Admin $\rightarrow$ Data Streams $\rightarrow$ Web $\rightarrow$ Measurement ID |
-| **Google Tag Manager** *(Optional)* | GTM Container ID | `GTM-XXXXXXX` | GTM Dashboard top right |
-| **Meta Pixel** | Pixel ID | `123456789012345` (15-16 digits) | Meta Events Manager $\rightarrow$ Data Sources $\rightarrow$ Settings |
-| **Microsoft Clarity** | Clarity Project ID | `a1b2c3d4e5` (alphanumeric) | Clarity Dashboard $\rightarrow$ Settings $\rightarrow$ Overview |
+| Platform                            | Required Identifier | Format / Example                 | Where to Find in Admin UI                                                       |
+| :---------------------------------- | :------------------ | :------------------------------- | :------------------------------------------------------------------------------ |
+| **Google Analytics 4**              | GA4 Measurement ID  | `G-XXXXXXXXXX`                   | Admin $\rightarrow$ Data Streams $\rightarrow$ Web $\rightarrow$ Measurement ID |
+| **Google Tag Manager** _(Optional)_ | GTM Container ID    | `GTM-XXXXXXX`                    | GTM Dashboard top right                                                         |
+| **Meta Pixel**                      | Pixel ID            | `123456789012345` (15-16 digits) | Meta Events Manager $\rightarrow$ Data Sources $\rightarrow$ Settings           |
+| **Microsoft Clarity**               | Clarity Project ID  | `a1b2c3d4e5` (alphanumeric)      | Clarity Dashboard $\rightarrow$ Settings $\rightarrow$ Overview                 |
 
 > [!IMPORTANT]
 > **Never hardcode secrets**: Measurement IDs and Pixel IDs are public client identifiers. Do **not** expose private API tokens (like Meta CAPI Access Tokens or Google Service Account keys) in client-side code.
@@ -66,6 +71,7 @@ Understanding how these three tools connect prevents architectural mistakes:
 ```
 
 ### Which One Should You Use?
+
 1. **Direct Google Tag (`gtag.js`) via SignalKit (Recommended for this SDK):**
    - SignalKit already has `createGA4Provider` built-in.
    - It directly initializes `gtag.js` and fires standard GA4 events (`view_item`, `add_to_cart`, `begin_checkout`, `purchase`).
@@ -90,13 +96,13 @@ flowchart LR
 
 ### Event Payloads & Mapping Table
 
-| Step | SignalKit Event | GA4 Mapped Event | Meta Pixel Mapped | Microsoft Clarity | Mandatory Parameters |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **0. Page Navigation** | `page_view` | `page_view` | `PageView` | Auto page | `page_path` |
-| **1. Product View** | `product_view` | `view_item` | `ViewContent` | `event: product_view` | `currency`, `value`, `items` (`item_id`, `item_name`, `price`) |
-| **2. Add to Cart** | `add_to_cart` | `add_to_cart` | `AddToCart` | `event: add_to_cart` | `currency`, `value`, `items` (`item_id`, `quantity`, `price`) |
-| **3. Begin Checkout** | `begin_checkout`| `begin_checkout`| `InitiateCheckout` | `event: begin_checkout` | `currency`, `value`, `items` |
-| **4. Purchase** | `purchase` | `purchase` | `Purchase` | `event: purchase` | `transaction_id`, `currency`, `value`, `items` |
+| Step                   | SignalKit Event  | GA4 Mapped Event | Meta Pixel Mapped  | Microsoft Clarity       | Mandatory Parameters                                           |
+| :--------------------- | :--------------- | :--------------- | :----------------- | :---------------------- | :------------------------------------------------------------- |
+| **0. Page Navigation** | `page_view`      | `page_view`      | `PageView`         | Auto page               | `page_path`                                                    |
+| **1. Product View**    | `product_view`   | `view_item`      | `ViewContent`      | `event: product_view`   | `currency`, `value`, `items` (`item_id`, `item_name`, `price`) |
+| **2. Add to Cart**     | `add_to_cart`    | `add_to_cart`    | `AddToCart`        | `event: add_to_cart`    | `currency`, `value`, `items` (`item_id`, `quantity`, `price`)  |
+| **3. Begin Checkout**  | `begin_checkout` | `begin_checkout` | `InitiateCheckout` | `event: begin_checkout` | `currency`, `value`, `items`                                   |
+| **4. Purchase**        | `purchase`       | `purchase`       | `Purchase`         | `event: purchase`       | `transaction_id`, `currency`, `value`, `items`                 |
 
 ---
 
@@ -105,7 +111,9 @@ flowchart LR
 When users click Google Ads, Meta Ads, or external links, URL parameters and headers carry attribution data.
 
 ### How SignalKit Captures Attribution
+
 Inside `packages/features/signals/browser/src/providers.ts`:
+
 1. **Safe Location & Query Filter:** SignalKit extracts and preserves only authorized advertising parameters:
    - `utm_source` (e.g. `google`, `facebook`, `newsletter`)
    - `utm_medium` (e.g. `cpc`, `banner`, `email`)
@@ -128,12 +136,18 @@ Inside `packages/features/signals/browser/src/providers.ts`:
 To ensure the funnel runs consistently across any project regardless of technology stack, implement the three tiers below:
 
 ### Tier 1: Modern React / Next.js Projects
+
 Uses the `@techinject/nextjs` package with typed hooks.
 
 ```tsx
 // app/providers.tsx
 'use client';
-import { SignalKitProvider, createGA4Provider, createMetaPixelProvider, createClarityProvider } from '@techinject/nextjs';
+import {
+  SignalKitProvider,
+  createGA4Provider,
+  createMetaPixelProvider,
+  createClarityProvider,
+} from '@techinject/nextjs';
 
 const config = {
   providers: [
@@ -150,6 +164,7 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
 ```
 
 Triggering in UI:
+
 ```tsx
 import { useSignals } from '@techinject/nextjs';
 
@@ -164,7 +179,9 @@ export function AddToCartButton({ product }) {
           properties: {
             currency: 'INR',
             value: product.price,
-            items: [{ item_id: product.id, item_name: product.name, price: product.price, quantity: 1 }],
+            items: [
+              { item_id: product.id, item_name: product.name, price: product.price, quantity: 1 },
+            ],
           },
         });
       }}
@@ -178,19 +195,22 @@ export function AddToCartButton({ product }) {
 ---
 
 ### Tier 2: Universal Vanilla JS / HTML / PHP / Shopify Projects
+
 For projects using server-rendered HTML (PHP, Laravel, Django), CMS (Shopify, WordPress), or legacy jQuery/vanilla JS.
 
 #### Step 1: Include the Universal Bundle in `<head>`
+
 ```html
-<script 
-  src="/assets/signalkit.bundle.js" 
-  data-ga4-id="G-XXXXXXXXXX" 
-  data-meta-id="123456789012345" 
-  data-clarity-id="a1b2c3d4e5">
-</script>
+<script
+  src="/assets/signalkit.bundle.js"
+  data-ga4-id="G-XXXXXXXXXX"
+  data-meta-id="123456789012345"
+  data-clarity-id="a1b2c3d4e5"
+></script>
 ```
 
 #### Step 2: Trigger Events via `window.signals.track`
+
 ```html
 <script>
   function handleCartAdd(product) {
@@ -199,13 +219,15 @@ For projects using server-rendered HTML (PHP, Laravel, Django), CMS (Shopify, Wo
       properties: {
         currency: 'INR',
         value: product.price,
-        items: [{
-          item_id: product.id,
-          item_name: product.name,
-          price: product.price,
-          quantity: 1
-        }]
-      }
+        items: [
+          {
+            item_id: product.id,
+            item_name: product.name,
+            price: product.price,
+            quantity: 1,
+          },
+        ],
+      },
     });
   }
 </script>
@@ -214,9 +236,11 @@ For projects using server-rendered HTML (PHP, Laravel, Django), CMS (Shopify, Wo
 ---
 
 ### Tier 3: Zero-Code Declarative HTML Data Attributes
+
 For marketing pages, hybrid CSS layouts, or projects where modifying JavaScript is restricted:
 
 Add a DOM-delegation listener in the SDK bundle:
+
 ```javascript
 // Auto-listener for data attributes across any technology
 document.addEventListener('click', (event) => {
@@ -243,14 +267,16 @@ document.addEventListener('click', (event) => {
 ```
 
 Usage in any HTML/CSS button:
+
 ```html
-<button 
+<button
   class="btn btn-primary"
   data-signal="add_to_cart"
   data-item-id="SHOES-99"
   data-item-name="Running Shoes"
   data-price="2499"
-  data-currency="INR">
+  data-currency="INR"
+>
   Add to Cart
 </button>
 ```
@@ -262,12 +288,14 @@ Usage in any HTML/CSS button:
 Single-page applications (Next.js App Router, Vue Router, React Router) do not trigger full browser reloads when navigating between routes.
 
 SignalKit automatically patches:
+
 - `window.history.pushState`
 - `window.history.replaceState`
 - `window.addEventListener('popstate', ...)`
 - `window.addEventListener('hashchange', ...)`
 
 Whenever the URL path changes, SignalKit emits a sanitized `page_view` event.
+
 > [!NOTE]
 > To avoid duplicate page views in GA4, turn **OFF** "Page changes based on browser history events" inside **GA4 $\rightarrow$ Admin $\rightarrow$ Data Streams $\rightarrow$ Enhanced Measurement settings**, since SignalKit explicitly controls route dispatches.
 
@@ -278,13 +306,16 @@ Whenever the URL path changes, SignalKit emits a sanitized `page_view` event.
 Once events are flowing into GA4, configure the funnel reports:
 
 ### Method 1: Built-in "Purchase Journey" Report (Instant)
+
 1. Navigate to **Reports $\rightarrow$ Monetization $\rightarrow$ Purchase journey**.
 2. GA4 will automatically render a bar chart of:
    $$\text{Session start} \longrightarrow \text{view\_item} \longrightarrow \text{add\_to\_cart} \longrightarrow \text{begin\_checkout} \longrightarrow \text{purchase}$$
 3. Drop-off rates between each stage are calculated automatically.
 
 ### Method 2: Custom Funnel Exploration (Detailed Breakdown)
+
 To view drop-offs broken down by **Traffic Source (Ads vs Organic)**:
+
 1. Open GA4 $\rightarrow$ **Explore** $\rightarrow$ Click **Funnel exploration**.
 2. In the **Steps** configuration, click the pencil edit icon:
    - **Step 1: Product View** $\rightarrow$ Event name = `view_item`
@@ -292,10 +323,12 @@ To view drop-offs broken down by **Traffic Source (Ads vs Organic)**:
    - **Step 3: Checkout Initiated** $\rightarrow$ Event name = `begin_checkout`
    - **Step 4: Order Success** $\rightarrow$ Event name = `purchase`
 3. In **Breakdown**, drag and drop **Session source / medium** or **First user campaign**.
-4. **Outcome:** The visual funnel separates into comparative columns (e.g., *Google Ads conversion rate: 4.2%* vs. *Instagram Ads conversion rate: 1.1%*).
+4. **Outcome:** The visual funnel separates into comparative columns (e.g., _Google Ads conversion rate: 4.2%_ vs. _Instagram Ads conversion rate: 1.1%_).
 
 ### Method 3: User Journey Path Exploration
+
 To see where users went before and after checkout:
+
 1. Navigate to **Explore $\rightarrow$ Path exploration**.
 2. Set the starting point or ending point to `Event name` = `begin_checkout`.
 3. View the tree diagram showing exact predecessor and successor pages.
@@ -305,13 +338,16 @@ To see where users went before and after checkout:
 ## 9. Critical Edge Cases & Implementation Guardrails
 
 ### 1. Purchase Reliability (Server-Side vs. Client-Side)
+
 - **Problem:** Users may close the browser tab immediately after payment, causing the client `purchase` event to drop.
 - **Solution:** Verify purchases via server webhook (e.g., Razorpay/Stripe webhook) and emit a server-side `purchase` event with the exact same `eventId` and `transaction_id`.
 
 ### 2. Event Deduplication
+
 - When both client and server send events to Meta Pixel / CAPI, send an identical `eventId`. Meta deduplicates records sharing the same `eventID` received within 48 hours.
 
 ### 3. Consent Management (GDPR / Google Consent Mode v2)
+
 - SignalKit starts in `DENIED_CONSENT` mode by default.
 - Once user accepts cookie/analytics consent on the website:
   ```ts
@@ -323,11 +359,11 @@ To see where users went before and after checkout:
 
 ## 10. Implementation Roadmap & Timeline
 
-| Phase | Task | Target Timeline | Deliverable |
-| :--- | :--- | :--- | :--- |
-| **Phase 1: Setup** | Collect GA4 Measurement IDs and Meta Pixel IDs per project | Day 1 (Morning) | Credentials list |
-| **Phase 2: Core SDK** | Build universal browser bundle with `data-signal` auto-listener | Day 1 (Midday) | `dist/signalkit.bundle.js` |
-| **Phase 3: Integration** | Inject script / providers into target projects (Next.js & HTML/PHP) | Day 1 (Afternoon)| Root layout injection |
-| **Phase 4: Events** | Wire `product_view`, `add_to_cart`, `begin_checkout`, `purchase` | Day 1 (Evening) | Catalog, Cart, & Checkout wired |
-| **Phase 5: Verification** | Test via GA4 DebugView and Chrome GA Debugger extension | Day 2 (Morning) | Verified event stream in GA4 |
-| **Phase 6: Reporting** | Build Funnel Exploration & Path Exploration reports in GA4 | Day 2 (Midday) | Completed visual funnels |
+| Phase                     | Task                                                                | Target Timeline   | Deliverable                     |
+| :------------------------ | :------------------------------------------------------------------ | :---------------- | :------------------------------ |
+| **Phase 1: Setup**        | Collect GA4 Measurement IDs and Meta Pixel IDs per project          | Day 1 (Morning)   | Credentials list                |
+| **Phase 2: Core SDK**     | Build universal browser bundle with `data-signal` auto-listener     | Day 1 (Midday)    | `dist/signalkit.bundle.js`      |
+| **Phase 3: Integration**  | Inject script / providers into target projects (Next.js & HTML/PHP) | Day 1 (Afternoon) | Root layout injection           |
+| **Phase 4: Events**       | Wire `product_view`, `add_to_cart`, `begin_checkout`, `purchase`    | Day 1 (Evening)   | Catalog, Cart, & Checkout wired |
+| **Phase 5: Verification** | Test via GA4 DebugView and Chrome GA Debugger extension             | Day 2 (Morning)   | Verified event stream in GA4    |
+| **Phase 6: Reporting**    | Build Funnel Exploration & Path Exploration reports in GA4          | Day 2 (Midday)    | Completed visual funnels        |

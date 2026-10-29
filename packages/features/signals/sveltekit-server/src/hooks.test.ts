@@ -183,4 +183,3 @@ test('SvelteKit 2 runtime event shape and route compatibility (3.1)', async () =
   expect(await res.text()).toBe('sk2-ok');
   expect(records[0]?.route).toBe('/api/v2/lead');
 });
-

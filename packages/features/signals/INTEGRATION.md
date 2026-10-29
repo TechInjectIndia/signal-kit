@@ -273,20 +273,20 @@ Create fresh observer/provider instances per request. The adapter uses route.id 
 
 All events are strictly validated and sanitized before dispatch to providers. Unknown or dangerous fields are stripped to protect privacy.
 
-| Event Name | Schema Properties | Provider Mapping |
-| :--- | :--- | :--- |
-| `page_view` | `page_path` | GA4 `page_view`, Meta `PageView`, Clarity `page_view` |
-| `product_view` | `item_id`, `item_name`, `price`, `currency`, `items`, etc. | GA4 `view_item`, Meta `ViewContent` |
-| `add_to_cart` | `currency`, `value`, `items` (can be empty), `coupon` | GA4 `add_to_cart`, Meta `AddToCart` |
-| `begin_checkout` | `currency`, `value`, `items`, `coupon` | GA4 `begin_checkout`, Meta `InitiateCheckout` |
-| `purchase` | `transaction_id`, `currency`, `value`, `items`, `shipping`, `tax` | GA4 `purchase`, Meta `Purchase` |
-| `generate_lead` | `value`, `currency`, `lead_type` | Meta `Lead`, GA4 `generate_lead` |
-| `phone_click` | `phone_number`, `destination` | Meta `Contact`, GA4 `phone_click` |
-| `whatsapp_click` | `phone_number`, `destination` | Meta `Contact`, GA4 `whatsapp_click` |
-| `sign_up` | `method` | Meta `CompleteRegistration`, GA4 `sign_up` |
-| `login` | `method` | Meta `Login`, GA4 `login` |
-| `search` | `search_term` | Meta `Search`, GA4 `search` |
-| `custom_event` | `action`, `category`, `label`, `value` | Meta `CustomEvent`, GA4 custom |
+| Event Name       | Schema Properties                                                 | Provider Mapping                                      |
+| :--------------- | :---------------------------------------------------------------- | :---------------------------------------------------- |
+| `page_view`      | `page_path`                                                       | GA4 `page_view`, Meta `PageView`, Clarity `page_view` |
+| `product_view`   | `item_id`, `item_name`, `price`, `currency`, `items`, etc.        | GA4 `view_item`, Meta `ViewContent`                   |
+| `add_to_cart`    | `currency`, `value`, `items` (can be empty), `coupon`             | GA4 `add_to_cart`, Meta `AddToCart`                   |
+| `begin_checkout` | `currency`, `value`, `items`, `coupon`                            | GA4 `begin_checkout`, Meta `InitiateCheckout`         |
+| `purchase`       | `transaction_id`, `currency`, `value`, `items`, `shipping`, `tax` | GA4 `purchase`, Meta `Purchase`                       |
+| `generate_lead`  | `value`, `currency`, `lead_type`                                  | Meta `Lead`, GA4 `generate_lead`                      |
+| `phone_click`    | `phone_number`, `destination`                                     | Meta `Contact`, GA4 `phone_click`                     |
+| `whatsapp_click` | `phone_number`, `destination`                                     | Meta `Contact`, GA4 `whatsapp_click`                  |
+| `sign_up`        | `method`                                                          | Meta `CompleteRegistration`, GA4 `sign_up`            |
+| `login`          | `method`                                                          | Meta `Login`, GA4 `login`                             |
+| `search`         | `search_term`                                                     | Meta `Search`, GA4 `search`                           |
+| `custom_event`   | `action`, `category`, `label`, `value`                            | Meta `CustomEvent`, GA4 custom                        |
 
 ### Example: Tracking leads and contacts
 

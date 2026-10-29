@@ -103,7 +103,7 @@ This document catalogs all confirmed bugs, framework edge cases, import traps, a
   ```ts
   signals.handle(event.request, () => resolve(event), {
     route: event.route.id ?? undefined,
-  })
+  });
   ```
 - **Error Manifestation:**
   In SvelteKit 2, `event.route` can evaluate to `null` or `undefined` (especially in standalone server endpoints, fallback handlers, or prerender passes).
@@ -167,6 +167,7 @@ This document catalogs all confirmed bugs, framework edge cases, import traps, a
   The in-app connections dashboard function `mountConnectionsDashboard` is exported **only** from `@techinject/browser/dashboard`.
 - **The Error:**
   Developers importing from framework packages encounter module export errors:
+
   ```ts
   // ❌ Throws: Module '"@techinject/nextjs"' has no exported member 'mountConnectionsDashboard'.
   import { mountConnectionsDashboard } from '@techinject/nextjs';
@@ -174,6 +175,7 @@ This document catalogs all confirmed bugs, framework edge cases, import traps, a
   // ❌ Throws: Module '"@techinject/sveltekit"' has no exported member 'mountConnectionsDashboard'.
   import { mountConnectionsDashboard } from '@techinject/sveltekit';
   ```
+
 - **Correction:** Must import directly from the browser package subpath:
   ```ts
   import { mountConnectionsDashboard } from '@techinject/browser/dashboard';
@@ -350,7 +352,9 @@ export const { handle, handleFetch } = createSvelteKitHooks(async (event) => {
   };
 });
 ```
+
 Inside the adapter itself, ensure:
+
 ```ts
-route: event.route?.id ?? undefined
+route: event.route?.id ?? undefined;
 ```

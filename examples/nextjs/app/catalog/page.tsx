@@ -114,21 +114,59 @@ export default function Catalog() {
         field notebook.
       </h1>
       <p className="intro">
-        Interactive 4-stage ecommerce funnel: <code>view_item</code> → <code>add_to_cart</code> → <code>begin_checkout</code> → <code>purchase</code>.
+        Interactive 4-stage ecommerce funnel: <code>view_item</code> → <code>add_to_cart</code> →{' '}
+        <code>begin_checkout</code> → <code>purchase</code>.
       </p>
 
       {/* Funnel Progress Indicator */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '24px 0', fontSize: '12px', fontFamily: 'monospace' }}>
-        <span style={{ padding: '6px 10px', borderRadius: '4px', background: '#d3d8ce', color: '#1e302b' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          flexWrap: 'wrap',
+          margin: '24px 0',
+          fontSize: '12px',
+          fontFamily: 'monospace',
+        }}
+      >
+        <span
+          style={{
+            padding: '6px 10px',
+            borderRadius: '4px',
+            background: '#d3d8ce',
+            color: '#1e302b',
+          }}
+        >
           1. View Product
         </span>
-        <span style={{ padding: '6px 10px', borderRadius: '4px', background: cartCount > 0 ? '#d9ef67' : '#e8ede5', color: '#1e302b' }}>
+        <span
+          style={{
+            padding: '6px 10px',
+            borderRadius: '4px',
+            background: cartCount > 0 ? '#d9ef67' : '#e8ede5',
+            color: '#1e302b',
+          }}
+        >
           2. Add to Cart {cartCount > 0 ? `(${cartCount})` : ''}
         </span>
-        <span style={{ padding: '6px 10px', borderRadius: '4px', background: step === 'checkout' || step === 'purchased' ? '#d9ef67' : '#e8ede5', color: '#1e302b' }}>
+        <span
+          style={{
+            padding: '6px 10px',
+            borderRadius: '4px',
+            background: step === 'checkout' || step === 'purchased' ? '#d9ef67' : '#e8ede5',
+            color: '#1e302b',
+          }}
+        >
           3. Checkout
         </span>
-        <span style={{ padding: '6px 10px', borderRadius: '4px', background: step === 'purchased' ? '#d9ef67' : '#e8ede5', color: '#1e302b' }}>
+        <span
+          style={{
+            padding: '6px 10px',
+            borderRadius: '4px',
+            background: step === 'purchased' ? '#d9ef67' : '#e8ede5',
+            color: '#1e302b',
+          }}
+        >
           4. Purchase {orderId ? `✓` : ''}
         </span>
       </div>
@@ -144,8 +182,18 @@ export default function Catalog() {
           <p>INR 450.00 · demonstration product</p>
 
           {step === 'purchased' ? (
-            <div style={{ border: '1px solid #1e302b', padding: '18px', borderRadius: '4px', background: '#e0ecb8', maxWidth: '380px' }}>
-              <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>🎉 Order Placed Successfully!</p>
+            <div
+              style={{
+                border: '1px solid #1e302b',
+                padding: '18px',
+                borderRadius: '4px',
+                background: '#e0ecb8',
+                maxWidth: '380px',
+              }}
+            >
+              <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>
+                🎉 Order Placed Successfully!
+              </p>
               <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontFamily: 'monospace' }}>
                 Order ID: <strong>{orderId}</strong>
                 <br />
@@ -159,7 +207,15 @@ export default function Catalog() {
               </button>
             </div>
           ) : step === 'checkout' ? (
-            <div style={{ border: '1px solid #d3d8ce', padding: '18px', borderRadius: '4px', background: '#f4f1e9', maxWidth: '380px' }}>
+            <div
+              style={{
+                border: '1px solid #d3d8ce',
+                padding: '18px',
+                borderRadius: '4px',
+                background: '#f4f1e9',
+                maxWidth: '380px',
+              }}
+            >
               <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>🛒 Checkout Stage</p>
               <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontFamily: 'monospace' }}>
                 Items: {cartCount || 1} x Field Notebook
@@ -171,7 +227,14 @@ export default function Catalog() {
                   Complete Purchase (Pay Now) →
                 </button>
                 <button
-                  style={{ background: 'transparent', border: '1px solid #993c22', color: '#993c22', padding: '12px', borderRadius: '4px', font: '12px monospace' }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #993c22',
+                    color: '#993c22',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    font: '12px monospace',
+                  }}
                   onClick={handleReset}
                 >
                   Abandon Checkout (Drop-off)
@@ -179,13 +242,27 @@ export default function Catalog() {
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                alignItems: 'flex-start',
+              }}
+            >
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button className="action" onClick={handleAddToCart}>
                   Add to cart +
                 </button>
                 <button
-                  style={{ border: '1px solid #1e302b', borderRadius: '4px', background: '#f4f1e9', color: '#1e302b', padding: '14px 18px', font: '13px monospace' }}
+                  style={{
+                    border: '1px solid #1e302b',
+                    borderRadius: '4px',
+                    background: '#f4f1e9',
+                    color: '#1e302b',
+                    padding: '14px 18px',
+                    font: '13px monospace',
+                  }}
                   onClick={handleProductView}
                 >
                   View Details (view_item)
@@ -213,7 +290,9 @@ export default function Catalog() {
       </div>
 
       <p className="note">
-        In real production stores, <code>product_view</code> fires on page load, <code>add_to_cart</code> on cart buttons, <code>begin_checkout</code> on checkout entry, and <code>purchase</code> from verified server webhooks.
+        In real production stores, <code>product_view</code> fires on page load,{' '}
+        <code>add_to_cart</code> on cart buttons, <code>begin_checkout</code> on checkout entry, and{' '}
+        <code>purchase</code> from verified server webhooks.
       </p>
     </section>
   );
