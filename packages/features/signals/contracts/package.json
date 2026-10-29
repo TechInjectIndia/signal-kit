@@ -21,7 +21,7 @@
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.type-tests.json"
   },
   "dependencies": {
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "repository": {
     "type": "git",
