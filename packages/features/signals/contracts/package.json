@@ -1,6 +1,6 @@
 {
   "name": "@techinject/contracts",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -21,7 +21,7 @@
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.type-tests.json"
   },
   "dependencies": {
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "repository": {
     "type": "git",

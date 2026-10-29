@@ -41,9 +41,20 @@ test('real SSR/hydration, SPA pages, consent, API observation and Kit internal-f
   expect(after.filter((r: { name: string }) => r.name === 'page_view')).toHaveLength(2);
   await page.getByRole('link', { name: 'Connections', exact: true }).click();
   const dashboard = page.getByRole('region', { name: 'SignalKit connections' });
-  await expect(dashboard).toContainText('Blocked by consent');
+  const events = dashboard.getByRole('region', { name: 'Event provider connections' });
+  const observability = dashboard.getByRole('region', { name: 'Observability connections' });
+  await expect(observability.getByRole('article')).toHaveCount(3);
+  for (const backend of ['Sentry', 'Grafana', 'SigNoz']) {
+    const card = observability
+      .getByRole('article')
+      .filter({ has: page.getByRole('heading', { name: backend, exact: true }) });
+    await expect(card).toContainText('Not configured');
+  }
+
+  await expect(events).toContainText('Blocked by consent');
   await page.getByRole('button', { name: 'Allow analytics and observability' }).click();
-  await expect(dashboard).toContainText('SDK send completed');
+  await expect(events).toContainText('SDK send completed');
+  await expect(observability.getByText('Not configured', { exact: true })).toHaveCount(3);
   await page.getByRole('link', { name: 'Home', exact: true }).click();
   await expect(dashboard).toHaveCount(0);
 });
