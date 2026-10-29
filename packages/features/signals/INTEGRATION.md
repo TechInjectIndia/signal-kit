@@ -281,8 +281,8 @@ All events are strictly validated and sanitized before dispatch to providers. Un
 | `begin_checkout` | `currency`, `value`, `items`, `coupon`                            | GA4 `begin_checkout`, Meta `InitiateCheckout`         |
 | `purchase`       | `transaction_id`, `currency`, `value`, `items`, `shipping`, `tax` | GA4 `purchase`, Meta `Purchase`                       |
 | `generate_lead`  | `value`, `currency`, `lead_type`                                  | Meta `Lead`, GA4 `generate_lead`                      |
-| `phone_click`    | `phone_number`, `destination`                                     | Meta `Contact`, GA4 `phone_click`                     |
-| `whatsapp_click` | `phone_number`, `destination`                                     | Meta `Contact`, GA4 `whatsapp_click`                  |
+| `phone_click`    | Optional `channel` (`phone` or `whatsapp`)                        | Meta `Contact`, GA4 `phone_click`                     |
+| `whatsapp_click` | Optional `channel` (`phone` or `whatsapp`)                        | Meta `Contact`, GA4 `whatsapp_click`                  |
 | `sign_up`        | `method`                                                          | Meta `CompleteRegistration`, GA4 `sign_up`            |
 | `login`          | `method`                                                          | Meta `Login`, GA4 `login`                             |
 | `search`         | `search_term`                                                     | Meta `Search`, GA4 `search`                           |
@@ -305,7 +305,7 @@ await signals.track({
 await signals.track({
   name: 'whatsapp_click',
   properties: {
-    destination: '+919876543210',
+    channel: 'whatsapp',
   },
 });
 ```

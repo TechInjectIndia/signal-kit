@@ -13,6 +13,7 @@ import {
   maximum,
   regex,
   union,
+  literal,
 } from 'zod/mini';
 
 export type Consent = { analytics: boolean; marketing: boolean; observability: boolean };
@@ -54,7 +55,6 @@ export type CommerceProperties = {
   coupon?: string;
   affiliation?: string;
   payment_type?: string;
-  user_id?: string;
 };
 export type SingleProductViewProperties = {
   item_id: string;
@@ -71,7 +71,7 @@ export type ProductViewProperties = CommerceProperties | SingleProductViewProper
 export type PurchaseProperties = CommerceProperties & { transaction_id: string };
 export type PageViewProperties = { page_path: string };
 export type LeadProperties = { value?: number; currency?: string; lead_type?: string };
-export type ContactProperties = { phone_number?: string; destination?: string };
+export type ContactProperties = { channel?: 'whatsapp' | 'phone' };
 export type AuthProperties = { method?: string };
 export type SearchProperties = { search_term: string };
 export type CustomProperties = {
@@ -155,7 +155,6 @@ const commerce = object({
   coupon: optional(text),
   affiliation: optional(text),
   payment_type: optional(text),
-  user_id: optional(text),
 });
 const singleProductView = object({
   item_id: text,
@@ -181,14 +180,8 @@ const schemas = {
     currency: optional(currency),
     lead_type: optional(text),
   }),
-  phone_click: object({
-    phone_number: optional(text),
-    destination: optional(text),
-  }),
-  whatsapp_click: object({
-    phone_number: optional(text),
-    destination: optional(text),
-  }),
+  phone_click: object({ channel: optional(union([literal('whatsapp'), literal('phone')])) }),
+  whatsapp_click: object({ channel: optional(union([literal('whatsapp'), literal('phone')])) }),
   sign_up: object({
     method: optional(text),
   }),

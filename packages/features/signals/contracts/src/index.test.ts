@@ -99,9 +99,9 @@ describe('event boundary', () => {
     ).toEqual({ method: 'google' });
 
     expect(
-      sanitizeEvent({ name: 'phone_click', properties: { destination: '+1234567890' } }, 'phone-1')
+      sanitizeEvent({ name: 'phone_click', properties: { channel: 'phone' } }, 'phone-1')
         ?.properties,
-    ).toEqual({ destination: '+1234567890' });
+    ).toEqual({ channel: 'phone' });
 
     expect(
       sanitizeEvent(
@@ -112,6 +112,49 @@ describe('event boundary', () => {
         'custom-1',
       )?.properties,
     ).toEqual({ action: 'video_play', category: 'tutorial', value: 10 });
+  });
+  it('strips raw identity fields from contact and commerce events', () => {
+    for (const name of ['phone_click', 'whatsapp_click'] as const) {
+      expect(
+        sanitizeEvent(
+          {
+            name,
+            properties: {
+              channel: name === 'phone_click' ? 'phone' : 'whatsapp',
+              phone_number: '+1234567890',
+              destination: '+1234567890',
+              user_id: 'customer-123',
+            },
+          },
+          `${name}-1`,
+        )?.properties,
+      ).toEqual({ channel: name === 'phone_click' ? 'phone' : 'whatsapp' });
+    }
+
+    for (const name of ['product_view', 'add_to_cart', 'begin_checkout', 'purchase'] as const) {
+      expect(
+        sanitizeEvent(
+          {
+            name,
+            properties: {
+              ...(name === 'purchase' ? { transaction_id: 'order-1' } : {}),
+              currency: 'USD',
+              value: 10,
+              items: [{ item_id: 'sku-1' }],
+              phone_number: '+1234567890',
+              destination: '+1234567890',
+              user_id: 'customer-123',
+            },
+          },
+          `${name}-1`,
+        )?.properties,
+      ).toEqual({
+        ...(name === 'purchase' ? { transaction_id: 'order-1' } : {}),
+        currency: 'USD',
+        value: 10,
+        items: [{ item_id: 'sku-1' }],
+      });
+    }
   });
   it('preserves standard ecommerce item and commerce properties (2.2)', () => {
     const res = sanitizeEvent(
