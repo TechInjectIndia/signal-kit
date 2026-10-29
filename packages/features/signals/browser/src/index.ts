@@ -8,7 +8,6 @@ export type BrowserConfig = Parameters<typeof createSignals>[0] & {
   autoTrack?: boolean;
   trackHash?: boolean;
   trackQuery?: boolean;
-  captureErrors?: boolean;
 };
 let activeOwner: object | undefined;
 export function createBrowserSignals(config: BrowserConfig = {}) {
@@ -129,36 +128,6 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     if (config.trackHash === true) {
       window.addEventListener('hashchange', navigation);
       restores.push(() => window.removeEventListener('hashchange', navigation));
-    }
-    if (config.captureErrors) {
-      const errorHandler = () => {
-        if (!running || !core.getConsent().observability) return;
-        record({
-          kind: 'request',
-          route: safeRoute(location.href),
-          method: 'ERROR',
-          status: 500,
-          durationMs: 0,
-          error: true,
-        });
-      };
-      const rejectionHandler = () => {
-        if (!running || !core.getConsent().observability) return;
-        record({
-          kind: 'request',
-          route: safeRoute(location.href),
-          method: 'UNHANDLED_REJECTION',
-          status: 500,
-          durationMs: 0,
-          error: true,
-        });
-      };
-      window.addEventListener('error', errorHandler);
-      window.addEventListener('unhandledrejection', rejectionHandler);
-      restores.push(() => {
-        window.removeEventListener('error', errorHandler);
-        window.removeEventListener('unhandledrejection', rejectionHandler);
-      });
     }
     const originalFetch = window.fetch;
     if (originalFetch) {

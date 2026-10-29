@@ -345,11 +345,11 @@ describe('browser providers', () => {
     await sdk.flush();
     expect(pages).toEqual(['/product/x', '/catalog']);
   });
-  it('captures unhandled browser errors when captureErrors is enabled (5.3)', async () => {
+  it('does not turn browser errors into request records', async () => {
     const records: RequestRecord[] = [];
+    window.fetch = vi.fn(async () => new Response('failed', { status: 500 }));
     const sdk = createBrowserSignals({
       consent,
-      captureErrors: true,
       observer: {
         record: (rec) => {
           records.push(rec);
@@ -358,8 +358,13 @@ describe('browser providers', () => {
     });
     disposals.push(sdk.dispose);
     window.dispatchEvent(new ErrorEvent('error', { message: 'synthetic crash' }));
+    window.dispatchEvent(new Event('unhandledrejection'));
     await sdk.flush();
-    expect(records.some((r) => r.method === 'ERROR' && r.error === true)).toBe(true);
-    sdk.stop();
+    expect(records).toEqual([]);
+
+    await window.fetch('/api/failure');
+    await sdk.flush();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ kind: 'request', method: 'GET', status: 500, error: true });
   });
 });
