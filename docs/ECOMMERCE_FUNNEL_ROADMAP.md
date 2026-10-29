@@ -209,6 +209,18 @@ For projects using server-rendered HTML (PHP, Laravel, Django), CMS (Shopify, Wo
 ></script>
 ```
 
+Consent is denied for all categories when `data-auto-consent` is absent. Connect your host consent banner to the standalone SDK and apply only the visitor's actual choices:
+
+```js
+window.signals.setConsent({
+  analytics: visitorChoice.analytics === true,
+  marketing: visitorChoice.marketing === true,
+  observability: visitorChoice.observability === true,
+});
+```
+
+Call this from the banner after the visitor chooses, or when restoring a previously saved choice. Events recorded before consent are dropped and are not replayed.
+
 #### Step 2: Trigger Events via `window.signals.track`
 
 ```html
