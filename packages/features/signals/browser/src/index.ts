@@ -106,9 +106,8 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     lastRoute = current;
     void page(route.path);
   };
-  function start(options: { force?: boolean } = {}) {
-    if (running || typeof window === 'undefined') return;
-    if (activeOwner && !options.force) return;
+  function start() {
+    if (running || typeof window === 'undefined' || activeOwner) return;
     activeOwner = owner;
     running = true;
     navigation();

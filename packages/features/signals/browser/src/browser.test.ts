@@ -88,6 +88,8 @@ describe('browser lifecycle', () => {
       providers: [{ name: 'recorder', category: 'analytics', send }],
     });
     disposals.push(second.dispose);
+    // A legacy caller cannot bypass the single-instance guard at runtime.
+    Reflect.apply(second.start, second, [{ force: true }]);
     first.setConsent(consent);
     await first.flush();
     expect(send).not.toHaveBeenCalled();
