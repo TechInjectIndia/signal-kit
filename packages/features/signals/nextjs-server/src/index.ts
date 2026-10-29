@@ -1,6 +1,6 @@
 import { registerOTel } from '@vercel/otel';
 import type { Observer } from '@techinject/contracts';
-import { safeRoute } from '@techinject/core';
+import { safeRoute, parseTraceparent } from '@techinject/core';
 export {
   createServerSignals as createNextSignals,
   createMetaCapiProvider,
@@ -18,13 +18,39 @@ export function createNextRequestErrorHandler(
   let pending = 0;
   return async (
     _error: unknown,
-    request: { path: string; method: string },
-    context: { routePath?: string },
+    request: {
+      path: string;
+      method: string;
+      headers?: Headers | Record<string, string | string[] | undefined>;
+    },
+    context: {
+      routePath?: string;
+      traceId?: string;
+      spanId?: string;
+      parentSpanId?: string;
+    } = {},
   ) => {
     if (options.enabled?.() === false || pending >= 32) return;
     pending++;
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
+      let traceId = context.traceId;
+      let spanId = context.spanId;
+      let parentSpanId = context.parentSpanId;
+      if (!traceId && request.headers) {
+        let traceHeader: string | null = null;
+        if (typeof (request.headers as Headers).get === 'function') {
+          traceHeader = (request.headers as Headers).get('traceparent');
+        } else if (typeof request.headers === 'object') {
+          const val = (request.headers as Record<string, unknown>)['traceparent'];
+          traceHeader = typeof val === 'string' ? val : null;
+        }
+        const parsed = parseTraceparent(traceHeader);
+        if (parsed) {
+          traceId = parsed.traceId;
+          parentSpanId = parsed.spanId;
+        }
+      }
       await Promise.race([
         Promise.resolve()
           .then(() =>
@@ -35,6 +61,9 @@ export function createNextRequestErrorHandler(
               status: 500,
               durationMs: 0,
               error: true,
+              ...(traceId ? { traceId } : {}),
+              ...(spanId ? { spanId } : {}),
+              ...(parentSpanId ? { parentSpanId } : {}),
             }),
           )
           .finally(() => {

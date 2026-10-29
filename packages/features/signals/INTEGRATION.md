@@ -267,7 +267,48 @@ export const handle = hooks.handle;
 export const handleFetch = hooks.handleFetch;
 ```
 
-Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. SvelteKit 3 is verified; Kit 2 is not certified by this build.
+Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. SvelteKit 2 and SvelteKit 3 with Svelte 5 are supported (`@sveltejs/kit >=2 <4`).
+
+## Supported event contracts
+
+All events are strictly validated and sanitized before dispatch to providers. Unknown or dangerous fields are stripped to protect privacy.
+
+| Event Name | Schema Properties | Provider Mapping |
+| :--- | :--- | :--- |
+| `page_view` | `page_path` | GA4 `page_view`, Meta `PageView`, Clarity `page_view` |
+| `product_view` | `item_id`, `item_name`, `price`, `currency`, `items`, etc. | GA4 `view_item`, Meta `ViewContent` |
+| `add_to_cart` | `currency`, `value`, `items` (can be empty), `coupon` | GA4 `add_to_cart`, Meta `AddToCart` |
+| `begin_checkout` | `currency`, `value`, `items`, `coupon` | GA4 `begin_checkout`, Meta `InitiateCheckout` |
+| `purchase` | `transaction_id`, `currency`, `value`, `items`, `shipping`, `tax` | GA4 `purchase`, Meta `Purchase` |
+| `generate_lead` | `value`, `currency`, `lead_type` | Meta `Lead`, GA4 `generate_lead` |
+| `phone_click` | `phone_number`, `destination` | Meta `Contact`, GA4 `phone_click` |
+| `whatsapp_click` | `phone_number`, `destination` | Meta `Contact`, GA4 `whatsapp_click` |
+| `sign_up` | `method` | Meta `CompleteRegistration`, GA4 `sign_up` |
+| `login` | `method` | Meta `Login`, GA4 `login` |
+| `search` | `search_term` | Meta `Search`, GA4 `search` |
+| `custom_event` | `action`, `category`, `label`, `value` | Meta `CustomEvent`, GA4 custom |
+
+### Example: Tracking leads and contacts
+
+```ts
+// Track a lead form submission
+await signals.track({
+  name: 'generate_lead',
+  properties: {
+    lead_type: 'consultation_request',
+    currency: 'INR',
+    value: 500,
+  },
+});
+
+// Track a WhatsApp or Phone button click
+await signals.track({
+  name: 'whatsapp_click',
+  properties: {
+    destination: '+919876543210',
+  },
+});
+```
 
 ## Development
 

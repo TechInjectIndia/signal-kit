@@ -64,11 +64,12 @@ for (const [consumer, forbidden] of [
 ]) {
   const result = spawnSync(
     'pnpm',
-    ['exec', 'turbo', 'run', 'build', `--filter=${consumer}`, '--dry=json'],
+    ['--silent', 'exec', 'turbo', 'run', 'build', `--filter=${consumer}`, '--dry=json'],
     { cwd: root, encoding: 'utf8' },
   );
   assert.equal(result.status, 0, result.stderr);
-  const graph = JSON.parse(result.stdout);
+  const jsonStart = result.stdout.indexOf('{');
+  const graph = JSON.parse(jsonStart >= 0 ? result.stdout.slice(jsonStart) : result.stdout);
   assert.ok(
     !graph.tasks.some((task) => forbidden.test(task.taskId)),
     `${consumer}: unrelated runtime in build graph`,

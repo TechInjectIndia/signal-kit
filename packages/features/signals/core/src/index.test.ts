@@ -136,6 +136,16 @@ describe('telemetry context', () => {
     expect(safeRoute('https://example.invalid/orders/123?token=secret')).toBe('/orders/:id');
     expect(safeRoute('/orders/abc', '/orders/:orderId')).toBe('/orders/:orderId');
     expect(safeRoute('/users/customer%40example.invalid')).toBe('/users/:redacted');
+    // Alphanumeric ID redaction (4.1)
+    expect(safeRoute('/users/507f1f77bcf86cd799439011')).toBe('/users/:id'); // MongoDB ObjectID
+    expect(safeRoute('/orders/cs_test_a1b2c3d4e5f6g7h8')).toBe('/orders/:id'); // Stripe ID
+    expect(safeRoute('/orders/ORD-98721')).toBe('/orders/:id'); // Order ID
+    expect(safeRoute('/posts/c123456789012345678901234')).toBe('/posts/:id'); // CUID
+    // Route groups stripping (4.2)
+    expect(safeRoute('/(marketing)/about')).toBe('/about');
+    expect(safeRoute('/(app)/dashboard/stats')).toBe('/dashboard/stats');
+    expect(safeRoute('/(auth)/login')).toBe('/login');
+
     expect(parseTraceparent('00-' + '0'.repeat(32) + '-' + '1'.repeat(16) + '-01')).toBeUndefined();
     const context = createTraceContext();
     expect(parseTraceparent(formatTraceparent(context))).toEqual(context);

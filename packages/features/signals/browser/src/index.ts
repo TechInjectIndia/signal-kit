@@ -6,6 +6,9 @@ export type BrowserConfig = Parameters<typeof createSignals>[0] & {
   traceOrigins?: string[];
   excludeUrls?: string[];
   autoTrack?: boolean;
+  trackHash?: boolean;
+  trackQuery?: boolean;
+  captureErrors?: boolean;
 };
 let activeOwner: object | undefined;
 export function createBrowserSignals(config: BrowserConfig = {}) {
@@ -31,7 +34,7 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
       if (timer !== undefined) clearTimeout(timer);
     }
   }
-  let lastPath = '';
+  let lastUrl = '';
   const restores: (() => void)[] = [];
   const excluded = (url: URL) =>
     [
@@ -44,31 +47,53 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     (config.excludeUrls ?? []).some(
       (value) => url.href.startsWith(value) || url.pathname.startsWith(value),
     );
-  const page = (path?: string, eventId?: string) =>
-    core.track({
+  const page = (path?: string, eventId?: string) => {
+    let routePath = path;
+    if (!routePath && typeof location !== 'undefined') {
+      if (location.hash && (location.hash.startsWith('#/') || location.hash.startsWith('#!/'))) {
+        routePath = location.hash.replace(/^#![/]?/, '/').replace(/^#[/]?/, '/');
+      } else {
+        routePath = location.pathname;
+      }
+    }
+    return core.track({
       name: 'page_view',
       ...(eventId ? { eventId } : {}),
       properties: {
-        page_path: safeRoute(path ?? (typeof location === 'undefined' ? '/' : location.href)),
+        page_path: safeRoute(routePath ?? '/'),
       },
     });
+  };
   const record = (value: RequestRecord) => {
     if (!core.getConsent().observability || !running) return;
-    if (!config.observer || pendingRecords.size >= 32) return;
+    if (!config.observer) return;
+    if (pendingRecords.size >= 32) {
+      try {
+        config.onDiagnostic?.({
+          eventId: 'dropped',
+          outcomes: [{ provider: 'observer', status: 'dropped', reason: 'capacity' }],
+        });
+      } catch {}
+      return;
+    }
     const operation = boundedObservation(() => config.observer!.record(value)).finally(() => {
       pendingRecords.delete(operation);
     });
     pendingRecords.add(operation);
   };
   const navigation = () => {
-    if (!running) return;
-    const path = location.pathname;
-    if (path === lastPath) return;
-    lastPath = path;
+    if (!running || typeof location === 'undefined') return;
+    const current =
+      config.trackQuery === true
+        ? location.pathname + location.search + location.hash
+        : location.pathname + location.hash;
+    if (current === lastUrl) return;
+    lastUrl = current;
     void page();
   };
-  function start() {
-    if (running || typeof window === 'undefined' || activeOwner) return;
+  function start(options: { force?: boolean } = {}) {
+    if (running || typeof window === 'undefined') return;
+    if (activeOwner && !options.force) return;
     activeOwner = owner;
     running = true;
     navigation();
@@ -85,6 +110,38 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     }
     window.addEventListener('popstate', navigation);
     restores.push(() => window.removeEventListener('popstate', navigation));
+    window.addEventListener('hashchange', navigation);
+    restores.push(() => window.removeEventListener('hashchange', navigation));
+    if (config.captureErrors) {
+      const errorHandler = () => {
+        if (!running || !core.getConsent().observability) return;
+        record({
+          kind: 'request',
+          route: safeRoute(location.href),
+          method: 'ERROR',
+          status: 500,
+          durationMs: 0,
+          error: true,
+        });
+      };
+      const rejectionHandler = () => {
+        if (!running || !core.getConsent().observability) return;
+        record({
+          kind: 'request',
+          route: safeRoute(location.href),
+          method: 'UNHANDLED_REJECTION',
+          status: 500,
+          durationMs: 0,
+          error: true,
+        });
+      };
+      window.addEventListener('error', errorHandler);
+      window.addEventListener('unhandledrejection', rejectionHandler);
+      restores.push(() => {
+        window.removeEventListener('error', errorHandler);
+        window.removeEventListener('unhandledrejection', rejectionHandler);
+      });
+    }
     const originalFetch = window.fetch;
     if (originalFetch) {
       const wrapped: typeof fetch = async (input, init) => {

@@ -12,6 +12,7 @@ import {
   positive,
   maximum,
   regex,
+  union,
 } from 'zod/mini';
 
 export type Consent = { analytics: boolean; marketing: boolean; observability: boolean };
@@ -25,23 +26,72 @@ export type EventName =
   | 'product_view'
   | 'add_to_cart'
   | 'begin_checkout'
-  | 'purchase';
+  | 'purchase'
+  | 'generate_lead'
+  | 'phone_click'
+  | 'whatsapp_click'
+  | 'sign_up'
+  | 'login'
+  | 'search'
+  | 'custom_event';
 export type CommerceItem = {
   item_id: string;
   item_name?: string;
   price?: number;
   quantity?: number;
   item_category?: string;
+  item_brand?: string;
+  item_variant?: string;
+  coupon?: string;
+  discount?: number;
 };
-export type CommerceProperties = { currency: string; value: number; items: CommerceItem[] };
+export type CommerceProperties = {
+  currency: string;
+  value: number;
+  items: CommerceItem[];
+  shipping?: number;
+  tax?: number;
+  coupon?: string;
+  affiliation?: string;
+  payment_type?: string;
+  user_id?: string;
+};
+export type SingleProductViewProperties = {
+  item_id: string;
+  item_name?: string;
+  price?: number;
+  currency?: string;
+  value?: number;
+  item_category?: string;
+  item_brand?: string;
+  item_variant?: string;
+  items?: CommerceItem[];
+};
+export type ProductViewProperties = CommerceProperties | SingleProductViewProperties;
 export type PurchaseProperties = CommerceProperties & { transaction_id: string };
 export type PageViewProperties = { page_path: string };
+export type LeadProperties = { value?: number; currency?: string; lead_type?: string };
+export type ContactProperties = { phone_number?: string; destination?: string };
+export type AuthProperties = { method?: string };
+export type SearchProperties = { search_term: string };
+export type CustomProperties = {
+  action: string;
+  category?: string;
+  label?: string;
+  value?: number;
+};
 type EventIdentity = { eventId?: string; timestamp?: number };
 export type EventInput = EventIdentity &
   (
     | { name: 'page_view'; properties: PageViewProperties }
-    | { name: 'product_view' | 'add_to_cart' | 'begin_checkout'; properties: CommerceProperties }
+    | { name: 'product_view'; properties: ProductViewProperties }
+    | { name: 'add_to_cart' | 'begin_checkout'; properties: CommerceProperties }
     | { name: 'purchase'; properties: PurchaseProperties }
+    | { name: 'generate_lead'; properties: LeadProperties }
+    | { name: 'phone_click' | 'whatsapp_click'; properties: ContactProperties }
+    | { name: 'sign_up' | 'login'; properties: AuthProperties }
+    | { name: 'search'; properties: SearchProperties }
+    | { name: 'custom_event'; properties: CustomProperties }
   );
 export type SignalEvent = {
   name: EventName;
@@ -91,18 +141,69 @@ const item = object({
   price: optional(amount),
   quantity: optional(int().check(positive(), maximum(100000))),
   item_category: optional(text),
+  item_brand: optional(text),
+  item_variant: optional(text),
+  coupon: optional(text),
+  discount: optional(amount),
 });
 const commerce = object({
   currency,
   value: amount,
-  items: array(item).check(minLength(1), maxLength(100)),
+  items: array(item).check(maxLength(100)),
+  shipping: optional(amount),
+  tax: optional(amount),
+  coupon: optional(text),
+  affiliation: optional(text),
+  payment_type: optional(text),
+  user_id: optional(text),
 });
+const singleProductView = object({
+  item_id: text,
+  item_name: optional(text),
+  price: optional(amount),
+  currency: optional(currency),
+  value: optional(amount),
+  item_category: optional(text),
+  item_brand: optional(text),
+  item_variant: optional(text),
+  items: optional(array(item).check(maxLength(100))),
+});
+const productViewSchema = union([commerce, singleProductView]);
+
 const schemas = {
   page_view: object({ page_path: string().check(minLength(1), maxLength(2048)) }),
-  product_view: commerce,
+  product_view: productViewSchema,
   add_to_cart: commerce,
   begin_checkout: commerce,
   purchase: extend(commerce, { transaction_id: text }),
+  generate_lead: object({
+    value: optional(amount),
+    currency: optional(currency),
+    lead_type: optional(text),
+  }),
+  phone_click: object({
+    phone_number: optional(text),
+    destination: optional(text),
+  }),
+  whatsapp_click: object({
+    phone_number: optional(text),
+    destination: optional(text),
+  }),
+  sign_up: object({
+    method: optional(text),
+  }),
+  login: object({
+    method: optional(text),
+  }),
+  search: object({
+    search_term: string().check(minLength(1), maxLength(256)),
+  }),
+  custom_event: object({
+    action: text,
+    category: optional(text),
+    label: optional(text),
+    value: optional(number()),
+  }),
 };
 /** Unknown fields are stripped; request URLs, identity, and arbitrary metadata never pass through. */
 export function sanitizeEvent(value: unknown, eventId: string): SignalEvent | undefined {

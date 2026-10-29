@@ -81,4 +81,118 @@ describe('event boundary', () => {
       ).toBeUndefined();
     }
   });
+  it('supports lead, search, auth, contact and custom action events (2.1)', () => {
+    expect(
+      sanitizeEvent(
+        { name: 'generate_lead', properties: { value: 100, currency: 'USD', lead_type: 'quote' } },
+        'lead-1',
+      )?.properties,
+    ).toEqual({ value: 100, currency: 'USD', lead_type: 'quote' });
+
+    expect(
+      sanitizeEvent({ name: 'search', properties: { search_term: 'sneakers' } }, 'search-1')
+        ?.properties,
+    ).toEqual({ search_term: 'sneakers' });
+
+    expect(
+      sanitizeEvent({ name: 'sign_up', properties: { method: 'google' } }, 'signup-1')?.properties,
+    ).toEqual({ method: 'google' });
+
+    expect(
+      sanitizeEvent({ name: 'phone_click', properties: { destination: '+1234567890' } }, 'phone-1')
+        ?.properties,
+    ).toEqual({ destination: '+1234567890' });
+
+    expect(
+      sanitizeEvent(
+        {
+          name: 'custom_event',
+          properties: { action: 'video_play', category: 'tutorial', value: 10 },
+        },
+        'custom-1',
+      )?.properties,
+    ).toEqual({ action: 'video_play', category: 'tutorial', value: 10 });
+  });
+  it('preserves standard ecommerce item and commerce properties (2.2)', () => {
+    const res = sanitizeEvent(
+      {
+        name: 'purchase',
+        properties: {
+          transaction_id: 'ord-123',
+          currency: 'USD',
+          value: 120,
+          shipping: 10,
+          tax: 10,
+          coupon: 'SUMMER',
+          payment_type: 'card',
+          items: [
+            {
+              item_id: 'sku-1',
+              item_brand: 'BrandX',
+              item_variant: 'Blue/L',
+              discount: 5,
+              coupon: 'ITEM5',
+            },
+          ],
+        },
+      },
+      'purchase-1',
+    );
+    expect(res?.properties).toEqual({
+      transaction_id: 'ord-123',
+      currency: 'USD',
+      value: 120,
+      shipping: 10,
+      tax: 10,
+      coupon: 'SUMMER',
+      payment_type: 'card',
+      items: [
+        {
+          item_id: 'sku-1',
+          item_brand: 'BrandX',
+          item_variant: 'Blue/L',
+          discount: 5,
+          coupon: 'ITEM5',
+        },
+      ],
+    });
+  });
+  it('allows single product view without full cart structure (2.3)', () => {
+    const res = sanitizeEvent(
+      {
+        name: 'product_view',
+        properties: {
+          item_id: 'prod-456',
+          item_name: 'Running Shoes',
+          price: 89.99,
+          item_brand: 'Nike',
+        },
+      },
+      'view-1',
+    );
+    expect(res?.properties).toEqual({
+      item_id: 'prod-456',
+      item_name: 'Running Shoes',
+      price: 89.99,
+      item_brand: 'Nike',
+    });
+  });
+  it('allows empty cart and empty checkout items (2.4)', () => {
+    const res = sanitizeEvent(
+      {
+        name: 'begin_checkout',
+        properties: {
+          currency: 'USD',
+          value: 0,
+          items: [],
+        },
+      },
+      'checkout-empty',
+    );
+    expect(res?.properties).toEqual({
+      currency: 'USD',
+      value: 0,
+      items: [],
+    });
+  });
 });

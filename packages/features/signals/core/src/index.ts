@@ -27,6 +27,8 @@ export type SignalsOptions = {
   timeoutMs?: number;
   maxPending?: number;
   onDiagnostic?: (result: DispatchResult) => void;
+  queueBeforeConsent?: boolean;
+  persistKey?: string;
 };
 export type ConnectionStatus = {
   name: string;
@@ -48,22 +50,40 @@ export function generateId(): string {
 }
 export function safeRoute(url: string | URL, routeTemplate?: string): string {
   try {
-    const path = new URL(routeTemplate ?? String(url), 'http://signalkit.invalid').pathname;
-    return path
-      .split('/')
-      .map((segment) => {
-        let decoded: string;
-        try {
-          decoded = decodeURIComponent(segment);
-        } catch {
-          return ':redacted';
-        }
-        return decoded.includes('@') || decoded.length > 64 ? ':redacted' : segment;
-      })
-      .join('/')
-      .replace(/\/[0-9]+(?=\/|$)/g, '/:id')
-      .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi, '/:id')
-      .slice(0, 2048);
+    const raw = String(routeTemplate ?? url);
+    // Strip layout route groups like /(marketing) or /(app)
+    const cleaned = raw.replace(/\/\([^)]+\)/g, '');
+    const path = new URL(cleaned || '/', 'http://signalkit.invalid').pathname;
+    return (
+      path
+        .split('/')
+        .filter((segment) => !/^\([^)]+\)$/.test(segment))
+        .map((segment) => {
+          let decoded: string;
+          try {
+            decoded = decodeURIComponent(segment);
+          } catch {
+            return ':redacted';
+          }
+          if (decoded.includes('@') || decoded.length > 64) return ':redacted';
+          // MongoDB ObjectID (24 hex characters)
+          if (/^[0-9a-f]{24}$/i.test(decoded)) return ':id';
+          // Stripe ID (cs_..., pi_..., ch_..., cus_..., etc.)
+          if (/^(cs|pi|ch|cus|sub|in|evt|tok)_[a-zA-Z0-9_]{8,}$/i.test(decoded)) return ':id';
+          // Order / reference prefixes (e.g., ORD-98721, REF-1234)
+          if (/^[A-Za-z]{2,6}-[0-9A-Za-z_-]{3,}$/.test(decoded)) return ':id';
+          // CUID (starts with c, 24 alphanumeric characters)
+          if (/^c[0-9a-z]{24}$/i.test(decoded)) return ':id';
+          // High entropy IDs (20+ alphanumeric characters with both digits and letters)
+          if (decoded.length >= 20 && /[0-9]/.test(decoded) && /[a-zA-Z]/.test(decoded))
+            return ':id';
+          return decoded;
+        })
+        .join('/')
+        .replace(/\/[0-9]+(?=\/|$)/g, '/:id')
+        .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?=\/|$)/gi, '/:id')
+        .slice(0, 2048) || '/'
+    );
   } catch {
     return '/';
   }
@@ -112,6 +132,29 @@ export function createSignals(options: SignalsOptions = {}) {
     dropped: 0,
     invalid: 0,
   }));
+  if (options.persistKey && typeof globalThis.sessionStorage !== 'undefined') {
+    try {
+      const saved = sessionStorage.getItem(options.persistKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Partial<ConnectionStatus>[];
+        for (const conn of connections) {
+          const match = parsed.find((p) => p.name === conn.name && p.category === conn.category);
+          if (match) {
+            conn.attempts = match.attempts ?? 0;
+            conn.sent = match.sent ?? 0;
+            conn.failed = match.failed ?? 0;
+            conn.denied = match.denied ?? 0;
+            conn.dropped = match.dropped ?? 0;
+            conn.invalid = match.invalid ?? 0;
+            conn.lastStatus = match.lastStatus;
+            conn.lastUpdated = match.lastUpdated;
+          }
+        }
+      }
+    } catch {}
+  }
+  const consentQueue: Array<{ event: NonNullable<ReturnType<typeof sanitizeEvent>> }> = [];
+  const queueBeforeConsent = options.queueBeforeConsent === true;
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of listeners) {
@@ -140,6 +183,11 @@ export function createSignals(options: SignalsOptions = {}) {
       connection.lastStatus = outcome.status;
       connection.lastUpdated = Date.now();
     });
+    if (options.persistKey && typeof globalThis.sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.setItem(options.persistKey, JSON.stringify(connections));
+      } catch {}
+    }
     notify();
     try {
       options.onDiagnostic?.(result);
@@ -152,8 +200,14 @@ export function createSignals(options: SignalsOptions = {}) {
     provider: Provider,
     event: NonNullable<ReturnType<typeof sanitizeEvent>>,
   ): Promise<DispatchResult['outcomes'][number]> {
-    if (!consent[provider.category])
+    if (!consent[provider.category]) {
+      if (queueBeforeConsent && consentQueue.length < 100) {
+        if (!consentQueue.some((q) => q.event.eventId === event.eventId)) {
+          consentQueue.push({ event: structuredClone(event) });
+        }
+      }
       return { provider: provider.name, status: 'denied', reason: 'consent' };
+    }
     const controller = new AbortController();
     active.set(controller, provider.category);
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -231,6 +285,7 @@ export function createSignals(options: SignalsOptions = {}) {
     return operation;
   }
   function setConsent(next: Consent) {
+    const previous = { ...consent };
     consent = normalizeConsent(next);
     for (const connection of connections) connection.consent = consent[connection.category];
     notify();
@@ -242,6 +297,25 @@ export function createSignals(options: SignalsOptions = {}) {
         /* Host isolation. */
       }
     }
+    if (queueBeforeConsent && consentQueue.length > 0) {
+      const newlyGrantedCategories = (['analytics', 'marketing', 'observability'] as const).filter(
+        (cat) => !previous[cat] && consent[cat],
+      );
+      if (newlyGrantedCategories.length > 0) {
+        const toReplay = [...consentQueue];
+        consentQueue.length = 0;
+        for (const item of toReplay) {
+          const eligibleProviders = providers.filter((p) =>
+            newlyGrantedCategories.includes(p.category),
+          );
+          if (eligibleProviders.length > 0) {
+            void Promise.all(eligibleProviders.map((p) => send(p, item.event))).then((outcomes) =>
+              report({ eventId: item.event.eventId, outcomes }),
+            );
+          }
+        }
+      }
+    }
   }
   setConsent(consent);
   return {
@@ -249,6 +323,16 @@ export function createSignals(options: SignalsOptions = {}) {
     setConsent,
     getConsent: () => ({ ...consent }),
     getConnections: (): ConnectionStatus[] => connections.map((connection) => ({ ...connection })),
+    replayConsentQueue: () => {
+      const toReplay = [...consentQueue];
+      consentQueue.length = 0;
+      const tasks = toReplay.map((item) =>
+        Promise.all(
+          providers.filter((p) => consent[p.category]).map((p) => send(p, item.event)),
+        ).then((outcomes) => report({ eventId: item.event.eventId, outcomes })),
+      );
+      return Promise.all(tasks);
+    },
     subscribeConnections(listener: () => void) {
       listeners.add(listener);
       return () => {

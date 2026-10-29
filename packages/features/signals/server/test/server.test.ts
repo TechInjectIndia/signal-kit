@@ -156,13 +156,27 @@ describe('Meta CAPI', () => {
         contents: [{ id: 'sku', quantity: 2, item_price: 50 }],
       },
     });
-    const unsafe = createMetaCapiProvider({
+    const autoHashed = createMetaCapiProvider({
       pixelId: '123',
       accessToken: 'synthetic',
       endpoint: 'https://collector.test/',
-      userData: () => ({ em: 'raw@example.test' }),
+      userData: () => ({ em: 'raw@example.test', client_ip_address: '1.2.3.4' }),
+      fetch: async (_url, init) => {
+        payload = JSON.parse(init!.body as string);
+        return Response.json({ events_received: 1 });
+      },
     });
-    await expect(unsafe.send(event)).rejects.toThrow('Invalid hashed');
+    await autoHashed.send(event);
+    expect(payload.data[0].user_data.em[0]).toHaveLength(64);
+    expect(payload.data[0].user_data.client_ip_address).toBe('1.2.3.4');
+
+    const invalidMatching = createMetaCapiProvider({
+      pixelId: '123',
+      accessToken: 'synthetic',
+      endpoint: 'https://collector.test/',
+      userData: () => ({ em: Array(11).fill('a'.repeat(64)) }),
+    });
+    await expect(invalidMatching.send(event)).rejects.toThrow('Invalid hashed');
   });
   it('rejects unsuccessful acknowledgment', async () => {
     const provider = createMetaCapiProvider({
@@ -173,6 +187,24 @@ describe('Meta CAPI', () => {
       fetch: async () => Response.json({ events_received: 0 }),
     });
     await expect(provider.send(event)).rejects.toThrow('did not accept');
+  });
+  it('preserves fbclid and marketing params in eventSourceUrl', async () => {
+    let payload: any;
+    const provider = createMetaCapiProvider({
+      pixelId: '123',
+      accessToken: 'synthetic-token',
+      endpoint: 'https://collector.test/',
+      eventSourceUrl:
+        'https://app.test/products/item-123?fbclid=test_fbclid_123&token=secret_to_strip',
+      userData: () => ({ em: 'a'.repeat(64) }),
+      fetch: async (_url, init) => {
+        payload = JSON.parse(init!.body as string);
+        return Response.json({ events_received: 1 });
+      },
+    });
+    await provider.send(event);
+    expect(payload.data[0].event_source_url).toContain('fbclid=test_fbclid_123');
+    expect(payload.data[0].event_source_url).not.toContain('secret_to_strip');
   });
 });
 describe('OTLP', () => {
@@ -242,5 +274,64 @@ describe('OTLP', () => {
     await observer.flush!();
     expect(errors).toEqual(['capacity', 'timeout']);
     observer.dispose!();
+  });
+  it('accepts non-JSON 200 OK responses without false error diagnosis', async () => {
+    const errors: string[] = [];
+    const observer = createOTLPObserver({
+      endpoint: 'https://collector.test/v1/traces',
+      serviceName: 'demo',
+      onError: (e) => errors.push(e),
+      fetch: async () => new Response('OK', { status: 200 }),
+    });
+    await observer.record(record);
+    await observer.flush!();
+    expect(errors).toHaveLength(0);
+  });
+  it('preserves nanosecond timestamp precision without precision loss', async () => {
+    let payload: any;
+    const observer = createOTLPObserver({
+      endpoint: 'https://collector.test/v1/traces',
+      serviceName: 'demo',
+      fetch: async (_url, init) => {
+        payload = JSON.parse(init!.body as string);
+        return new Response('OK', { status: 200 });
+      },
+    });
+    const highPrecisionRecord: RequestRecord & { startTime: number } = {
+      ...record,
+      startTime: 1730000000123,
+      durationMs: 15,
+    };
+    await observer.record(highPrecisionRecord);
+    await observer.flush!();
+    const span = payload.resourceSpans[0].scopeSpans[0].spans[0];
+    expect(span.startTimeUnixNano).toBe('1730000000123000000');
+    // Notice that BigInt(Math.floor(1730000000123 * 1000000)) would have produced 1730000000122999808
+    expect(span.startTimeUnixNano).not.toBe(String(BigInt(Math.floor(1730000000123 * 1000000))));
+  });
+});
+describe('relative server fetch (1.1)', () => {
+  it('handles relative fetch URLs without crashing and records telemetry', async () => {
+    let recorded: RequestRecord | undefined;
+    let fetchedUrl: any;
+    const transport = vi.fn(async (input: any) => {
+      fetchedUrl = input;
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+    const signals = createServerSignals({
+      consent: { analytics: true, marketing: true, observability: true },
+      observer: {
+        record: (rec) => {
+          recorded = rec;
+        },
+      },
+      fetch: transport,
+    });
+    const response = await signals.fetch('/api/cart');
+    expect(response.status).toBe(200);
+    expect(fetchedUrl).toBe('/api/cart');
+    expect(recorded).toBeDefined();
+    expect(recorded?.route).toBe('/api/cart');
+    expect(recorded?.status).toBe(200);
   });
 });

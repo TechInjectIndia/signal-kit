@@ -159,3 +159,28 @@ test.each([false, true])(
     ).rejects.toBe(hostError);
   },
 );
+
+test('SvelteKit 2 runtime event shape and route compatibility (3.1)', async () => {
+  const records: { route: string }[] = [];
+  const hooks = createSvelteKitHooks(() => ({
+    consent: { analytics: false, marketing: false, observability: true },
+    observer: {
+      record(record) {
+        records.push(record);
+      },
+    },
+  }));
+  // SvelteKit 2 RequestEvent shape: event.route can have null id or undefined id for endpoints
+  const sk2Event = {
+    request: new Request('https://shop.example/api/v2/lead'),
+    url: new URL('https://shop.example/api/v2/lead'),
+    route: { id: null },
+  } as unknown as RequestEvent;
+  const res = await hooks.handle({
+    event: sk2Event,
+    resolve: async () => new Response('sk2-ok'),
+  });
+  expect(await res.text()).toBe('sk2-ok');
+  expect(records[0]?.route).toBe('/api/v2/lead');
+});
+

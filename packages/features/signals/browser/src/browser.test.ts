@@ -243,7 +243,74 @@ describe('browser providers', () => {
     disposals.push(blocked.dispose);
     const result = blocked.page('/blocked');
     await Promise.resolve();
-    [...document.querySelectorAll('script')].at(-1)?.dispatchEvent(new Event('error'));
     expect((await result).outcomes[0]?.status).toBe('failed');
+  });
+  it('preserves UTM and gclid query parameters in GA4 page_location (1.2)', async () => {
+    history.replaceState(
+      null,
+      '',
+      '/products/shoes?utm_source=google&utm_medium=cpc&gclid=gclid123&secret=token',
+    );
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [createGA4Provider({ measurementId: 'G-UTM123' })],
+    });
+    disposals.push(sdk.dispose);
+    const result = sdk.track({
+      name: 'page_view',
+      eventId: 'pv-utm',
+      properties: { page_path: '/products/shoes' },
+    });
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    await result;
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const eventCall = layer.findLast(
+      (args) => args[0] === 'event' && (args[2] as Record<string, unknown>)?.event_id === 'pv-utm',
+    );
+    expect(eventCall).toBeDefined();
+    const eventParams = eventCall![2] as Record<string, string>;
+    expect(eventParams.page_location).toContain('utm_source=google');
+    expect(eventParams.page_location).toContain('gclid=gclid123');
+    expect(eventParams.page_location).not.toContain('secret=token');
+  });
+  it('tracks hash navigation as page views (4.3)', async () => {
+    const pages: string[] = [];
+    const sdk = createBrowserSignals({
+      consent,
+      providers: [
+        {
+          name: 'recorder',
+          category: 'analytics',
+          send: (event) => {
+            pages.push(event.properties.page_path as string);
+          },
+        },
+      ],
+    });
+    disposals.push(sdk.dispose);
+    window.location.hash = '#/catalog';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages.some((p) => p.includes('catalog'))).toBe(true);
+    sdk.stop();
+  });
+  it('captures unhandled browser errors when captureErrors is enabled (5.3)', async () => {
+    const records: RequestRecord[] = [];
+    const sdk = createBrowserSignals({
+      consent,
+      captureErrors: true,
+      observer: {
+        record: (rec) => {
+          records.push(rec);
+        },
+      },
+    });
+    disposals.push(sdk.dispose);
+    window.dispatchEvent(new ErrorEvent('error', { message: 'synthetic crash' }));
+    await sdk.flush();
+    expect(records.some((r) => r.method === 'ERROR' && r.error === true)).toBe(true);
+    sdk.stop();
   });
 });

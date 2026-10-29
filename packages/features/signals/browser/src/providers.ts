@@ -65,6 +65,68 @@ function loader(src: string, config: ScriptConfig) {
 function id(value: string, pattern: RegExp, label: string) {
   if (!pattern.test(value)) throw new Error(`Invalid ${label}`);
 }
+const ALLOWED_ATTRIBUTION_PARAMS = new Set([
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_term',
+  'utm_content',
+  'utm_id',
+  'gclid',
+  'fbclid',
+  'dclid',
+  'msclkid',
+  'ttclid',
+  'twclid',
+  'wbraid',
+  'gbraid',
+]);
+
+function safePageLocation(urlStr: string): string {
+  try {
+    const url = new URL(urlStr);
+    const path = safeRoute(url.pathname);
+    const safeParams = new URLSearchParams();
+    for (const [key, val] of url.searchParams.entries()) {
+      const lower = key.toLowerCase();
+      if (
+        (ALLOWED_ATTRIBUTION_PARAMS.has(lower) || lower.startsWith('utm_')) &&
+        !val.includes('@') &&
+        val.length <= 512
+      ) {
+        safeParams.set(key, val);
+      }
+    }
+    const search = safeParams.toString();
+    return `${url.origin}${path}${search ? `?${search}` : ''}`;
+  } catch {
+    return safeRoute(urlStr);
+  }
+}
+
+function safeReferrer(refStr: string): string {
+  if (!refStr) return '';
+  try {
+    const url = new URL(refStr);
+    const path = safeRoute(url.pathname);
+    const safeParams = new URLSearchParams();
+    for (const [key, val] of url.searchParams.entries()) {
+      const lower = key.toLowerCase();
+      if (
+        (ALLOWED_ATTRIBUTION_PARAMS.has(lower) || lower.startsWith('utm_')) &&
+        !val.includes('@') &&
+        val.length <= 512
+      ) {
+        safeParams.set(key, val);
+      }
+    }
+    const search = safeParams.toString();
+    return `${url.origin}${path}${search ? `?${search}` : ''}`;
+  } catch {
+    return safeRoute(refStr);
+  }
+}
+
 export function createGA4Provider(
   config: ScriptConfig & { measurementId: string },
 ): ConsentProvider {
@@ -90,8 +152,8 @@ export function createGA4Provider(
       w.gtag('js', new Date());
       w.gtag('config', config.measurementId, {
         send_page_view: false,
-        page_location: location.origin + safeRoute(location.href),
-        page_referrer: document.referrer ? safeRoute(document.referrer) : '',
+        page_location: safePageLocation(location.href),
+        page_referrer: safeReferrer(document.referrer),
       });
       initialized = true;
     }
@@ -106,8 +168,8 @@ export function createGA4Provider(
       win().gtag?.('consent', 'update', { analytics_storage: 'granted' });
       win().gtag?.('event', event.name === 'product_view' ? 'view_item' : event.name, {
         ...event.properties,
-        page_location: location.origin + safeRoute(location.href),
-        page_referrer: document.referrer ? safeRoute(document.referrer) : '',
+        page_location: safePageLocation(location.href),
+        page_referrer: safeReferrer(document.referrer),
         event_id: event.eventId,
         send_to: config.measurementId,
       });
@@ -130,6 +192,13 @@ const metaNames: Record<SignalEvent['name'], string> = {
   add_to_cart: 'AddToCart',
   begin_checkout: 'InitiateCheckout',
   purchase: 'Purchase',
+  generate_lead: 'Lead',
+  phone_click: 'Contact',
+  whatsapp_click: 'Contact',
+  sign_up: 'CompleteRegistration',
+  login: 'Login',
+  search: 'Search',
+  custom_event: 'CustomEvent',
 };
 export function createMetaPixelProvider(
   config: ScriptConfig & { pixelId: string },

@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { createHash } from 'node:crypto';
 import { createSignals, safeRoute, parseTraceparent } from '@techinject/core';
 import type {
   Consent,
@@ -68,9 +69,23 @@ export function createServerSignals(config: ServerConfig = {}) {
       const url = input instanceof Request ? input.url : String(input);
       if (disposed || !signals.getConsent().observability || excluded(url))
         return transport(input, init);
-      const request = new Request(input, init);
+      let isRelative = false;
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(url);
+      } catch {
+        isRelative = true;
+        try {
+          parsedUrl = new URL(url, 'http://signalkit.internal');
+        } catch {
+          return transport(input, init);
+        }
+      }
       const parent = context.getStore();
-      const headers = new Headers(request.headers);
+      const headers = new Headers(input instanceof Request ? input.headers : init?.headers);
+      const method = (
+        input instanceof Request ? input.method : (init?.method ?? 'GET')
+      ).toUpperCase();
       const existingHeader = headers.get('traceparent');
       const existing = parseTraceparent(existingHeader);
       // The outgoing record identifies the span actually propagated on the wire.
@@ -83,24 +98,37 @@ export function createServerSignals(config: ServerConfig = {}) {
         : parent
           ? { ...parent, parentSpanId: parent.spanId, spanId: randomHex(8) }
           : trace(null);
-      if (
-        (config.traceOrigins ?? []).includes(new URL(request.url).origin) &&
-        !headers.has('traceparent')
-      ) {
+      const traceOrigins = config.traceOrigins ?? [];
+      const isAllowedOrigin =
+        !headers.has('traceparent') &&
+        (isRelative
+          ? traceOrigins.some(
+              (o) => o === '' || o === '/' || o === 'relative' || o === parsedUrl.origin,
+            )
+          : traceOrigins.includes(parsedUrl.origin));
+      if (isAllowedOrigin) {
         headers.set('traceparent', `00-${span.traceId}-${span.spanId}-${span.flags}`);
       }
       const start = performance.now();
       const startTime = Date.now();
       let status = 0;
+      let outgoingInput: Request | string | URL;
+      let outgoingInit: RequestInit | undefined = undefined;
       try {
-        const response = await transport(new Request(request, { headers }));
+        outgoingInput = new Request(input, { ...init, headers });
+      } catch {
+        outgoingInput = input;
+        outgoingInit = { ...init, headers };
+      }
+      try {
+        const response = await transport(outgoingInput, outgoingInit);
         status = response.status;
         return response;
       } finally {
         observe({
           kind: 'request',
-          route: safeRoute(request.url),
-          method: request.method,
+          route: safeRoute(isRelative ? parsedUrl.pathname + parsedUrl.search : url),
+          method,
           status,
           durationMs: performance.now() - start,
           ...span,
@@ -179,6 +207,13 @@ const metaNames: Record<SignalEvent['name'], string> = {
   add_to_cart: 'AddToCart',
   begin_checkout: 'InitiateCheckout',
   purchase: 'Purchase',
+  generate_lead: 'Lead',
+  phone_click: 'Contact',
+  whatsapp_click: 'Contact',
+  sign_up: 'CompleteRegistration',
+  login: 'Login',
+  search: 'Search',
+  custom_event: 'CustomEvent',
 };
 export interface MetaCapiOptions {
   pixelId: string;
@@ -188,23 +223,46 @@ export interface MetaCapiOptions {
   endpoint?: string;
   fetch?: typeof globalThis.fetch;
   testEventCode?: string;
-  /** Only SHA-256 hashed em/ph/external_id and validated fbp/fbc are accepted. */
-  userData?: () => Record<string, string | string[]>;
+  /** SHA-256 hashed matching data (or plaintext auto-hashed) and validated cookies/IP/UA. */
+  userData?: () => Record<string, unknown>;
   eventSourceUrl?: string;
 }
-function safeUserData(input: Record<string, string | string[]>): Record<string, string | string[]> {
-  const result: Record<string, string | string[]> = {};
-  for (const key of ['em', 'ph', 'external_id']) {
+function sha256(val: string): string {
+  return createHash('sha256').update(val.trim().toLowerCase()).digest('hex');
+}
+function hashPhone(val: string): string {
+  const trimmed = val.trim();
+  if (/^[a-f0-9]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
+  const digits = trimmed.replace(/\D/g, '');
+  return createHash('sha256').update(digits).digest('hex');
+}
+const HASHED_FIELDS = ['em', 'fn', 'ln', 'ct', 'zp', 'country', 'db', 'ge', 'external_id'] as const;
+function safeUserData(input: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const key of HASHED_FIELDS) {
     const raw = input[key];
-    if (raw === undefined) continue;
+    if (raw === undefined || raw === null) continue;
     const values = Array.isArray(raw) ? raw : [raw];
-    if (values.length > 10 || !values.every((value) => /^[a-f0-9]{64}$/i.test(value)))
-      throw new Error('Invalid hashed matching data');
-    result[key] = values;
+    if (values.length > 10) throw new Error('Invalid hashed matching data');
+    result[key] = values.map((val) => {
+      if (typeof val !== 'string') throw new Error('Invalid hashed matching data');
+      const trimmed = val.trim();
+      if (/^[a-f0-9]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
+      return sha256(trimmed);
+    });
   }
-  for (const key of ['fbp', 'fbc']) {
+  if (input.ph !== undefined && input.ph !== null) {
+    const raw = input.ph;
+    const values = Array.isArray(raw) ? raw : [raw];
+    if (values.length > 10) throw new Error('Invalid hashed matching data');
+    result.ph = values.map((val) => {
+      if (typeof val !== 'string') throw new Error('Invalid hashed matching data');
+      return hashPhone(String(val));
+    });
+  }
+  for (const key of ['fbp', 'fbc'] as const) {
     const value = input[key];
-    if (value !== undefined) {
+    if (value !== undefined && value !== null) {
       if (
         typeof value !== 'string' ||
         value.length > 256 ||
@@ -214,7 +272,22 @@ function safeUserData(input: Record<string, string | string[]>): Record<string, 
       result[key] = value;
     }
   }
-  if (Object.keys(input).some((key) => !['em', 'ph', 'external_id', 'fbp', 'fbc'].includes(key)))
+  for (const key of ['client_ip_address', 'client_user_agent'] as const) {
+    const value = input[key];
+    if (value !== undefined && value !== null) {
+      if (typeof value !== 'string' || value.length > 512) throw new Error(`Invalid ${key}`);
+      result[key] = value;
+    }
+  }
+  const ALLOWED_KEYS = new Set([
+    ...HASHED_FIELDS,
+    'ph',
+    'fbp',
+    'fbc',
+    'client_ip_address',
+    'client_user_agent',
+  ]);
+  if (Object.keys(input).some((key) => !ALLOWED_KEYS.has(key)))
     throw new Error('Unsupported matching data');
   if (Object.keys(result).length === 0) throw new Error('Matching data required');
   return result;
@@ -231,7 +304,23 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
   const source = options.eventSourceUrl ? new URL(options.eventSourceUrl) : undefined;
   if (source) {
     source.pathname = safeRoute(source);
-    source.search = '';
+    const safeParams = new URLSearchParams();
+    for (const [key, value] of source.searchParams.entries()) {
+      const lower = key.toLowerCase();
+      if (
+        lower === 'fbclid' ||
+        lower.startsWith('utm_') ||
+        lower === 'gclid' ||
+        lower === 'dclid' ||
+        lower === 'msclkid'
+      ) {
+        if (!value.includes('@') && value.length <= 512) {
+          safeParams.set(key, value);
+        }
+      }
+    }
+    const safeQuery = safeParams.toString();
+    source.search = safeQuery ? `?${safeQuery}` : '';
     source.hash = '';
     source.username = '';
     source.password = '';
@@ -346,8 +435,8 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
                     parentSpanId: record.parentSpanId,
                     name: `${record.method} ${route}`,
                     kind: data.spanKind ?? 3,
-                    startTimeUnixNano: String(BigInt(Math.floor(start * 1_000_000))),
-                    endTimeUnixNano: String(BigInt(end) * 1_000_000n),
+                    startTimeUnixNano: String(BigInt(Math.floor(start)) * 1_000_000n),
+                    endTimeUnixNano: String(BigInt(Math.floor(end)) * 1_000_000n),
                     attributes,
                     status: { code: record.error ? 2 : 0 },
                   },
@@ -379,11 +468,16 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
           // OTLP partial rejection is not successful delivery.
           const text = await response.text();
           if (text) {
-            const result = JSON.parse(text) as {
-              partialSuccess?: { rejectedSpans?: string | number };
-            };
-            if (Number(result.partialSuccess?.rejectedSpans ?? 0) > 0)
-              throw new Error('OTLP rejected spans');
+            try {
+              const result = JSON.parse(text) as {
+                partialSuccess?: { rejectedSpans?: string | number };
+              };
+              if (Number(result.partialSuccess?.rejectedSpans ?? 0) > 0)
+                throw new Error('OTLP rejected spans');
+            } catch (err) {
+              if (err instanceof Error && err.message === 'OTLP rejected spans') throw err;
+              // Non-JSON 200 responses (e.g. text/plain 'OK' or empty body) are valid deliveries
+            }
           }
         })
         .catch(() => {

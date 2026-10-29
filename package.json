@@ -6,10 +6,16 @@
   "type": "module",
   "packageManager": "pnpm@10.24.0",
   "engines": {
-    "node": ">=22 <23",
+    "node": ">=22",
     "pnpm": ">=10 <11"
   },
   "scripts": {
+    "dev": "pnpm --filter @signalkit/example-nextjs dev",
+    "dev:all": "pnpm --parallel --filter \"@signalkit/example-nextjs\" --filter \"@signalkit/example-bun\" dev",
+    "dev:bun": "pnpm --filter @signalkit/example-bun dev",
+    "dev:sveltekit": "pnpm --filter @signalkit/example-sveltekit dev",
+    "dev:site": "pnpm --filter @signalkit/site dev",
+    "test:bun": "pnpm --filter @signalkit/example-bun test",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

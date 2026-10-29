@@ -21,7 +21,7 @@ export function createSvelteKitHooks(
     try {
       return await active.run(signals, () =>
         signals.handle(event.request, () => resolve(event), {
-          route: event.route.id ?? undefined,
+          route: event.route?.id ?? undefined,
         }),
       );
     } finally {
