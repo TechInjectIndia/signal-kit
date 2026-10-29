@@ -2,7 +2,7 @@
 
 A consent-aware ecommerce telemetry SDK for Next.js, Bun and SvelteKit. Shared typed events, automatic page/request instrumentation and provider adapters, with a platform-independent core.
 
-**Status: alpha candidate `0.1.0-alpha.1`, not yet published to npm.** Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
+**Status: published alpha `0.1.0-alpha.1`.** Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
 
 [![SignalKit demo: consent, navigation, cart and API outcomes](docs/assets/demo.gif)](https://techinjectindia.github.io/signal-kit/demo.mp4)
 
@@ -25,6 +25,10 @@ pnpm --filter @signalkit/example-bun dev
 ```
 
 The examples use local recorders and synthetic data. The Next lab starts with all consent denied. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
+
+## Connections dashboard
+
+Open `/connections` in the Next.js lab to see configured event providers, consent blocks, send outcomes and counters. Embed the same portable view inside your app with `@techinject/browser/dashboard`. It reads the existing SDK instance and updates without polling. No credentials, payloads or extra provider requests are used. See [dashboard setup](docs/CONNECTIONS-DASHBOARD.md).
 
 ## What is included
 
@@ -51,7 +55,7 @@ await signals.track({
 });
 ```
 
-The owner-selected package scope is `@techinject`; packages are not published yet. Use the workspace or verified local alpha tarballs. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
+The owner-selected package scope is `@techinject`; all nine packages are published as `0.1.0-alpha.1`. Pin this exact version or use the workspace. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
 
 ## Platform availability
 
@@ -276,3 +280,7 @@ MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their p
 [Alpha review and install plan](docs/releases/0.1.0-alpha.1.md) · [Pilot developer handoff](docs/growth/PILOT-GUIDE.md) · [Maintenance routine](docs/growth/MAINTAINER-SOP.md). Report a concrete installation problem; stars are welcome, but real usage and useful feedback matter more.
 
 [SvelteKit guide](https://techinjectindia.github.io/signal-kit/docs/sveltekit/) · [SvelteKit local lab](examples/sveltekit/README.md)
+
+## Versioned releases and upgrades
+
+All nine @techinject packages share a Changesets version and changelog process. npm trusted publishing and the versioned browser CDN bundle are prepared; npm account access is verified; initial publication is verified; trusted publisher activation remains pending. Existing deployments never silently pull SDK updates. See [upgrade instructions for every platform](docs/UPGRADING.md) and [maintainer release setup](docs/RELEASING.md).

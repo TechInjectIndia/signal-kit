@@ -38,3 +38,22 @@ assert.ok(
   'SvelteKit browser bundle imports server code',
 );
 console.log('SvelteKit browser entry bundles without server imports');
+
+assert.ok(
+  !Object.keys(result.metafile.inputs).some((path) => path.endsWith('/dashboard.js')),
+  'Optional dashboard included in default SDK bundle',
+);
+const dashboard = await build({
+  entryPoints: [join(root, 'packages/features/signals/browser/dist/dashboard.js')],
+  bundle: true,
+  platform: 'browser',
+  write: false,
+  metafile: true,
+});
+assert.ok(
+  !Object.keys(dashboard.metafile.inputs).some((path) =>
+    /\/server\/|node:|providers\.js/.test(path),
+  ),
+  'Dashboard imports server or provider implementation',
+);
+console.log('Optional dashboard bundles independently without provider/server code');

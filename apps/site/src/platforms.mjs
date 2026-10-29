@@ -1,3 +1,9 @@
+import {
+  createConnectionsPage,
+  nextConnectionsExample,
+  svelteConnectionsExample,
+  serverConnectionsExample,
+} from './connections-docs.mjs';
 import { sveltekitPage } from './sveltekit-docs.mjs';
 import { nextExample, bunExample, purchaseExample } from './content.mjs';
 import { integrationExamples } from './integration-examples.mjs';
@@ -80,7 +86,7 @@ export const platformPages = [
       {
         title: 'Build and try the Next.js lab',
         paragraphs: [
-          'Alpha packages are not published on npm yet. Start with Node 22 and pnpm 10.24.0. The lab uses synthetic data and local recorders. For a fresh external project, prepare the local alpha tarballs using pnpm release:prepare and follow the repository alpha install plan.',
+          'Alpha 0.1.0-alpha.1 is published on npm. Pin installed @techinject packages to this exact version. Start the source lab with Node 22 and pnpm 10.24.0. The lab uses synthetic data and local recorders. For a fresh external project, prepare the local alpha tarballs using pnpm release:prepare and follow the repository alpha install plan.',
         ],
         code: setup + '\npnpm --filter @signalkit/example-nextjs dev\n# Open http://localhost:3100',
         label: 'Terminal',
@@ -128,7 +134,7 @@ export const platformPages = [
       {
         title: 'Build and try the Bun lab',
         paragraphs: [
-          'Use Node 22, pnpm 10.24.0 and Bun 1.3.4 for the recorded setup. Alpha packages are available from source and local tarballs, not npm. The lab uses synthetic consent and local records.',
+          'Use Node 22, pnpm 10.24.0 and Bun 1.3.4 for the recorded setup. Alpha 0.1.0-alpha.1 is available on npm; pin installed @techinject packages to this exact version. The lab uses synthetic consent and local records.',
         ],
         code:
           setup +
@@ -178,4 +184,53 @@ export function platformCategories(name) {
   if (['Next.js', 'SvelteKit', 'Astro'].includes(name)) return ['frontend', 'backend'];
   if (['HTML / JavaScript', 'Vue', 'Angular'].includes(name)) return ['frontend'];
   return ['backend'];
+}
+
+for (const page of platformPages) {
+  page.sections.push({
+    title: 'Open the connections health dashboard',
+    paragraphs: [
+      'Add a /connections page inside your app, using its existing SDK instance. Add @techinject/browser as a direct dependency for the dashboard renderer. Alpha 0.1.0-alpha.1 is published; pin your installed @techinject packages to this exact version. Counts reset with the instance; SDK completion does not prove provider delivery or attribution. Protect production diagnostics with host authentication.',
+      page.path === 'docs/bun/'
+        ? 'Bun is a server integration. Read a safe snapshot on the server; an authenticated host frontend must render it. No automatic dashboard URL or cross-request collector is provided.'
+        : 'Open your app’s /connections URL after adding the page. Reuse the root client; do not initialize another SDK instance for the dashboard.',
+    ],
+    label:
+      page.path === 'docs/nextjs/'
+        ? 'app/connections/page.tsx'
+        : page.path === 'docs/sveltekit/'
+          ? 'src/routes/connections/+page.svelte'
+          : 'Server snapshot',
+    code:
+      page.path === 'docs/nextjs/'
+        ? nextConnectionsExample
+        : page.path === 'docs/sveltekit/'
+          ? svelteConnectionsExample
+          : serverConnectionsExample,
+    links: [['../connections/', 'Full dashboard guide: all platforms, setup and status meanings']],
+  });
+}
+platformPages.push(createConnectionsPage(platforms));
+
+for (const page of platformPages) {
+  page.sections.push({
+    title: 'Upgrade SignalKit safely',
+    paragraphs: [
+      'Pin all installed @techinject packages to the same exact released version. Keep the lockfile, read release notes, test consent/navigation/API and dashboard behavior, then rebuild and redeploy. Alpha 0.1.0-alpha.1 is published; the commands below pin this reviewed release. Source installs require fetching the reviewed release and rebuilding first.',
+      'Coming-soon framework adapters remain unverified. Browser CDN updates require replacing the explicit version in your import URL; neither packages nor deployed apps silently pull updates.',
+    ],
+    label: 'Published alpha / exact version pins',
+    code:
+      page.path === 'docs/nextjs/'
+        ? 'pnpm add --save-exact @techinject/nextjs@0.1.0-alpha.1 @techinject/browser@0.1.0-alpha.1\n# If using Node tracing, update @techinject/nextjs-server to 0.1.0-alpha.1 too.'
+        : page.path === 'docs/sveltekit/'
+          ? 'pnpm add --save-exact @techinject/sveltekit@0.1.0-alpha.1 @techinject/browser@0.1.0-alpha.1\n# If using server hooks, update @techinject/sveltekit-server to 0.1.0-alpha.1 too.'
+          : 'pnpm add --save-exact @techinject/bun@0.1.0-alpha.1\n# Update any directly installed core/server packages to 0.1.0-alpha.1 too.',
+    links: [
+      [
+        'https://github.com/TechInjectIndia/signal-kit/blob/main/docs/UPGRADING.md',
+        'All framework upgrade paths and CDN instructions',
+      ],
+    ],
+  });
 }

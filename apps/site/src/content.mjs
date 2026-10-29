@@ -7,7 +7,7 @@ export const faq = [
   ],
   [
     'Is SignalKit available on npm?',
-    'Not yet. Alpha 0.1.0-alpha.1 is available from source and locally packed tarballs. Clone the repository and build its workspace, or use locally packed packages. The owner-selected @techinject scope is prepared for an alpha release; publication and npm ownership have not been verified.',
+    'Yes. Alpha 0.1.0-alpha.1 is available on npm. Pin the @techinject packages to this exact version, or use the workspace.',
   ],
   [
     'Which frameworks does SignalKit support?',
@@ -35,7 +35,7 @@ export const faq = [
   ],
   [
     'Do I need a SignalKit account or hosted collector?',
-    'No SignalKit account or hosted collector is required. Configure your own provider accounts and, when using OTLP, your own compatible collector. SignalKit does not include an analytics dashboard.',
+    'No SignalKit account or hosted collector is required. Configure your own provider accounts and, when using OTLP, your own compatible collector. An optional in-app connections dashboard shows SDK event-provider outcomes; it is not a hosted analytics reporting service.',
   ],
   [
     'What has been tested?',
@@ -180,7 +180,7 @@ export const guides = [
         title: 'What should you test before production?',
         paragraphs: [
           'Replay a signed captured-payment fixture twice and verify the same persisted purchase ID. Reject altered signatures, mismatched amount/currency and unpaid state. Simulate a timeout between provider acceptance and acknowledgement. Confirm denied consent does not dispatch, and inspect accepted events in your own provider account before claiming live attribution.',
-          'The repository’s local tests establish fixture behavior. They do not establish that GA4 or Meta attributed a real customer purchase. No npm install command is offered while packages remain unpublished.',
+          'The repository’s local tests establish fixture behavior. They do not establish that GA4 or Meta attributed a real customer purchase. The npm alpha is available with explicit 0.1.0-alpha.1 version pins.',
         ],
         links: [
           [

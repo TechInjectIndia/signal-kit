@@ -79,10 +79,11 @@ if (pkg.private !== true)
   fail('Root workspace must be private to prevent accidental npm publishing.');
 if (pkg.license !== 'MIT') fail('Package license must match LICENSE.');
 const workflow = await readFile(resolve(root, '.github/workflows/ci.yml'), 'utf8');
-for (const match of workflow.matchAll(/uses:\s+([^\s#]+)/g)) {
+const releaseWorkflow = await readFile(resolve(root, '.github/workflows/release.yml'), 'utf8');
+for (const match of (workflow + releaseWorkflow).matchAll(/uses:\s+([^\s#]+)/g)) {
   if (!/^[^@]+@[a-f0-9]{40}$/.test(match[1])) fail(`Action is not pinned to a commit: ${match[1]}`);
 }
-if (/pull_request_target/.test(workflow))
+if (/pull_request_target/.test(workflow + releaseWorkflow))
   fail('CI must not execute contributor code in a privileged PR workflow.');
 if (!/contents: read/.test(workflow))
   fail('CI must explicitly request read-only contents permission.');

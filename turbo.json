@@ -26,5 +26,6 @@
     "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
     "NEXT_TELEMETRY_DISABLED"
   ],
-  "agentGuidance": false
+  "agentGuidance": false,
+  "globalDependencies": ["scripts/build-cdn.mjs", "scripts/files.mjs", "LICENSE"]
 }

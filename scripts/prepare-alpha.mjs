@@ -6,7 +6,9 @@ import { build } from 'esbuild';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import { root } from './files.mjs';
-const version = '0.1.0-alpha.1';
+const version = JSON.parse(
+  await readFile(join(root, 'packages/features/signals/core/package.json'), 'utf8'),
+).version;
 const names = [
   'contracts',
   'core',

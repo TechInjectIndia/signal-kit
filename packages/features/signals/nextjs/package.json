@@ -1,6 +1,6 @@
 {
   "name": "@techinject/nextjs",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "type": "module",
   "license": "MIT",
   "files": [
@@ -40,8 +40,7 @@
     "directory": "packages/features/signals/nextjs"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {},
   "description": "SignalKit nextjs consent-aware telemetry package"

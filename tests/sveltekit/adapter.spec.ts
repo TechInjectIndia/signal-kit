@@ -39,4 +39,11 @@ test('real SSR/hydration, SPA pages, consent, API observation and Kit internal-f
   await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   const after = JSON.parse(await page.locator('#records').innerText());
   expect(after.filter((r: { name: string }) => r.name === 'page_view')).toHaveLength(2);
+  await page.getByRole('link', { name: 'Connections', exact: true }).click();
+  const dashboard = page.getByRole('region', { name: 'SignalKit connections' });
+  await expect(dashboard).toContainText('Blocked by consent');
+  await page.getByRole('button', { name: 'Allow analytics and observability' }).click();
+  await expect(dashboard).toContainText('SDK send completed');
+  await page.getByRole('link', { name: 'Home', exact: true }).click();
+  await expect(dashboard).toHaveCount(0);
 });

@@ -1,6 +1,6 @@
 {
   "name": "@techinject/bun",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
@@ -32,8 +32,7 @@
     "directory": "packages/features/signals/bun"
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "alpha"
+    "access": "public"
   },
   "engines": {},
   "description": "SignalKit bun consent-aware telemetry package"

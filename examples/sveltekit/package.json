@@ -12,7 +12,8 @@
   "dependencies": {
     "@techinject/sveltekit": "workspace:*",
     "@techinject/sveltekit-server": "workspace:*",
-    "@techinject/contracts": "workspace:*"
+    "@techinject/contracts": "workspace:*",
+    "@techinject/browser": "workspace:*"
   },
   "devDependencies": {
     "@sveltejs/kit": "3.0.1",
