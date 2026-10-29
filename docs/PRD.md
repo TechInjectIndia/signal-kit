@@ -67,3 +67,13 @@ Owner-authorized addition, 12 October 2026: separate SSR-safe browser lifecycle 
 ## Host connections dashboard — 12 October 2026
 
 Owner requested a simple dashboard inside each consuming app. Reuse the existing SDK instance: core exposes copied connection snapshots and isolated subscriptions; an optional browser/dashboard subpath renders them without polling or provider probes. Show event-provider configuration, current consent, bounded aggregate counters, latest SDK outcome and time. Never retain payloads, event IDs, raw errors, endpoints or credentials. Configuration is not connectivity; completed sends do not prove delivery or attribution. Counts are per instance, in memory; technical Observer status and cross-request/server aggregation are outside this first version. The host owns authentication and any server-to-browser snapshot endpoint. Next lab includes a noindex /connections consumer page. Verify failure/timeout/denial, duplicate names, mutation isolation, cleanup, safe rendering and real mobile navigation.
+
+## Observability backend extension — 13 October 2026
+
+Owner requested Sentry and Grafana support, clarifying that cloud and self-hosted deployments should share one implementation. Use the existing generic OTLP trace exporter for SigNoz and Grafana-compatible backends with host-configured endpoints and authentication headers. Add a separate Sentry error bridge and observer composition; do not introduce cloud-specific SDK factories.
+
+Maintain consent controls, bounded exports, isolated failures and server-only credentials. Preserve the exclusion of raw exception messages, stacks, request bodies and user data. Host-owned Sentry instrumentation remains separate from SignalKit-controlled events. Test local/cloud endpoint and header mapping, safe event construction, lifecycle and export deadlines. Account provisioning, live ingestion, deployment and npm publication are outside this change.
+
+## Local connections observability catalog — 13 October 2026
+
+Owner requested visibility of the new integrations on the local /connections page. The portable dashboard accepts optional host-declared observability metadata and renders Sentry, Grafana and SigNoz separately from event-provider outcomes. Next.js and SvelteKit labs list these as not configured because their observers are synthetic. Backend labels and setup guidance are fixed, while configuration/policy flags are supplied by the host. No credentials, endpoints, provider objects, health probes or invented delivery counters are exposed. Existing two-argument dashboard calls remain supported. Configuration is unverified host information, not evidence of a connection.

@@ -28,3 +28,13 @@ Local production build/runtime verified on Node 22.21.1: SvelteKit 3.0.1, Svelte
 ## In-app connections dashboard — 12 October 2026
 
 Core status snapshots/subscriptions and optional browser/dashboard renderer verified with denied consent, successful/failed/timeout/invalid outcomes, duplicate names, safe text rendering and teardown. Next production /connections page verified in Chromium at 390px with real consent changes and SDK send outcomes. Event providers only, per-instance in-memory counts; technical Observer health, cross-request aggregation and vendor delivery/attribution are unverified and not represented.
+
+## Observability backends — 13 October 2026 (unreleased)
+
+The same OTLP HTTP JSON trace exporter supports configurable local/cloud endpoints and authentication. Synthetic tests cover local SigNoz/Tempo and cloud SigNoz/Grafana destinations; no separate cloud implementation is required. Sentry uses a host-injected captureEvent/flush bridge tested with synthetic clients. Composition tests cover independent payload copies, consent, failure isolation and bounded flush.
+
+Workspace build, typecheck, tests (including the local Bun runtime), repository checks, formatting and dependency boundaries were verified on Node 22.21.1. Live Grafana/SigNoz ingestion, native Sentry SDK certification and deployed Firebase/Vercel behavior remain unverified. See [setup guide](CLOUD-OBSERVABILITY.md).
+
+## Local observability catalog verification
+
+Next.js and SvelteKit production-browser tests pass with Sentry, Grafana and SigNoz shown as not configured. Existing consent/outcome updates and cleanup remain verified; Next mobile checks confirm no horizontal overflow at 390px. Browser unit tests cover fixed labels, safe metadata and configured-but-unverified states. Workspace build, typecheck, tests, formatting, repository and boundary checks pass on Node 22.21.1. These cards are configuration summaries, not live backend verification.

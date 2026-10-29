@@ -51,3 +51,6 @@ export function createNextRequestErrorHandler(
     }
   };
 }
+
+export { createSentryObserver, combineObservers } from '@techinject/server';
+export type { SentryClient, SentryEvent, SentryOptions } from '@techinject/server';

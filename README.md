@@ -284,3 +284,7 @@ MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their p
 ## Versioned releases and upgrades
 
 All nine @techinject packages share a Changesets version and changelog process. npm trusted publishing and the versioned browser CDN bundle are prepared; npm account access is verified; initial publication is verified; trusted publisher activation remains pending. Existing deployments never silently pull SDK updates. See [upgrade instructions for every platform](docs/UPGRADING.md) and [maintainer release setup](docs/RELEASING.md).
+
+## Observability backends (unreleased)
+
+Use the existing OTLP exporter with configurable endpoints and authentication for local or cloud SigNoz and Grafana-compatible backends. A host-owned Sentry SDK bridge adds sanitized error reports, and observer composition lets errors and traces use different destinations. See [setup](docs/CLOUD-OBSERVABILITY.md). Sentry/composition additions are not yet published; live ingestion and deployed serverless behavior remain unverified.

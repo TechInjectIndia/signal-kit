@@ -7,7 +7,14 @@ export default function ConnectionsPage() {
   const signals = useSignals();
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (container.current) return mountConnectionsDashboard(container.current, signals);
+    if (container.current)
+      return mountConnectionsDashboard(container.current, signals, {
+        observability: [
+          { backend: 'sentry', configured: false },
+          { backend: 'grafana', configured: false },
+          { backend: 'signoz', configured: false },
+        ],
+      });
   }, [signals]);
   return (
     <section>
@@ -17,6 +24,9 @@ export default function ConnectionsPage() {
         <br />
         at a glance.
       </h1>
+      <p>
+        This lab uses synthetic recorders. Set up your own backend to export observability data.
+      </p>
       <div ref={container} />
     </section>
   );

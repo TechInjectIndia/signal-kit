@@ -110,6 +110,24 @@ Style `.signalkit-connections` and its articles with host CSS; the Next lab prov
 
 The view shows current consent, configured provider names/categories, last outcome/time and aggregate completed, failed, denied, dropped and invalid counts. It stores no event IDs, payloads or raw errors. No network requests, cookies, storage, polling or test events are introduced. Rendering uses text nodes, including custom provider names.
 
-Configuration does not verify connectivity. `sent` means the adapter's send returned successfully; browser scripts can merely enqueue work. Provider delivery, reporting, attribution and deduplication require independent checks. Consent denial takes precedence over a previous successful outcome. Counts reset when the SDK instance restarts and represent local outcomes, not unique delivered events. Technical `Observer` transports, global framework tracing, provider account health and cross-request/server aggregation are not included.
+Configuration does not verify connectivity. `sent` means the adapter's send returned successfully; browser scripts can merely enqueue work. Provider delivery, reporting, attribution and deduplication require independent checks. Consent denial takes precedence over a previous successful outcome. Counts reset when the SDK instance restarts and represent local outcomes, not unique delivered events. Technical observer delivery counters, global framework tracing, provider account health and cross-request/server aggregation are not included. The optional observability catalog below shows only host-declared configuration.
 
 Core/server consumers can read `signals.getConnections()` and subscribe via `signals.subscribeConnections(listener)`, which returns an unsubscribe function. Snapshots are copied; listeners cannot disrupt dispatch. Request-scoped server instances have request-scoped counts. Any persistent aggregation or authenticated snapshot endpoint belongs to the host, and server credentials/provider objects must never cross into client code.
+
+## Observability entries (unreleased)
+
+Pass a third argument to show server observability options alongside event-provider outcomes:
+
+```ts
+mountConnectionsDashboard(container, signals, {
+  observability: [
+    { backend: 'sentry', configured: false },
+    { backend: 'grafana', configured: false },
+    { backend: 'signoz', configured: false },
+  ],
+});
+```
+
+Both local labs include this catalog. They show “Not configured” because they use synthetic recorders, not real vendor connections. In a consuming app, supply safe host-declared booleans; `configured: true` displays “Configured · delivery unverified.” Optional `hosting` is `local` or `cloud`; `enabled: false` marks a configured destination blocked by host policy. These options are static for that mount: remount the view if host configuration changes. Browser consent changes do not establish server policy.
+
+Only the fixed backend IDs `sentry`, `grafana`, `signoz` and `otlp` are supported, with at most four unique entries. Never pass tokens, URLs, headers, DSNs, provider instances or raw configuration into the browser. A host may provide an authenticated, explicitly allowlisted configuration summary. The view does not probe providers or infer account health. See [backend setup](CLOUD-OBSERVABILITY.md) to configure actual Sentry/OTLP exports.
