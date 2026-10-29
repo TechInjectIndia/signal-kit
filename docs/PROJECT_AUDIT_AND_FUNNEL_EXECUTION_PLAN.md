@@ -60,7 +60,7 @@ signal-kit/
   - Triggers named events for session recording and heatmap milestone tracking.
 - **SPA Navigation & Route Interception ([browser/src/index.ts](../packages/features/signals/browser/src/index.ts#L84-L100)):**
   - Monkey-patches `window.history.pushState` and `window.history.replaceState`.
-  - Listens to `popstate` and `hashchange`.
+  - Listens to `popstate`; listens to `hashchange` only when `trackHash: true` is configured.
   - Fires automatic `page_view` whenever the route changes without full page reload.
 
 ---

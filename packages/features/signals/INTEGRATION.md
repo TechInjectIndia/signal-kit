@@ -47,7 +47,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Use public IDs from your host config and real persisted consent. Numeric placeholder above must be replaced before creating Meta provider. Place provider around root layout children. useSignals().track accepts typed ecommerce inputs; useSignals().setConsent updates consent (keep parent config consistent). Provider structural config is init-only: remount on provider, observer or origin changes. Default auto pages track initial/pathname changes, not query/hash-only transitions. Direct browser SDK auto-starts unless autoTrack:false; start/stop/dispose are explicit controls.
+Use public IDs from your host config and real persisted consent. Numeric placeholder above must be replaced before creating Meta provider. Place provider around root layout children. useSignals().track accepts typed ecommerce inputs; useSignals().setConsent updates consent (keep parent config consistent). Provider structural config is init-only: remount on provider, observer or origin changes. Default auto pages track initial/pathname changes, not query/hash-only transitions. Set `trackHash: true` only for a `#/` or `#!/` hash router; ordinary in-page anchors do not emit page views. Direct browser SDK auto-starts unless autoTrack:false; start/stop/dispose are explicit controls.
 
 GA4 provider sends explicit pages; disable automatic history page changes in Enhanced Measurement to avoid vendor-side duplicates. SignalKit does not own scripts previously loaded by other tools. Configure CSP with vendor domains/nonces, third-party privacy/masking and consent policies. Clarity is optional createClarityProvider({projectId}). Browser legacy globals + multiple tools require host integration validation.
 

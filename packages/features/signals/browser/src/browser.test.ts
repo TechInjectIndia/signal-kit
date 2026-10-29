@@ -275,7 +275,8 @@ describe('browser providers', () => {
     expect(eventParams.page_location).toContain('gclid=gclid123');
     expect(eventParams.page_location).not.toContain('secret=token');
   });
-  it('tracks hash navigation as page views (4.3)', async () => {
+  it('ignores in-page anchors without hash route tracking', async () => {
+    history.replaceState(null, '', '/product/x');
     const pages: string[] = [];
     const sdk = createBrowserSignals({
       consent,
@@ -290,11 +291,59 @@ describe('browser providers', () => {
       ],
     });
     disposals.push(sdk.dispose);
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
+    window.location.hash = '#reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    history.pushState(null, '', '/product/x#details');
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
     window.location.hash = '#/catalog';
     window.dispatchEvent(new HashChangeEvent('hashchange'));
     await sdk.flush();
-    expect(pages.some((p) => p.includes('catalog'))).toBe(true);
-    sdk.stop();
+    expect(pages).toEqual(['/product/x']);
+  });
+  it('tracks hash routes only when enabled and ignores plain anchors', async () => {
+    history.replaceState(null, '', '/product/x');
+    const pages: string[] = [];
+    const sdk = createBrowserSignals({
+      consent,
+      trackHash: true,
+      providers: [
+        {
+          name: 'recorder',
+          category: 'analytics',
+          send: (event) => {
+            pages.push(event.properties.page_path as string);
+          },
+        },
+      ],
+    });
+    disposals.push(sdk.dispose);
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
+    window.location.hash = '#reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
+    window.location.hash = '#/catalog';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x', '/catalog']);
+
+    window.location.hash = '#!/catalog?tab=reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x', '/catalog']);
+
+    window.location.hash = '#reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x', '/catalog']);
   });
   it('captures unhandled browser errors when captureErrors is enabled (5.3)', async () => {
     const records: RequestRecord[] = [];

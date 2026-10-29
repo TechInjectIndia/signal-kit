@@ -33,31 +33,8 @@ This document catalogs all confirmed bugs, framework edge cases, import traps, a
 ### 1.1 In-Page Hash Anchors Trigger Duplicate `page_view` Events
 
 - **Source:** `packages/features/signals/browser/src/index.ts`
-- **Mechanism:**
-  The browser SDK listens to `hashchange` events:
-  ```ts
-  const navigation = () => {
-    if (!running || typeof location === 'undefined') return;
-    const current =
-      config.trackQuery === true
-        ? location.pathname + location.search + location.hash
-        : location.pathname + location.hash;
-    if (current === lastUrl) return;
-    lastUrl = current;
-    void page();
-  };
-  ```
-  Inside `page()`, hash routing is only parsed if the hash begins with `#/` or `#!/`:
-  ```ts
-  if (location.hash && (location.hash.startsWith('#/') || location.hash.startsWith('#!/'))) {
-    routePath = location.hash.replace(/^#![/]?/, '/').replace(/^#[/]?/, '/');
-  } else {
-    routePath = location.pathname;
-  }
-  ```
-- **Error Manifestation:**
-  When a user clicks any regular in-page jump link (e.g. `<a href="#pricing">`, `<a href="#faq">`, or tab switchers), `current !== lastUrl` evaluates to `true`, triggering `page()`. Because `#pricing` does not start with `#/`, `routePath` falls back to `location.pathname` (e.g., `/`).
-- **Consequence:** Falsely emits an extra, duplicate `page_view` event for the root path every time a visitor clicks an anchor on the page, corrupting page view and impression metrics.
+- **Status:** Resolved. The browser SDK listens to `hashchange` only when `trackHash: true` is configured. Only `#/` and `#!/` hashes are treated as routes; ordinary anchors are ignored. Automatic page views deduplicate on the resolved route path before sanitizing the event payload.
+- **Verification:** The browser test covers `#reviews` and hash-route transitions with and without `trackHash`.
 
 ---
 

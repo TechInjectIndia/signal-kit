@@ -304,7 +304,7 @@ SignalKit automatically patches:
 - `window.history.pushState`
 - `window.history.replaceState`
 - `window.addEventListener('popstate', ...)`
-- `window.addEventListener('hashchange', ...)`
+- `window.addEventListener('hashchange', ...)` when `trackHash: true` is configured for a `#/` or `#!/` router
 
 Whenever the URL path changes, SignalKit emits a sanitized `page_view` event.
 

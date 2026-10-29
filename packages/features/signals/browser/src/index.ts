@@ -34,8 +34,12 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
       if (timer !== undefined) clearTimeout(timer);
     }
   }
-  let lastUrl = '';
+  let lastRoute = '';
+  let lastPathname = '';
+  let lastSearch = '';
   const restores: (() => void)[] = [];
+  const isHashRoute = (hash: string) =>
+    config.trackHash === true && (hash.startsWith('#/') || hash.startsWith('#!/'));
   const excluded = (url: URL) =>
     [
       'googletagmanager.com',
@@ -47,20 +51,25 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     (config.excludeUrls ?? []).some(
       (value) => url.href.startsWith(value) || url.pathname.startsWith(value),
     );
-  const page = (path?: string, eventId?: string) => {
-    let routePath = path;
-    if (!routePath && typeof location !== 'undefined') {
-      if (location.hash && (location.hash.startsWith('#/') || location.hash.startsWith('#!/'))) {
-        routePath = location.hash.replace(/^#![/]?/, '/').replace(/^#[/]?/, '/');
-      } else {
-        routePath = location.pathname;
-      }
+  const currentRoute = () => {
+    if (typeof location === 'undefined') return { path: '/', search: '' };
+    if (isHashRoute(location.hash)) {
+      const hashRoute =
+        location.hash.slice(location.hash.startsWith('#!') ? 2 : 1).split('#')[0] ?? '/';
+      const queryIndex = hashRoute.indexOf('?');
+      return queryIndex < 0
+        ? { path: hashRoute, search: '' }
+        : { path: hashRoute.slice(0, queryIndex), search: hashRoute.slice(queryIndex) };
     }
+    return { path: location.pathname, search: location.search };
+  };
+  const page = (path?: string, eventId?: string) => {
+    const routePath = path || currentRoute().path;
     return core.track({
       name: 'page_view',
       ...(eventId ? { eventId } : {}),
       properties: {
-        page_path: safeRoute(routePath ?? '/'),
+        page_path: safeRoute(routePath),
       },
     });
   };
@@ -83,13 +92,20 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   };
   const navigation = () => {
     if (!running || typeof location === 'undefined') return;
-    const current =
-      config.trackQuery === true
-        ? location.pathname + location.search + location.hash
-        : location.pathname + location.hash;
-    if (current === lastUrl) return;
-    lastUrl = current;
-    void page();
+    if (
+      location.hash &&
+      !isHashRoute(location.hash) &&
+      location.pathname === lastPathname &&
+      (config.trackQuery !== true || location.search === lastSearch)
+    )
+      return;
+    lastPathname = location.pathname;
+    lastSearch = location.search;
+    const route = currentRoute();
+    const current = route.path + (config.trackQuery === true ? route.search : '');
+    if (current === lastRoute) return;
+    lastRoute = current;
+    void page(route.path);
   };
   function start(options: { force?: boolean } = {}) {
     if (running || typeof window === 'undefined') return;
@@ -110,8 +126,10 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     }
     window.addEventListener('popstate', navigation);
     restores.push(() => window.removeEventListener('popstate', navigation));
-    window.addEventListener('hashchange', navigation);
-    restores.push(() => window.removeEventListener('hashchange', navigation));
+    if (config.trackHash === true) {
+      window.addEventListener('hashchange', navigation);
+      restores.push(() => window.removeEventListener('hashchange', navigation));
+    }
     if (config.captureErrors) {
       const errorHandler = () => {
         if (!running || !core.getConsent().observability) return;
