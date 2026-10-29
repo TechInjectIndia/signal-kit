@@ -6,7 +6,7 @@ SDK v1 local implementation, 2026-10-05. All nine packages are published on npm 
 | --------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------- |
 | Tooling                           | Node22.21.1, pnpm10.24.0, TS5.9.3, Turbo2.11.7 | workspace builds/typechecks                                                  |
 | Bun                               | 1.3.4 macOS arm64                              | real Bun.serve socket, inbound trace, signed synthetic payment/restart tests |
-| Next App Router Node              | 16.3.8, React19.3.0                            | production build, browser runtime and local OTel recorder                    |
+| Next App Router Node              | 16.4.1, React19.3.0                            | production build, browser runtime and local OTel recorder                    |
 | Modern Chromium                   | Playwright pinned lockfile browser             | navigation/consent/API/commerce fixture                                      |
 | GA4/Meta Pixel/Clarity            | public SDK interfaces                          | jsdom command/script fixtures; no provider sandbox/live proof                |
 | Meta CAPI                         | caller selects explicit Graph API version      | injected HTTP acceptance/rejection fixtures only                             |
