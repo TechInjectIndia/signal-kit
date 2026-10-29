@@ -1,7 +1,12 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { SignalKitProvider, useSignals, type BrowserConfig } from '@techinject/nextjs';
+import {
+  SignalKitProvider,
+  useSignals,
+  createGA4Provider,
+  type BrowserConfig,
+} from '@techinject/nextjs';
 import type { Consent, EventInput, DispatchResult } from '@techinject/contracts';
 
 type Demo = { track(input: EventInput): Promise<DispatchResult> };
@@ -20,18 +25,41 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<string[]>([]);
   const config = useMemo<BrowserConfig>(() => {
     const append = (line: string) => setLines((previous) => [line, ...previous].slice(0, 30));
+
+    let ga4Id = process.env.NEXT_PUBLIC_GA4_ID;
+    if (!ga4Id && typeof window !== 'undefined') {
+      try {
+        const queryId = new URLSearchParams(window.location.search).get('ga4_id');
+        if (queryId && /^G-[A-Z0-9]+$/.test(queryId)) {
+          ga4Id = queryId;
+          sessionStorage.setItem('signalkit_ga4_id', queryId);
+        } else {
+          const stored = sessionStorage.getItem('signalkit_ga4_id');
+          if (stored && /^G-[A-Z0-9]+$/.test(stored)) ga4Id = stored;
+        }
+      } catch {}
+    }
+
+    const providers: BrowserConfig['providers'] = [
+      {
+        name: 'local-analytics',
+        category: 'analytics',
+        send(event) {
+          append(`${event.name} · ${event.eventId.slice(0, 8)}`);
+        },
+      },
+      { name: 'local-marketing', category: 'marketing', send() {} },
+    ];
+
+    if (ga4Id && /^G-[A-Z0-9]+$/.test(ga4Id)) {
+      try {
+        providers.push(createGA4Provider({ measurementId: ga4Id }));
+      } catch {}
+    }
+
     return {
       traceOrigins: typeof location === 'undefined' ? [] : [location.origin],
-      providers: [
-        {
-          name: 'local-analytics',
-          category: 'analytics',
-          send(event) {
-            append(`${event.name} · ${event.eventId.slice(0, 8)}`);
-          },
-        },
-        { name: 'local-marketing', category: 'marketing', send() {} },
-      ],
+      providers,
       observer: {
         record(record) {
           append(
