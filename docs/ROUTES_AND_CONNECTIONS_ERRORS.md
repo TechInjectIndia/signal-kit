@@ -66,9 +66,10 @@ This document catalogs all confirmed bugs, framework edge cases, import traps, a
     },
   });
   ```
-- **Error Manifestation:**
-  While the GA4 provider includes a whitelist for `page_location` (`safePageLocation`), the primary event payload (`properties.page_path`) emitted by the SDK is scrubbed by `safeRoute`.
-- **Consequence:** Any custom analytics observers, backend webhooks, or OpenTelemetry (OTLP) collectors will only receive `page_path: '/'`. Campaign source tracking (`utm_source`, `utm_medium`, `utm_campaign`), Google Ads click IDs (`gclid`), and Meta click IDs (`fbclid`) are completely absent from the structured event properties.
+- **Current behavior:**
+  The primary event payload (`properties.page_path`) and provider URL metadata omit query strings. GA4 page location/referrer and Meta CAPI event source URL use the shared `safeProviderUrl` helper in core, which also removes fragments and URL credentials.
+- **Consequence:**
+  SDK events do not forward campaign parameters or click IDs. This follows the PRD's default query-string exclusion. Any attribution exception requires product-owner approval and a PRD/FRD amendment before implementation.
 
 ---
 

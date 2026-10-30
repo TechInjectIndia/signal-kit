@@ -4,6 +4,7 @@ import {
   createTraceContext,
   formatTraceparent,
   parseTraceparent,
+  safeProviderUrl,
   safeRoute,
 } from './index.js';
 const event = { name: 'page_view' as const, eventId: 'stable', properties: { page_path: '/' } };
@@ -194,6 +195,16 @@ describe('dispatch lifecycle', () => {
   });
 });
 describe('telemetry context', () => {
+  it('removes query strings, fragments and URL credentials from provider URLs', () => {
+    expect(
+      safeProviderUrl(
+        'https://user:secret@example.invalid/orders/123?utm_source=google&utm_private=%2B919876543210&token=secret#details',
+      ),
+    ).toBe('https://example.invalid/orders/:id');
+    expect(safeProviderUrl('https://example.invalid/?gclid=click-id&fbclid=click-id')).toBe(
+      'https://example.invalid/',
+    );
+  });
   it('strips URL identities and rejects malformed contexts', () => {
     expect(safeRoute('https://example.invalid/orders/123?token=secret')).toBe('/orders/:id');
     expect(safeRoute('/orders/abc', '/orders/:orderId')).toBe('/orders/:orderId');

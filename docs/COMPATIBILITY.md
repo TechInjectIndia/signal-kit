@@ -15,7 +15,7 @@ SDK v1 local implementation, 2026-10-05. All nine packages are published on npm 
 | Hono/Astro/HTML integration hosts | future                                         | generic browser/server contracts only; no compatibility claim                |
 | Django/Laravel                    | future native adapters                         | no implementation                                                            |
 
-Requirements: modern browser crypto.randomUUID, structuredClone, fetch/Headers, URL and performance. SSR import/start guards supported. Outbound server instrumentation is signals.fetch, not global Node/Bun fetch. Browser JS error/rejection capture is outside the v1 request telemetry contract; the optional Next request-error hook is separate. Declarative Bun routes are supported via `instrumentBunRoutes`. Expanded peer support covers SvelteKit >=2 <4 and Next.js >=14 <17.
+Requirements: modern browser crypto.randomUUID, structuredClone, fetch/Headers, URL and performance. SSR import/start guards supported. Outbound server instrumentation is signals.fetch, not global Node/Bun fetch. Browser JS error/rejection capture is outside the v1 request telemetry contract; the optional Next request-error hook is separate. Declarative Bun routes are supported via `instrumentBunRoutes`. The declared peer ranges are SvelteKit >=3 <4 and Next.js >=15 <17; only the recorded versions above have consumer runtime evidence.
 
 Counts, commands, graph and local runtime outcomes are recorded in the build report. Setup-time usability, independent developer onboarding and live provider dedup/attribution remain release gates. No synthetic test should be described as live tracking verification.
 
@@ -23,7 +23,7 @@ All exported browser adapters bundled with esbuild: 31,464 bytes minified / 10,6
 
 ## SvelteKit runtime evidence
 
-Local production build/runtime verified on Node 22.21.1: SvelteKit 3.0.1, Svelte 5.57.2, adapter-node 6.0.0, Vite 8.3.4, plugin 7.3.1 and fixture TypeScript 6.0.3. SSR/hydration, SPA navigation, consent withdrawal, cart/API capture and internal-fetch trace correlation pass. SvelteKit 2 runtime event shape and route compatibility verified by test suite (peer range: `>=2 <4`). Edge and live providers are not verified. Browser and Node server packages are separate. No npm publication performed.
+Local production build/runtime verified on Node 22.21.1: SvelteKit 3.0.1, Svelte 5.57.2, adapter-node 6.0.0, Vite 8.3.4, plugin 7.3.1 and fixture TypeScript 6.0.3. SSR/hydration, SPA navigation, consent withdrawal, cart/API capture and internal-fetch trace correlation pass. Kit 2 remains unverified; a mocked route-event test does not establish runtime compatibility. Edge and live providers are not verified. Browser and Node server packages are separate. No npm publication performed.
 
 ## In-app connections dashboard — 12 October 2026
 

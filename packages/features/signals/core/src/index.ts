@@ -86,6 +86,14 @@ export function safeRoute(url: string | URL, routeTemplate?: string): string {
     return '/';
   }
 }
+export function safeProviderUrl(input: string | URL): string {
+  try {
+    const url = new URL(String(input));
+    return `${url.origin}${safeRoute(url.pathname)}`;
+  } catch {
+    return safeRoute(input);
+  }
+}
 export type TraceContext = { traceId: string; spanId: string; sampled: boolean };
 export function parseTraceparent(value: string | null | undefined): TraceContext | undefined {
   const match = /^00-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$/.exec(value ?? '');

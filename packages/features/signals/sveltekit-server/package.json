@@ -36,7 +36,7 @@
   },
   "description": "SignalKit SvelteKit Node request hooks adapter",
   "peerDependencies": {
-    "@sveltejs/kit": ">=2 <4"
+    "@sveltejs/kit": ">=3 <4"
   },
   "devDependencies": {
     "@sveltejs/kit": "3.0.1",

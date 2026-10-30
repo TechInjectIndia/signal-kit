@@ -91,7 +91,7 @@ Store eventId with the trusted host order. Browser and server copies both emit p
 
 createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and userData callback with SHA-256 hashed em/ph/external_id or validated fbp/fbc. It deliberately refuses arbitrary matching fields. Hashes remain personal data; host supplies consent/retention policy. No access token belongs browser config. A stable event ID enables Meta dedup but actual matching/dedup is unverified until sandbox/live tests.
 
-Default denied consent drops data without replay; resource limits drop overload. Custom providers should honour AbortSignal and implement setConsent/dispose. Telemetry delivery is best effort; persisted outbox/retry belongs host. Safe route heuristics cannot remove every sensitive pathname: supply templates/exclusions and avoid PII in named commerce fields. External scripts can inspect host URL/DOM/cookies independently.
+Default denied consent drops data without replay; resource limits drop overload. Custom providers should honour AbortSignal and implement setConsent/dispose. Telemetry delivery is best effort; persisted outbox/retry belongs host. GA4 page location/referrer and Meta CAPI event source URL omit query strings and fragments. Safe route heuristics cannot remove every sensitive pathname: supply templates/exclusions and avoid PII in named commerce fields. External scripts can inspect host URL/DOM/cookies independently.
 
 ## Copyable host examples
 
@@ -267,7 +267,7 @@ export const handle = hooks.handle;
 export const handleFetch = hooks.handleFetch;
 ```
 
-Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. SvelteKit 2 and SvelteKit 3 with Svelte 5 are supported (`@sveltejs/kit >=2 <4`).
+Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. The declared peer range is `@sveltejs/kit >=3 <4`; SvelteKit 3.0.1 with Svelte 5 has consumer runtime evidence, while Kit 2 is unverified.
 
 ## Supported event contracts
 

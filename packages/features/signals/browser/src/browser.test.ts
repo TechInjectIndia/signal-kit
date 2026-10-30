@@ -247,11 +247,11 @@ describe('browser providers', () => {
     await Promise.resolve();
     expect((await result).outcomes[0]?.status).toBe('failed');
   });
-  it('preserves UTM and gclid query parameters in GA4 page_location (1.2)', async () => {
+  it('excludes query parameters from GA4 page_location', async () => {
     history.replaceState(
       null,
       '',
-      '/products/shoes?utm_source=google&utm_medium=cpc&gclid=gclid123&secret=token',
+      '/products/shoes?utm_source=google&utm_extra=%2B919876543210&gclid=gclid123&secret=token',
     );
     const sdk = createBrowserSignals({
       autoTrack: false,
@@ -273,9 +273,8 @@ describe('browser providers', () => {
     );
     expect(eventCall).toBeDefined();
     const eventParams = eventCall![2] as Record<string, string>;
-    expect(eventParams.page_location).toContain('utm_source=google');
-    expect(eventParams.page_location).toContain('gclid=gclid123');
-    expect(eventParams.page_location).not.toContain('secret=token');
+    expect(new URL(eventParams.page_location).pathname).toBe('/products/shoes');
+    expect(new URL(eventParams.page_location).search).toBe('');
   });
   it('ignores in-page anchors without hash route tracking', async () => {
     history.replaceState(null, '', '/product/x');

@@ -188,14 +188,14 @@ describe('Meta CAPI', () => {
     });
     await expect(provider.send(event)).rejects.toThrow('did not accept');
   });
-  it('preserves fbclid and marketing params in eventSourceUrl', async () => {
+  it('excludes query parameters from eventSourceUrl', async () => {
     let payload: any;
     const provider = createMetaCapiProvider({
       pixelId: '123',
       accessToken: 'synthetic-token',
       endpoint: 'https://collector.test/',
       eventSourceUrl:
-        'https://app.test/products/item-123?fbclid=test_fbclid_123&token=secret_to_strip',
+        'https://app.test/products/item-123?fbclid=test_fbclid_123&utm_extra=%2B919876543210&token=secret_to_strip',
       userData: () => ({ em: 'a'.repeat(64) }),
       fetch: async (_url, init) => {
         payload = JSON.parse(init!.body as string);
@@ -203,8 +203,7 @@ describe('Meta CAPI', () => {
       },
     });
     await provider.send(event);
-    expect(payload.data[0].event_source_url).toContain('fbclid=test_fbclid_123');
-    expect(payload.data[0].event_source_url).not.toContain('secret_to_strip');
+    expect(payload.data[0].event_source_url).toBe('https://app.test/products/:id');
   });
 });
 describe('OTLP', () => {

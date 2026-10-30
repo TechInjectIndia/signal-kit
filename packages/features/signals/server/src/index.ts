@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
-import { createSignals, safeRoute, parseTraceparent } from '@techinject/core';
+import { createSignals, safeRoute, safeProviderUrl, parseTraceparent } from '@techinject/core';
 import type {
   Consent,
   Observer,
@@ -301,30 +301,9 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
     options.endpoint ??
     `https://graph.facebook.com/${options.apiVersion}/${options.pixelId}/events`;
   const transport = options.fetch ?? globalThis.fetch;
-  const source = options.eventSourceUrl ? new URL(options.eventSourceUrl) : undefined;
-  if (source) {
-    source.pathname = safeRoute(source);
-    const safeParams = new URLSearchParams();
-    for (const [key, value] of source.searchParams.entries()) {
-      const lower = key.toLowerCase();
-      if (
-        lower === 'fbclid' ||
-        lower.startsWith('utm_') ||
-        lower === 'gclid' ||
-        lower === 'dclid' ||
-        lower === 'msclkid'
-      ) {
-        if (!value.includes('@') && value.length <= 512) {
-          safeParams.set(key, value);
-        }
-      }
-    }
-    const safeQuery = safeParams.toString();
-    source.search = safeQuery ? `?${safeQuery}` : '';
-    source.hash = '';
-    source.username = '';
-    source.password = '';
-  }
+  const source = options.eventSourceUrl
+    ? safeProviderUrl(new URL(options.eventSourceUrl))
+    : undefined;
   return {
     name: 'meta-capi',
     category: 'marketing',
@@ -358,7 +337,7 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
               event_time: Math.floor(event.timestamp / 1000),
               event_id: event.eventId,
               action_source: 'website',
-              event_source_url: source?.href,
+              event_source_url: source,
               user_data: data,
               custom_data: customData,
             },
