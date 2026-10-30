@@ -11,8 +11,8 @@ import { registryField } from './registry-response.mjs';
 test('Changesets produces one numbered alpha and changelogs for all nine packages', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'signalkit-version-'));
   try {
-    for (const file of ['package.json', 'pnpm-workspace.yaml'])
-      await cp(join(root, file), join(folder, file));
+    // Changesets detects the Bun workspace from package.json workspaces plus bun.lock.
+    for (const file of ['package.json', 'bun.lock']) await cp(join(root, file), join(folder, file));
     await mkdir(join(folder, '.changeset'));
     await cp(join(root, '.changeset/config.json'), join(folder, '.changeset/config.json'));
     await writeFile(

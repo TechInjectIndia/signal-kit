@@ -5,7 +5,8 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://127.0.0.1:3100' },
   webServer: {
-    command: 'pnpm --filter @signalkit/example-nextjs start',
+    command: 'bun run start',
+    cwd: 'examples/nextjs',
     url: 'http://127.0.0.1:3100',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

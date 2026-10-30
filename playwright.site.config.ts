@@ -8,7 +8,8 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: preview, javaScriptEnabled: false },
   webServer: {
-    command: 'pnpm --filter @signalkit/site dev',
+    command: 'bun run dev',
+    cwd: 'apps/site',
     url: preview,
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

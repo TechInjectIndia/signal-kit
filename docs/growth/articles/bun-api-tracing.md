@@ -19,16 +19,16 @@ The workspace contains an actual Bun HTTP example. Start the server fixture belo
 ```sh
 git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
-pnpm install --frozen-lockfile
-pnpm build
-pnpm --filter @signalkit/example-nextjs dev
+bun install --frozen-lockfile
+bun run build
+bun run --filter @signalkit/example-nextjs dev
 # In another terminal from repository root:
-pnpm --filter @signalkit/example-bun dev
+bun run --filter @signalkit/example-bun dev
 ```
 
 ## Wrap incoming requests explicitly
 
-This code is a complete local server that prints safe records through an injected observer. Save it as examples/bun/trace-demo.ts inside the built workspace, then run pnpm --filter @signalkit/example-bun exec bun trace-demo.ts. Technical consent here is for the synthetic fixture; your real host supplies its own policy.
+This code is a complete local server that prints safe records through an injected observer. Save it as examples/bun/trace-demo.ts inside the built workspace, then run bun trace-demo.ts from examples/bun. Technical consent here is for the synthetic fixture; your real host supplies its own policy.
 
 ```ts
 import { createServerSignals } from '@techinject/server';

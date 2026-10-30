@@ -14,7 +14,7 @@ Select the recipient and sending account before sending. Adapt the invitation to
 
 ## Reproducible setup trial
 
-1. Record a UTC start timestamp, source commit, OS, Node/pnpm/Bun versions and selected host. Use a participant/project alias, not client names or personal details. Log every assistance interval separately.
+1. Record a UTC start timestamp, source commit, OS, Node/Bun versions, client package manager and selected host. Use a participant/project alias, not client names or personal details. Log every assistance interval separately.
 2. Use the current [README quickstart](../../README.md) and [integration guide](../../packages/features/signals/INTEGRATION.md). Clone the repository; run the pinned install and build commands. Until a verified registry release exists, do not use an advertised npm installation command.
 3. Start the relevant local lab. Confirm the Next lab begins with consent denied, then grant the needed categories. Observe initial/navigation page events and an API request in the local inspector/recorder.
 4. Exercise product view, cart and checkout with synthetic values. Exercise the signed payment fixture and replay/restart path for a verified purchase. A browser checkout success screen is not purchase proof.

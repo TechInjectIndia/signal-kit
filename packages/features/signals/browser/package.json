@@ -19,9 +19,9 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && node ../../../../scripts/build-cdn.mjs",
+    "build": "tsc -p tsconfig.json && bun ../../../../scripts/build-cdn.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "bun --bun vitest run",
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
