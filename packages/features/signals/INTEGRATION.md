@@ -53,7 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Use public IDs from your host config and real persisted consent. Numeric placeholder above must be replaced before creating Meta provider. Place provider around root layout children. useSignals().track accepts typed ecommerce inputs; useSignals().setConsent updates consent (keep parent config consistent). Provider structural config is init-only: remount on provider, observer or origin changes. Default auto pages track initial/pathname changes, not query/hash-only transitions. Set `trackHash: true` only for a `#/` or `#!/` hash router; ordinary in-page anchors do not emit page views. Direct browser SDK auto-starts unless autoTrack:false; start/stop/dispose are explicit controls.
+Use public IDs from your host config and real persisted consent. Numeric placeholder above must be replaced before creating Meta provider. Place provider around root layout children. useSignals().track accepts typed ecommerce inputs; useSignals().setConsent updates consent (keep parent config consistent). Provider structural config is init-only: remount on provider, observer or origin changes. Automatic pages track initial/pathname changes, not query-only transitions. Set `trackHash: true` only for a `#/` or `#!/` hash router; ordinary in-page anchors do not emit page views. There is no `trackQuery` option. Direct browser SDK auto-starts unless autoTrack:false; start/stop/dispose are explicit controls.
 
 GA4 provider sends explicit pages; disable automatic history page changes in Enhanced Measurement to avoid vendor-side duplicates. SignalKit does not own scripts previously loaded by other tools. Configure CSP with vendor domains/nonces, third-party privacy/masking and consent policies. Clarity is optional createClarityProvider({projectId}). Browser legacy globals + multiple tools require host integration validation.
 
@@ -364,6 +364,8 @@ All events are validated and sanitized before dispatch. Unknown properties are s
 | `login`          | `login`            | `Login` (custom)                  | `login` event                      | `Login` (custom)                  |
 | `search`         | `search`           | `Search` (standard)               | `search` event                     | `Search` (standard)               |
 | `custom_event`   | validated `action` | validated `action` (custom)       | validated `action` event           | validated `action` (custom)       |
+
+`add_to_cart`, `begin_checkout`, and `purchase` require at least one item. `product_view` may carry an empty item list. `custom_event.properties.value`, when supplied, must be finite and nonnegative.
 
 `custom_event.properties.action` must match `^[a-z][a-z0-9_]{0,39}$`; invalid names are rejected before dispatch. Meta Pixel uses `trackSingleCustom` for custom names. GA4 receives `event_id`, and Meta Pixel/CAPI receive the corresponding event ID. Clarity's browser event API accepts only a name, so it does not receive an event-level ID or provide cross-platform deduplication. `page_view` starts Clarity's page/session capture without emitting an explicit Clarity event. All other listed events use Clarity's `event` API.
 

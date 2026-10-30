@@ -272,7 +272,7 @@ describe('event boundary', () => {
       item_brand: 'Nike',
     });
   });
-  it('allows empty cart and empty checkout items (2.4)', () => {
+  it('requires cart and checkout items but permits an empty product view', () => {
     for (const name of ['add_to_cart', 'begin_checkout'] as const) {
       const res = sanitizeEvent(
         {
@@ -285,11 +285,27 @@ describe('event boundary', () => {
         },
         `${name}-empty`,
       );
-      expect(res?.properties).toEqual({
-        currency: 'USD',
-        value: 0,
-        items: [],
-      });
+      expect(res).toBeUndefined();
     }
+    expect(
+      sanitizeEvent(
+        { name: 'product_view', properties: { currency: 'USD', value: 0, items: [] } },
+        'product-view-empty',
+      )?.properties,
+    ).toEqual({ currency: 'USD', value: 0, items: [] });
+  });
+  it('rejects negative custom values and accepts zero', () => {
+    expect(
+      sanitizeEvent(
+        { name: 'custom_event', properties: { action: 'video_play', value: -1 } },
+        'custom-negative',
+      ),
+    ).toBeUndefined();
+    expect(
+      sanitizeEvent(
+        { name: 'custom_event', properties: { action: 'video_play', value: 0 } },
+        'custom-zero',
+      )?.properties,
+    ).toEqual({ action: 'video_play', value: 0 });
   });
 });

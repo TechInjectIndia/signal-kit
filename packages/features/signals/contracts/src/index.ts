@@ -170,12 +170,15 @@ const item = object({
 const commerce = object({
   currency,
   value: amount,
-  items: array(item).check(maxLength(100)),
+  items: array(item).check(minLength(1), maxLength(100)),
   shipping: optional(amount),
   tax: optional(amount),
   coupon: optional(text),
   affiliation: optional(text),
   payment_type: optional(text),
+});
+const productViewCommerce = extend(commerce, {
+  items: array(item).check(maxLength(100)),
 });
 const singleProductView = object({
   item_id: text,
@@ -188,7 +191,7 @@ const singleProductView = object({
   item_variant: optional(text),
   items: optional(array(item).check(maxLength(100))),
 });
-const productViewSchema = union([commerce, singleProductView]);
+const productViewSchema = union([productViewCommerce, singleProductView]);
 
 const schemas = {
   page_view: object({ page_path: string().check(minLength(1), maxLength(2048)) }),
@@ -219,7 +222,7 @@ const schemas = {
     action: string().check(regex(CUSTOM_EVENT_ACTION_PATTERN), noContactPii),
     category: optional(freeText),
     label: optional(freeText),
-    value: optional(number()),
+    value: optional(amount),
   }),
 };
 /** Also guard direct provider calls that bypass sanitizeEvent. */

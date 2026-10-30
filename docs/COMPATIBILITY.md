@@ -23,7 +23,9 @@ Counts, commands, graph and local runtime outcomes are recorded in the build rep
 
 Turbo dry-run graphs verify that each root `dev` script selects its intended host and `dev:all` selects the four runnable hosts. The direct Turbo JSON boundary check verifies the build graphs without parsing pnpm output. These are local tooling checks, not additional platform runtime evidence.
 
-Contracts unit tests verify that `purchase` rejects an empty `items` array while `add_to_cart` and `begin_checkout` accept an empty array. This is schema evidence, not live GA4 or Meta delivery evidence.
+Contracts unit tests verify that `add_to_cart`, `begin_checkout`, and `purchase` reject an empty `items` array while `product_view` accepts it. This is schema evidence, not live GA4 or Meta delivery evidence.
+
+On Node 22.23.4, the repository, formatting, build, typecheck, unit/runtime test, boundary and two Chromium end-to-end checks passed locally. Browser unit tests verify that query-only navigation does not add a page view, even if a caller passes the removed `trackQuery` property at runtime. These checks do not verify provider-side delivery.
 
 Contracts tests verify that synthetic email- and phone-like values in review-extension free-text fields are rejected before dispatch, while ordinary search text remains valid. This pattern check does not prove detection of every kind of personal data.
 

@@ -7,7 +7,6 @@ export type BrowserConfig = Parameters<typeof createSignals>[0] & {
   excludeUrls?: string[];
   autoTrack?: boolean;
   trackHash?: boolean;
-  trackQuery?: boolean;
 };
 let activeOwner: object | undefined;
 export function createBrowserSignals(config: BrowserConfig = {}) {
@@ -35,7 +34,6 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   }
   let lastRoute = '';
   let lastPathname = '';
-  let lastSearch = '';
   const restores: (() => void)[] = [];
   const isHashRoute = (hash: string) =>
     config.trackHash === true && (hash.startsWith('#/') || hash.startsWith('#!/'));
@@ -51,19 +49,17 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
       (value) => url.href.startsWith(value) || url.pathname.startsWith(value),
     );
   const currentRoute = () => {
-    if (typeof location === 'undefined') return { path: '/', search: '' };
+    if (typeof location === 'undefined') return '/';
     if (isHashRoute(location.hash)) {
       const hashRoute =
         location.hash.slice(location.hash.startsWith('#!') ? 2 : 1).split('#')[0] ?? '/';
       const queryIndex = hashRoute.indexOf('?');
-      return queryIndex < 0
-        ? { path: hashRoute, search: '' }
-        : { path: hashRoute.slice(0, queryIndex), search: hashRoute.slice(queryIndex) };
+      return queryIndex < 0 ? hashRoute : hashRoute.slice(0, queryIndex);
     }
-    return { path: location.pathname, search: location.search };
+    return location.pathname;
   };
   const page = (path?: string, eventId?: string) => {
-    const routePath = path || currentRoute().path;
+    const routePath = path || currentRoute();
     return core.track({
       name: 'page_view',
       ...(eventId ? { eventId } : {}),
@@ -83,20 +79,12 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   };
   const navigation = () => {
     if (!running || typeof location === 'undefined') return;
-    if (
-      location.hash &&
-      !isHashRoute(location.hash) &&
-      location.pathname === lastPathname &&
-      (config.trackQuery !== true || location.search === lastSearch)
-    )
-      return;
+    if (location.hash && !isHashRoute(location.hash) && location.pathname === lastPathname) return;
     lastPathname = location.pathname;
-    lastSearch = location.search;
-    const route = currentRoute();
-    const current = route.path + (config.trackQuery === true ? route.search : '');
+    const current = currentRoute();
     if (current === lastRoute) return;
     lastRoute = current;
-    void page(route.path);
+    void page(current);
   };
   function start() {
     if (running || typeof window === 'undefined' || activeOwner) return;

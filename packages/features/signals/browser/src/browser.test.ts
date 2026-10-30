@@ -104,6 +104,28 @@ describe('browser lifecycle', () => {
     sdk.stop();
     expect(history.pushState).toBe(original);
   });
+  it('ignores query-only navigation even with a legacy trackQuery property', async () => {
+    const pages: string[] = [];
+    const legacyConfig = {
+      consent,
+      trackQuery: true,
+      providers: [
+        {
+          name: 'recorder',
+          category: 'analytics' as const,
+          send(event: { name: string; properties: Record<string, unknown> }) {
+            if (event.name === 'page_view') pages.push(event.properties.page_path as string);
+          },
+        },
+      ],
+    };
+    const sdk = createBrowserSignals(legacyConfig);
+    disposals.push(sdk.dispose);
+    history.pushState(null, '', '/products/1?ref=first');
+    history.replaceState(null, '', '/products/1?ref=second');
+    await sdk.flush();
+    expect(pages).toEqual(['/', '/products/:id']);
+  });
   it('does not load or replay pages without consent and prevents duplicate active instrumentation', async () => {
     const send = vi.fn();
     const first = createBrowserSignals({
