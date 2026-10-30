@@ -28,6 +28,12 @@ The SDK is designed around platform-independent contracts. Next.js, Bun and Svel
 
 The portable browser/server building blocks already exist, but that does not establish support for the coming-soon hosts. Next Edge remains deferred and unsupported.
 
+## Public IDs and server secrets
+
+Each local example has a root `signalkit.config.ts` for public GA4, Meta Pixel and Clarity IDs. The Next.js lab configures all three with clearly fake IDs so the inspector can show per-provider adapter outcomes after analytics and marketing consent. These outcomes do not verify a real provider account. The SvelteKit browser lab keeps external providers disabled by default. The Bun fixture is server-only, so its public ID file does not register browser providers. Replace IDs locally for host-owned account tests; keep real customer IDs out of this repository. Standalone static HTML continues to pass public IDs with `data-ga4-id`, `data-meta-id` and `data-clarity-id` attributes.
+
+Keep the Meta CAPI access token, OTLP authentication headers and webhook secret in server-only environment variables. Never put them in `signalkit.config.ts` or any file imported by browser code.
+
 ## Next.js browser
 
 ```tsx
@@ -47,7 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Use public IDs from your host config and real persisted consent. Numeric placeholder above must be replaced before creating Meta provider. Place provider around root layout children. useSignals().track accepts typed ecommerce inputs; useSignals().setConsent updates consent (keep parent config consistent). Provider structural config is init-only: remount on provider, observer or origin changes. Default auto pages track initial/pathname changes, not query/hash-only transitions. Direct browser SDK auto-starts unless autoTrack:false; start/stop/dispose are explicit controls.
+Use public IDs from your host config and real persisted consent. Numeric placeholder above must be replaced before creating Meta provider. Place provider around root layout children. useSignals().track accepts typed ecommerce inputs; useSignals().setConsent updates consent (keep parent config consistent). Provider structural config is init-only: remount on provider, observer or origin changes. Automatic pages track initial/pathname changes, not query-only transitions. Set `trackHash: true` only for a `#/` or `#!/` hash router; ordinary in-page anchors do not emit page views. There is no `trackQuery` option. Direct browser SDK auto-starts unless autoTrack:false; start/stop/dispose are explicit controls.
 
 GA4 provider sends explicit pages; disable automatic history page changes in Enhanced Measurement to avoid vendor-side duplicates. SignalKit does not own scripts previously loaded by other tools. Configure CSP with vendor domains/nonces, third-party privacy/masking and consent policies. Clarity is optional createClarityProvider({projectId}). Browser legacy globals + multiple tools require host integration validation.
 
@@ -83,15 +89,80 @@ const signals = createServerSignals({
 Bun.serve({ fetch: instrumentBunFetch(signals, async (req) => Response.json({ ok: true })) });
 ```
 
-Wrap every Bun routes-table handler too: routes bypass fallback fetch. Supply routeResolver for arbitrary dynamic/sensitive slugs. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Browser flush now waits for bounded observer records and its optional flush hook; browser observer deadlines default to2s and use timeoutMs when supplied (clamped1–30,000ms), separately from the core default5s dispatch deadline. Server telemetry preserves valid existing outbound traceparent IDs in emitted records. Configure observer errors/onDiagnostic for overload/rejection visibility. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
+`traceOrigins` accepts exact origins for absolute outbound URLs. Relative `signals.fetch('/api/...')` calls do not receive a new `traceparent` header by default. If your host fetch transport supports relative URLs and you want propagation for them, set `traceRelative: true` in `createServerSignals` config. Existing `traceparent` headers are preserved. Do not put `''`, `'/'` or `'relative'` in `traceOrigins`; those values have no special meaning.
+
+Declarative Bun routes bypass fallback fetch. Pass the routes table through `instrumentBunRoutes` to capture both direct handlers and method-map handlers with their route patterns:
+
+```ts
+import { instrumentBunRoutes } from '@techinject/bun';
+
+Bun.serve({
+  routes: instrumentBunRoutes(signals, {
+    '/orders/:id': {
+      GET: () => Response.json({ ok: true }),
+    },
+  }),
+  fetch: instrumentBunFetch(signals, () => new Response('Not found', { status: 404 })),
+});
+```
+
+Supply routeResolver for arbitrary dynamic/sensitive slugs and order/reference IDs in the fallback handler. `safeRoute` preserves ordinary product slugs containing numbers; use route templates or exclusions wherever a slug may contain sensitive data. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Browser flush now waits for bounded observer records and its optional flush hook; browser observer deadlines default to2s and use timeoutMs when supplied (clamped1–30,000ms), separately from the core default5s dispatch deadline. Server telemetry preserves valid existing outbound traceparent IDs in emitted records. `onDiagnostic` reports core event outcomes; browser observer records above the 32-pending bound are silently dropped and do not produce event/provider outcomes. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
+
+## Experimental standalone browser bundle
+
+The browser build produces `packages/features/signals/browser/dist/cdn/signalkit.global.js` for a plain script tag. This is an experimental bundle, not a verified HTML, PHP, Shopify or WordPress integration. Use only public provider IDs:
+
+```html
+<script src="/assets/signalkit.global.js" data-ga4-id="G-YOURID"></script>
+```
+
+All consent categories start denied. Connect the host consent banner to the visitor's actual choices after the script loads:
+
+```js
+window.signals.setConsent({
+  analytics: analyticsAllowed,
+  marketing: marketingAllowed,
+  observability: observabilityAllowed,
+});
+```
+
+The script has no attribute that grants consent. Denied events are dropped and never replayed. The bundle listens for `product_view`, `add_to_cart` and `begin_checkout` clicks marked with `[data-signal]`. Supply real `data-item-id`, `data-price` and uppercase three-letter `data-currency` values on each element. Cart and checkout clicks also require `data-quantity`; product views omit quantity when it is not provided. Missing or invalid attributes skip tracking instead of fabricating values. A host can observe safe diagnostics without receiving the attribute values:
+
+```js
+window.addEventListener('signalkit:diagnostic', (event) => {
+  console.log(event.detail); // { status: 'invalid', reason: 'missing_attribute', attribute: 'data-price' }
+});
+```
+
+For example, this cart button supplies every required value:
+
+```html
+<button
+  data-signal="add_to_cart"
+  data-item-id="sku-1"
+  data-price="450"
+  data-currency="INR"
+  data-quantity="1"
+>
+  Add to cart
+</button>
+```
+
+Host code should still track verified purchases from trusted server state.
 
 ## Verified purchase and provider delivery
 
 Store eventId with the trusted host order. Browser and server copies both emit purchase using same eventId and transaction_id. Verify payment signatures and captured/paid state against trusted order currency/amount; never trust a client success page. The Bun example shows raw HMAC and a durable local SQLite outbox with replay tests. Production applications supply their own persistence, per-user consent, signed webhook rotation, currency exponents and order line items.
 
-createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and userData callback with SHA-256 hashed em/ph/external_id or validated fbp/fbc. It deliberately refuses arbitrary matching fields. Hashes remain personal data; host supplies consent/retention policy. No access token belongs browser config. A stable event ID enables Meta dedup but actual matching/dedup is unverified until sandbox/live tests.
+createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and a userData callback. Supply only SHA-256 prehashed `em`, `ph` and `external_id`, or validated `fbp`/`fbc` cookies. Plaintext values and other matching fields are rejected. The host normalizes and hashes before calling the adapter:
 
-Default denied consent drops data without replay; resource limits drop overload. Custom providers should honour AbortSignal and implement setConsent/dispose. Telemetry delivery is best effort; persisted outbox/retry belongs host. Safe route heuristics cannot remove every sensitive pathname: supply templates/exclusions and avoid PII in named commerce fields. External scripts can inspect host URL/DOM/cookies independently.
+- Normalize `ph` to E.164 with the country calling code (for example, synthetic `+12025550199`), then remove the leading `+` and SHA-256 hash the remaining digits. Supply that hash as `ph`.
+- Use the **exact same case-sensitive `external_id` preimage** as the Pixel before SHA-256 hashing. Do not lowercase it or the Pixel and CAPI hashes may differ.
+- Normalize `em` under Meta's email rules before SHA-256 hashing.
+
+The adapter passes valid 64-character SHA-256 hex values through without rehashing; it validates `fbp`/`fbc` without hashing. Extra plaintext normalization and matching fields (`fn`, `ln`, `ct`, `zp`, `country`, `db`, `ge`, IP address and user agent) need a separate owner-approved PR. Hashes remain personal data; the host supplies consent and retention policy. No access token belongs in browser config. A stable event ID enables Meta dedup, but actual matching and dedup remain unverified until sandbox or live tests.
+
+Default denied consent drops data without replay; resource limits drop overload. Custom providers should honour AbortSignal and implement setConsent/dispose. Telemetry delivery is best effort; persisted outbox/retry belongs host. GA4 page location/referrer and Meta CAPI event source URL omit query strings and fragments. Safe route heuristics cannot remove every sensitive pathname: supply templates/exclusions and avoid PII in named commerce fields. External scripts can inspect host URL/DOM/cookies independently.
 
 ## Copyable host examples
 
@@ -267,11 +338,90 @@ export const handle = hooks.handle;
 export const handleFetch = hooks.handleFetch;
 ```
 
-Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. SvelteKit 3 is verified; Kit 2 is not certified by this build.
+Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. The declared peer range is `@sveltejs/kit >=3 <4`; SvelteKit 3.0.1 with Svelte 5 has consumer runtime evidence, while Kit 2 is unverified.
+
+## Predefined event contracts
+
+The SDK keeps the following nine predefined events. All events are validated and sanitized before dispatch. Unknown properties are stripped. Each configured provider receives the event only when its consent category is granted; CAPI requires a separate server-side `track` call with approved matching data.
+
+| SDK event        | GA4 event        | Meta Pixel event                  | Clarity behavior                   | Meta CAPI support                 |
+| ---------------- | ---------------- | --------------------------------- | ---------------------------------- | --------------------------------- |
+| `page_view`      | `page_view`      | `PageView` (standard)             | Page/session capture; no API event | `PageView` (standard)             |
+| `product_view`   | `view_item`      | `ViewContent` (standard)          | `product_view` event               | `ViewContent` (standard)          |
+| `add_to_cart`    | `add_to_cart`    | `AddToCart` (standard)            | `add_to_cart` event                | `AddToCart` (standard)            |
+| `begin_checkout` | `begin_checkout` | `InitiateCheckout` (standard)     | `begin_checkout` event             | `InitiateCheckout` (standard)     |
+| `purchase`       | `purchase`       | `Purchase` (standard)             | `purchase` event                   | `Purchase` (standard)             |
+| `generate_lead`  | `generate_lead`  | `Lead` (standard)                 | `generate_lead` event              | `Lead` (standard)                 |
+| `sign_up`        | `sign_up`        | `CompleteRegistration` (standard) | `sign_up` event                    | `CompleteRegistration` (standard) |
+| `login`          | `login`          | `Login` (custom)                  | `login` event                      | `Login` (custom)                  |
+| `search`         | `search`         | `Search` (standard)               | `search` event                     | `Search` (standard)               |
+
+`add_to_cart`, `begin_checkout`, and `purchase` require at least one item. `product_view` may carry an empty item list. The app-owned custom example also requires finite nonnegative `value` when supplied.
+
+The registered example `custom_event.properties.action` must match `^[a-z][a-z0-9_]{0,39}$`; invalid names are rejected before dispatch. Meta Pixel uses `trackSingleCustom` for custom names. GA4 receives `event_id`, and Meta Pixel/CAPI receive the corresponding event ID. Clarity's browser event API accepts only a name, so it does not receive an event-level ID or provide cross-platform deduplication. `page_view` starts Clarity's page/session capture without emitting an explicit Clarity event. All other listed events use Clarity's `event` API.
+
+`search_term`, `custom_event` `action`/`label`/`category`, `lead_type` and sign-up/login `method` reject email- or phone-like values; the whole event is dropped before provider dispatch. The shared contract check also catches common percent-encoded forms. A ten-digit identifier may be rejected as phone-like, so use short non-identifying categories for these fields. Pattern checks do not replace host-side privacy review of every event property.
+
+### Register consumer-defined events once
+
+`phone_click`, `whatsapp_click` and `custom_event` are not built-ins. Import the [Next.js example definitions](../../../examples/nextjs/signalkit.events.ts) or write your own with Zod and `defineEvent`. Each example has its own event module; its root passes the same readonly tuple to the browser/server SDK configuration. Definitions are immutable per instance and cannot override predefined names.
+
+```ts
+import * as z from 'zod/mini';
+import { createBrowserSignals, defineEvent } from '@techinject/browser';
+
+const helpOpen = defineEvent({
+  name: 'help_open',
+  schema: z.object({ section: z.string().check(z.minLength(1), z.maxLength(128)) }),
+  map: {
+    ga4: { name: 'help_open', properties: { section: 'section' } },
+    meta: { name: 'help_open', mode: 'custom', properties: { section: 'section' } },
+    clarity: { name: 'help_open' },
+  },
+});
+const events = [helpOpen] as const;
+const signals = createBrowserSignals({ events, providers, consent });
+await signals.track({ name: 'help_open', properties: { section: 'shipping' } });
+```
+
+The property type is inferred from the schema. Use the same tuple in a typed Next hook wrapper, for example `const useAppSignals = () => useSignals<typeof events>()`; pass `events` to the root `SignalKitProvider` config. SvelteKit and server constructors infer the tuple directly. A schema must be a synchronous Zod object with recursively stripping objects and bounded JSON output; passthrough objects, arbitrary records, transforms and non-JSON schema types are rejected. Limits are 8 nested levels, 100 fields/items per container, 2,048 characters per string, 5,000 values and 65,536 serialized characters. All parsed values and mapped properties pass the same PII guard; the host remains responsible for privacy.
+
+Mappings project declared schema keys, with no arbitrary callback. A name may use `{ from: 'action' }`; unsafe or predefined provider names are rejected. Meta mappings require `standard` or `custom` mode and are shared by Pixel/CAPI. Clarity accepts only a name. A consented provider without a mapping returns `invalid` with `event_mapping_missing`; denied providers return `denied` without replay. Local custom providers without a mapping family receive the sanitized canonical event. Registration is root-only; remount/recreate an instance to change definitions.
+
+| Example definition | GA4                | Meta Pixel / CAPI           | Clarity            |
+| ------------------ | ------------------ | --------------------------- | ------------------ |
+| `phone_click`      | `phone_click`      | `Contact` (standard)        | `phone_click`      |
+| `whatsapp_click`   | `whatsapp_click`   | `Contact` (standard)        | `whatsapp_click`   |
+| `custom_event`     | validated `action` | validated `action` (custom) | validated `action` |
+
+Contact definitions require literal non-identifying channels. The generic example projects only category, label and value; it never forwards `action` as a property. For server CAPI calls, register the same definitions and supply the existing approved matching-data callback. Registration does not move credentials or purchase verification into browser code. The standalone script bundle exposes only predefined events.
+
+### Example: Tracking leads and registered contacts
+
+```ts
+// Register contact/custom definitions at the root before using them.
+// Track a lead form submission
+await signals.track({
+  name: 'generate_lead',
+  properties: {
+    lead_type: 'consultation_request',
+    currency: 'INR',
+    value: 500,
+  },
+});
+
+// Track a WhatsApp or Phone button click
+await signals.track({
+  name: 'whatsapp_click',
+  properties: {
+    channel: 'whatsapp',
+  },
+});
+```
 
 ## Development
 
-Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfile; pnpm build; pnpm test; pnpm typecheck; pnpm test:boundaries. pnpm --filter @signalkit/example-nextjs dev or pnpm --filter @signalkit/example-bun dev. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
+Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfile; pnpm build; pnpm test; pnpm typecheck; pnpm test:boundaries. Use `pnpm dev` for Next, `pnpm dev:bun` for Bun, or `pnpm dev:all` for all local hosts through Turbo. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
 
 ## Technical references
 

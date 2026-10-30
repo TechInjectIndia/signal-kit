@@ -63,8 +63,8 @@ for (const [consumer, forbidden] of [
   ],
 ]) {
   const result = spawnSync(
-    'pnpm',
-    ['exec', 'turbo', 'run', 'build', `--filter=${consumer}`, '--dry=json'],
+    join(root, 'node_modules', '.bin', process.platform === 'win32' ? 'turbo.cmd' : 'turbo'),
+    ['run', 'build', `--filter=${consumer}`, '--dry=json'],
     { cwd: root, encoding: 'utf8' },
   );
   assert.equal(result.status, 0, result.stderr);

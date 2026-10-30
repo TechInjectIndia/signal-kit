@@ -18,7 +18,8 @@
     "next": "16.4.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@techinject/nextjs-server": "workspace:*"
+    "@techinject/nextjs-server": "workspace:*",
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

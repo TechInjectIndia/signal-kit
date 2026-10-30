@@ -10,6 +10,11 @@
     "pnpm": ">=10 <11"
   },
   "scripts": {
+    "dev": "turbo run dev --filter=@signalkit/example-nextjs",
+    "dev:all": "turbo run dev",
+    "dev:bun": "turbo run dev --filter=@signalkit/example-bun",
+    "dev:sveltekit": "turbo run dev --filter=@signalkit/example-sveltekit",
+    "dev:site": "turbo run dev --filter=@signalkit/site",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

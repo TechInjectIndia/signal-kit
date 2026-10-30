@@ -13,7 +13,8 @@
     "@techinject/sveltekit": "workspace:*",
     "@techinject/sveltekit-server": "workspace:*",
     "@techinject/contracts": "workspace:*",
-    "@techinject/browser": "workspace:*"
+    "@techinject/browser": "workspace:*",
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@sveltejs/kit": "3.0.1",

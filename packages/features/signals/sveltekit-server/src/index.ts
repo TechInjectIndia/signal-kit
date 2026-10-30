@@ -1,16 +1,17 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { Handle, HandleFetch } from '@sveltejs/kit/hooks';
+import type { EventDefinition } from '@techinject/server';
 import { createServerSignals, type ServerConfig, type ServerSignals } from '@techinject/server';
 
 /** Node runtime only. Return fresh observer/provider instances for each request. */
-export function createSvelteKitHooks(
-  getConfig: (event: RequestEvent) => ServerConfig | Promise<ServerConfig>,
+export function createSvelteKitHooks<const Events extends readonly EventDefinition[] = readonly []>(
+  getConfig: (event: RequestEvent) => ServerConfig<Events> | Promise<ServerConfig<Events>>,
 ): { handle: Handle; handleFetch: HandleFetch } {
-  const active = new AsyncLocalStorage<ServerSignals>();
+  const active = new AsyncLocalStorage<ServerSignals<Events>>();
   const handle: Handle = async ({ event, resolve }) => {
-    let config: ServerConfig;
-    let signals: ServerSignals;
+    let config: ServerConfig<Events>;
+    let signals: ServerSignals<Events>;
     try {
       config = await getConfig(event);
       signals = createServerSignals(config);
@@ -21,7 +22,7 @@ export function createSvelteKitHooks(
     try {
       return await active.run(signals, () =>
         signals.handle(event.request, () => resolve(event), {
-          route: event.route.id ?? undefined,
+          route: event.route?.id ?? undefined,
         }),
       );
     } finally {

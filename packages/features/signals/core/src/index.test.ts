@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   createSignals,
   createTraceContext,
   formatTraceparent,
   parseTraceparent,
+  safeProviderUrl,
   safeRoute,
 } from './index.js';
 const event = { name: 'page_view' as const, eventId: 'stable', properties: { page_path: '/' } };
@@ -24,6 +25,28 @@ describe('dispatch lifecycle', () => {
     );
     signals.setConsent(null as never);
     expect(signals.getConsent().analytics).toBe(false);
+  });
+  it('drops contact-like free text before analytics and marketing dispatch', async () => {
+    const analyticsSend = vi.fn();
+    const marketingSend = vi.fn();
+    const onDiagnostic = vi.fn();
+    const signals = createSignals({
+      consent: { analytics: true, marketing: true, observability: false },
+      onDiagnostic,
+      providers: [
+        { name: 'analytics', category: 'analytics', send: analyticsSend },
+        { name: 'marketing', category: 'marketing', send: marketingSend },
+      ],
+    });
+    const result = await signals.track({
+      name: 'search',
+      eventId: 'synthetic-search',
+      properties: { search_term: 'sample@example.invalid +1 (202) 555-0100' },
+    });
+    expect(result.outcomes.map((outcome) => outcome.status)).toEqual(['invalid', 'invalid']);
+    expect(analyticsSend).not.toHaveBeenCalled();
+    expect(marketingSend).not.toHaveBeenCalled();
+    expect(JSON.stringify(onDiagnostic.mock.calls)).not.toContain('sample@example.invalid');
   });
   it('coerces initial runtime consent and notifies adapters before any dispatch', async () => {
     const observed: boolean[] = [];
@@ -60,6 +83,68 @@ describe('dispatch lifecycle', () => {
     expect(calls).toBe(0);
     expect((await signals.track(event)).eventId).toBe('stable');
     expect(calls).toBe(1);
+  });
+  it('keeps connection counts per instance even when legacy storage data exists', async () => {
+    const getItem = vi
+      .fn()
+      .mockReturnValue(
+        JSON.stringify([{ name: 'recorder', category: 'analytics', attempts: 999, sent: 999 }]),
+      );
+    const setItem = vi.fn();
+    vi.stubGlobal('sessionStorage', { getItem, setItem });
+    const options = {
+      persistKey: 'legacy-key',
+      consent: { analytics: true, marketing: false, observability: false },
+      providers: [{ name: 'recorder', category: 'analytics' as const, send: vi.fn() }],
+    };
+    try {
+      const first = createSignals(options);
+      expect(first.getConnections()[0]).toMatchObject({ attempts: 0, sent: 0 });
+      await first.track(event);
+      expect(first.getConnections()[0]).toMatchObject({ attempts: 1, sent: 1 });
+
+      const second = createSignals(options);
+      expect(second.getConnections()[0]).toMatchObject({ attempts: 0, sent: 0 });
+      expect(getItem).not.toHaveBeenCalled();
+      expect(setItem).not.toHaveBeenCalled();
+      first.dispose();
+      second.dispose();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+  it('does not replay a denied provider copy or duplicate a sent copy after consent changes', async () => {
+    const analyticsSend = vi.fn();
+    const marketingSend = vi.fn();
+    const options = {
+      queueBeforeConsent: true,
+      consent: { analytics: true, marketing: false, observability: false },
+      providers: [
+        { name: 'analytics', category: 'analytics' as const, send: analyticsSend },
+        { name: 'marketing', category: 'marketing' as const, send: marketingSend },
+      ],
+    };
+    const signals = createSignals(options);
+
+    expect((await signals.track(event)).outcomes.map((outcome) => outcome.status)).toEqual([
+      'sent',
+      'denied',
+    ]);
+    expect(analyticsSend).toHaveBeenCalledOnce();
+    expect(marketingSend).not.toHaveBeenCalled();
+
+    signals.setConsent({ analytics: false, marketing: false, observability: false });
+    signals.setConsent({ analytics: true, marketing: false, observability: false });
+    signals.setConsent({ analytics: true, marketing: true, observability: false });
+    await signals.flush();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(analyticsSend).toHaveBeenCalledOnce();
+    expect(marketingSend).not.toHaveBeenCalled();
+    expect('replayConsentQueue' in signals).toBe(false);
+
+    await signals.track({ ...event, eventId: 'new-event' });
+    expect(analyticsSend).toHaveBeenCalledTimes(2);
+    expect(marketingSend).toHaveBeenCalledOnce();
   });
   it('isolates failures, diagnostics and event mutation', async () => {
     const signals = createSignals({
@@ -132,10 +217,36 @@ describe('dispatch lifecycle', () => {
   });
 });
 describe('telemetry context', () => {
+  it('removes query strings, fragments and URL credentials from provider URLs', () => {
+    expect(
+      safeProviderUrl(
+        'https://user:secret@example.invalid/orders/123?utm_source=google&utm_private=%2B919876543210&token=secret#details',
+      ),
+    ).toBe('https://example.invalid/orders/:id');
+    expect(safeProviderUrl('https://example.invalid/?gclid=click-id&fbclid=click-id')).toBe(
+      'https://example.invalid/',
+    );
+  });
   it('strips URL identities and rejects malformed contexts', () => {
     expect(safeRoute('https://example.invalid/orders/123?token=secret')).toBe('/orders/:id');
     expect(safeRoute('/orders/abc', '/orders/:orderId')).toBe('/orders/:orderId');
     expect(safeRoute('/users/customer%40example.invalid')).toBe('/users/:redacted');
+    // Recognized ID formats are redacted; ordinary slugs remain distinct.
+    expect(safeRoute('/users/507f1f77bcf86cd799439011')).toBe('/users/:id'); // MongoDB ObjectID
+    expect(safeRoute('/orders/cs_test_a1b2c3d4e5f6g7h8')).toBe('/orders/:id'); // Stripe ID
+    expect(safeRoute('/orders/ORD-98721')).toBe('/orders/ORD-98721'); // Host supplies a route template.
+    expect(safeRoute('/orders/ORD-98721', '/orders/:orderId')).toBe('/orders/:orderId');
+    expect(safeRoute('/collections/new-arrivals')).toBe('/collections/new-arrivals'); // Normal slug
+    expect(safeRoute('/products/iphone-15-pro')).toBe('/products/iphone-15-pro');
+    expect(safeRoute('/products/air-max-90')).toBe('/products/air-max-90');
+    expect(safeRoute('/blog/best-running-shoes-2026')).toBe('/blog/best-running-shoes-2026');
+    expect(safeRoute('/collections/summer%2Fwinter')).toBe('/collections/summer%2Fwinter');
+    expect(safeRoute('/posts/c123456789012345678901234')).toBe('/posts/:id'); // CUID
+    // Route groups stripping (4.2)
+    expect(safeRoute('/(marketing)/about')).toBe('/about');
+    expect(safeRoute('/(app)/dashboard/stats')).toBe('/dashboard/stats');
+    expect(safeRoute('/(auth)/login')).toBe('/login');
+
     expect(parseTraceparent('00-' + '0'.repeat(32) + '-' + '1'.repeat(16) + '-01')).toBeUndefined();
     const context = createTraceContext();
     expect(parseTraceparent(formatTraceparent(context))).toEqual(context);

@@ -18,14 +18,15 @@ export default function ConnectionsPage() {
   }, [signals]);
   return (
     <section>
-      <p className="eyebrow">LOCAL CONNECTIONS / SYNTHETIC PROVIDERS</p>
+      <p className="eyebrow">DEMO CONNECTIONS / FAKE PUBLIC IDS</p>
       <h1>
         Your signals,
         <br />
         at a glance.
       </h1>
       <p>
-        This lab uses synthetic recorders. Set up your own backend to export observability data.
+        Local recorders and three browser adapters show SDK outcomes. Fake public IDs do not verify
+        provider delivery. Set up your own backend to export observability data.
       </p>
       <div ref={container} />
     </section>

@@ -18,13 +18,13 @@ git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
 pnpm install --frozen-lockfile
 pnpm build
-pnpm --filter @signalkit/example-nextjs dev
+pnpm dev
 # http://localhost:3100 — consent controls and local inspector
-pnpm --filter @signalkit/example-bun dev
+pnpm dev:bun
 # http://localhost:3200 — API and signed payment fixture
 ```
 
-The examples use local recorders and synthetic data. The Next lab starts with all consent denied. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
+Use `pnpm dev:sveltekit` or `pnpm dev:site` for those hosts; `pnpm dev:all` runs every example and the site through Turbo. The examples use local recorders and synthetic data. The Next lab starts with all consent denied and configures GA4, Meta Pixel and Clarity with fake public IDs to show adapter outcomes after consent; those outcomes do not verify a real account. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
 
 ## Connections dashboard
 
@@ -32,7 +32,8 @@ Open `/connections` in the Next.js lab to see configured event providers, consen
 
 ## What is included
 
-- Typed product_view, add_to_cart, begin_checkout and purchase events; runtime payload validation.
+- Nine predefined ecommerce, lead, search and account events with runtime schemas and provider mappings.
+- Consumer-defined events registered once through `defineEvent` and the root `events` option, sharing consent, privacy and delivery handling.
 - Browser initial/navigation pages and fetch/XHR failures, status and duration.
 - Bun incoming handler and server outbound fetch instrumentation with trace correlation.
 - Next React root provider and separate Node OpenTelemetry registration for automatic framework requests.
@@ -54,6 +55,8 @@ await signals.track({
   },
 });
 ```
+
+Contact/custom event examples require explicit root registration; see [consumer event setup](packages/features/signals/INTEGRATION.md#register-consumer-defined-events-once).
 
 The owner-selected package scope is `@techinject`; all nine packages are published as `0.1.0-alpha.2` on the `alpha` tag. Pin this exact version or use the workspace. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
 

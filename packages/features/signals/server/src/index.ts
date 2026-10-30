@@ -1,5 +1,7 @@
+import type { EventDefinition, SignalsOptions } from '@techinject/core';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { createSignals, safeRoute, parseTraceparent } from '@techinject/core';
+import { createSignals, safeRoute, safeProviderUrl, parseTraceparent } from '@techinject/core';
+import { getProviderEvent } from '@techinject/contracts';
 import type {
   Consent,
   Observer,
@@ -8,12 +10,16 @@ import type {
   Provider,
 } from '@techinject/contracts';
 
-export type ServerConfig = Parameters<typeof createSignals>[0] & {
-  observer?: Observer;
-  traceOrigins?: string[];
-  excludeUrls?: string[];
-  fetch?: typeof globalThis.fetch;
-};
+export type ServerConfig<Events extends readonly EventDefinition[] = readonly []> =
+  SignalsOptions<Events> & {
+    observer?: Observer;
+    /** Propagate traceparent to relative fetch URLs when the host transport supports them. Default false. */
+    traceRelative?: boolean;
+    /** Exact origins allowed to receive traceparent on absolute fetch URLs. */
+    traceOrigins?: string[];
+    excludeUrls?: string[];
+    fetch?: typeof globalThis.fetch;
+  };
 type Trace = { traceId: string; spanId: string; flags: string; parentSpanId?: string };
 const randomHex = (bytes: number) =>
   Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (b) =>
@@ -25,7 +31,9 @@ function trace(header: string | null): Trace {
     ? { traceId: match[1]!, parentSpanId: match[2]!, spanId: randomHex(8), flags: match[3]! }
     : { traceId: randomHex(16), spanId: randomHex(8), flags: '01' };
 }
-export function createServerSignals(config: ServerConfig = {}) {
+export function createServerSignals<const Events extends readonly EventDefinition[] = readonly []>(
+  config: ServerConfig<Events> = {},
+) {
   const signals = createSignals(config);
   const context = new AsyncLocalStorage<Trace>();
   let disposed = false;
@@ -68,9 +76,23 @@ export function createServerSignals(config: ServerConfig = {}) {
       const url = input instanceof Request ? input.url : String(input);
       if (disposed || !signals.getConsent().observability || excluded(url))
         return transport(input, init);
-      const request = new Request(input, init);
+      let isRelative = false;
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(url);
+      } catch {
+        isRelative = true;
+        try {
+          parsedUrl = new URL(url, 'http://signalkit.internal');
+        } catch {
+          return transport(input, init);
+        }
+      }
       const parent = context.getStore();
-      const headers = new Headers(request.headers);
+      const headers = new Headers(input instanceof Request ? input.headers : init?.headers);
+      const method = (
+        input instanceof Request ? input.method : (init?.method ?? 'GET')
+      ).toUpperCase();
       const existingHeader = headers.get('traceparent');
       const existing = parseTraceparent(existingHeader);
       // The outgoing record identifies the span actually propagated on the wire.
@@ -83,24 +105,34 @@ export function createServerSignals(config: ServerConfig = {}) {
         : parent
           ? { ...parent, parentSpanId: parent.spanId, spanId: randomHex(8) }
           : trace(null);
-      if (
-        (config.traceOrigins ?? []).includes(new URL(request.url).origin) &&
-        !headers.has('traceparent')
-      ) {
+      const isAllowedOrigin =
+        !headers.has('traceparent') &&
+        (isRelative
+          ? config.traceRelative === true
+          : (config.traceOrigins ?? []).includes(parsedUrl.origin));
+      if (isAllowedOrigin) {
         headers.set('traceparent', `00-${span.traceId}-${span.spanId}-${span.flags}`);
       }
       const start = performance.now();
       const startTime = Date.now();
       let status = 0;
+      let outgoingInput: Request | string | URL;
+      let outgoingInit: RequestInit | undefined = undefined;
       try {
-        const response = await transport(new Request(request, { headers }));
+        outgoingInput = new Request(input, { ...init, headers });
+      } catch {
+        outgoingInput = input;
+        outgoingInit = { ...init, headers };
+      }
+      try {
+        const response = await transport(outgoingInput, outgoingInit);
         status = response.status;
         return response;
       } finally {
         observe({
           kind: 'request',
-          route: safeRoute(request.url),
-          method: request.method,
+          route: safeRoute(isRelative ? parsedUrl.pathname + parsedUrl.search : url),
+          method,
           status,
           durationMs: performance.now() - start,
           ...span,
@@ -171,15 +203,10 @@ export function createServerSignals(config: ServerConfig = {}) {
     },
   };
 }
-export type ServerSignals = ReturnType<typeof createServerSignals>;
+export type ServerSignals<Events extends readonly EventDefinition[] = readonly []> = ReturnType<
+  typeof createServerSignals<Events>
+>;
 
-const metaNames: Record<SignalEvent['name'], string> = {
-  page_view: 'PageView',
-  product_view: 'ViewContent',
-  add_to_cart: 'AddToCart',
-  begin_checkout: 'InitiateCheckout',
-  purchase: 'Purchase',
-};
 export interface MetaCapiOptions {
   pixelId: string;
   accessToken: string;
@@ -188,7 +215,7 @@ export interface MetaCapiOptions {
   endpoint?: string;
   fetch?: typeof globalThis.fetch;
   testEventCode?: string;
-  /** Only SHA-256 hashed em/ph/external_id and validated fbp/fbc are accepted. */
+  /** Prehashed SHA-256 em/ph/external_id or validated fbp/fbc only. */
   userData?: () => Record<string, string | string[]>;
   eventSourceUrl?: string;
 }
@@ -198,11 +225,14 @@ function safeUserData(input: Record<string, string | string[]>): Record<string, 
     const raw = input[key];
     if (raw === undefined) continue;
     const values = Array.isArray(raw) ? raw : [raw];
-    if (values.length > 10 || !values.every((value) => /^[a-f0-9]{64}$/i.test(value)))
+    if (
+      values.length > 10 ||
+      !values.every((value) => typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value))
+    )
       throw new Error('Invalid hashed matching data');
     result[key] = values;
   }
-  for (const key of ['fbp', 'fbc']) {
+  for (const key of ['fbp', 'fbc'] as const) {
     const value = input[key];
     if (value !== undefined) {
       if (
@@ -228,34 +258,16 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
     options.endpoint ??
     `https://graph.facebook.com/${options.apiVersion}/${options.pixelId}/events`;
   const transport = options.fetch ?? globalThis.fetch;
-  const source = options.eventSourceUrl ? new URL(options.eventSourceUrl) : undefined;
-  if (source) {
-    source.pathname = safeRoute(source);
-    source.search = '';
-    source.hash = '';
-    source.username = '';
-    source.password = '';
-  }
+  const source = options.eventSourceUrl
+    ? safeProviderUrl(new URL(options.eventSourceUrl))
+    : undefined;
   return {
     name: 'meta-capi',
+    eventFamily: 'meta',
     category: 'marketing',
     async send(event, signal) {
+      const mapped = getProviderEvent(event, 'meta');
       const data = safeUserData(options.userData?.() ?? {});
-      const items = event.properties.items as
-        | Array<{ item_id?: string; quantity?: number; price?: number }>
-        | undefined;
-      const customData = {
-        currency: event.properties.currency,
-        value: event.properties.value,
-        order_id: event.properties.transaction_id,
-        content_type: 'product',
-        content_ids: items?.map((item) => item.item_id).filter(Boolean),
-        contents: items?.map((item) => ({
-          id: item.item_id,
-          quantity: item.quantity ?? 1,
-          item_price: item.price,
-        })),
-      };
       const response = await transport(endpoint, {
         method: 'POST',
         signal: signal ?? null,
@@ -265,13 +277,13 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
           test_event_code: options.testEventCode,
           data: [
             {
-              event_name: metaNames[event.name],
+              event_name: mapped.name,
               event_time: Math.floor(event.timestamp / 1000),
               event_id: event.eventId,
               action_source: 'website',
-              event_source_url: source?.href,
+              event_source_url: source,
               user_data: data,
-              custom_data: customData,
+              custom_data: mapped.properties,
             },
           ],
         }),
@@ -346,8 +358,8 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
                     parentSpanId: record.parentSpanId,
                     name: `${record.method} ${route}`,
                     kind: data.spanKind ?? 3,
-                    startTimeUnixNano: String(BigInt(Math.floor(start * 1_000_000))),
-                    endTimeUnixNano: String(BigInt(end) * 1_000_000n),
+                    startTimeUnixNano: String(BigInt(Math.floor(start)) * 1_000_000n),
+                    endTimeUnixNano: String(BigInt(Math.floor(end)) * 1_000_000n),
                     attributes,
                     status: { code: record.error ? 2 : 0 },
                   },
@@ -379,11 +391,16 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
           // OTLP partial rejection is not successful delivery.
           const text = await response.text();
           if (text) {
-            const result = JSON.parse(text) as {
-              partialSuccess?: { rejectedSpans?: string | number };
-            };
-            if (Number(result.partialSuccess?.rejectedSpans ?? 0) > 0)
-              throw new Error('OTLP rejected spans');
+            try {
+              const result = JSON.parse(text) as {
+                partialSuccess?: { rejectedSpans?: string | number };
+              };
+              if (Number(result.partialSuccess?.rejectedSpans ?? 0) > 0)
+                throw new Error('OTLP rejected spans');
+            } catch (err) {
+              if (err instanceof Error && err.message === 'OTLP rejected spans') throw err;
+              // Non-JSON 200 responses (e.g. text/plain 'OK' or empty body) are valid deliveries
+            }
           }
         })
         .catch(() => {
@@ -413,3 +430,6 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
 
 export { createSentryObserver, combineObservers } from './observers.js';
 export type { SentryClient, SentryEvent, SentryOptions } from './observers.js';
+
+export { defineEvent } from '@techinject/core';
+export type { EventDefinition, RegisteredEventInput } from '@techinject/core';
