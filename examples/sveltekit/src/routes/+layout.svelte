@@ -1,13 +1,23 @@
 <script lang="ts">
   import { onMount, setContext } from 'svelte';
-  import { createSvelteKitClient } from '@techinject/sveltekit';
+  import { createSvelteKitClient, createGA4Provider, createMetaPixelProvider, createClarityProvider } from '@techinject/sveltekit';
   import type { SignalEvent, RequestRecord } from '@techinject/contracts';
+  import { GA4_MEASUREMENT_ID, META_PIXEL_ID, CLARITY_PROJECT_ID, ENABLE_EXTERNAL_PROVIDERS } from '../../signalkit.config';
   let { children } = $props();
   let events = $state<(SignalEvent | RequestRecord)[]>([]);
   let mounted = $state(false);
   const client = createSvelteKitClient({
     consent: { analytics: false, marketing: false, observability: false },
-    providers: [{ name: 'local', category: 'analytics', send(event) { events = [...events, event]; } }],
+    providers: [
+      { name: 'local', category: 'analytics', send(event) { events = [...events, event]; } },
+      ...(ENABLE_EXTERNAL_PROVIDERS
+        ? [
+            createGA4Provider({ measurementId: GA4_MEASUREMENT_ID }),
+            createMetaPixelProvider({ pixelId: META_PIXEL_ID }),
+            createClarityProvider({ projectId: CLARITY_PROJECT_ID }),
+          ]
+        : []),
+    ],
     observer: { record(record) { events = [...events, record]; } },
   });
   setContext('signals', client);

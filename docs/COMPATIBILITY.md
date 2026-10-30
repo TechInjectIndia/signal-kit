@@ -31,6 +31,8 @@ Standalone browser tests verify that missing or invalid declarative click attrib
 
 Browser observer capacity tests verify that a 33rd pending record is dropped without a synthetic `onDiagnostic` event/provider result.
 
+The Next.js lab smoke test checks that its browser shell reads public IDs from the root config without a GA4 environment lookup or server credentials. The local labs keep external providers disabled by default; this source-level check is not live GA4, Meta or Clarity verification.
+
 Meta CAPI injected-transport tests verify field-specific plaintext normalization and SHA-256 hashing for city, postal code, country, date of birth and gender, plus rejection of invalid country/date input. Live match quality remains unverified.
 
 Server tests verify that relative fetch trace propagation requires `traceRelative: true`; magic `traceOrigins` entries do not enable it, and absolute third-party origins remain denied.

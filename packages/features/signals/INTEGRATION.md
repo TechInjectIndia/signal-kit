@@ -28,6 +28,12 @@ The SDK is designed around platform-independent contracts. Next.js, Bun and Svel
 
 The portable browser/server building blocks already exist, but that does not establish support for the coming-soon hosts. Next Edge remains deferred and unsupported.
 
+## Public IDs and server secrets
+
+Each local example has a root `signalkit.config.ts` for public GA4, Meta Pixel and Clarity IDs. The Next.js and SvelteKit browser labs import those constants and register external providers only when `ENABLE_EXTERNAL_PROVIDERS` is set after replacing the clearly fake placeholders. The Bun fixture is server-only, so its public ID file does not register browser providers. Keep real customer IDs out of this repository. Standalone static HTML continues to pass public IDs with `data-ga4-id`, `data-meta-id` and `data-clarity-id` attributes.
+
+Keep the Meta CAPI access token, OTLP authentication headers and webhook secret in server-only environment variables. Never put them in `signalkit.config.ts` or any file imported by browser code.
+
 ## Next.js browser
 
 ```tsx

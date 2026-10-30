@@ -5,9 +5,17 @@ import {
   SignalKitProvider,
   useSignals,
   createGA4Provider,
+  createMetaPixelProvider,
+  createClarityProvider,
   type BrowserConfig,
 } from '@techinject/nextjs';
 import type { Consent, EventInput, DispatchResult } from '@techinject/contracts';
+import {
+  GA4_MEASUREMENT_ID,
+  META_PIXEL_ID,
+  CLARITY_PROJECT_ID,
+  ENABLE_EXTERNAL_PROVIDERS,
+} from '../signalkit.config';
 
 type Demo = { track(input: EventInput): Promise<DispatchResult> };
 const Context = createContext<Demo | null>(null);
@@ -26,8 +34,6 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
   const config = useMemo<BrowserConfig>(() => {
     const append = (line: string) => setLines((previous) => [line, ...previous].slice(0, 30));
 
-    const ga4Id = process.env.NEXT_PUBLIC_GA4_ID;
-
     const providers: BrowserConfig['providers'] = [
       {
         name: 'local-analytics',
@@ -39,10 +45,12 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
       { name: 'local-marketing', category: 'marketing', send() {} },
     ];
 
-    if (ga4Id && /^G-[A-Z0-9]+$/.test(ga4Id)) {
-      try {
-        providers.push(createGA4Provider({ measurementId: ga4Id }));
-      } catch {}
+    if (ENABLE_EXTERNAL_PROVIDERS) {
+      providers.push(
+        createGA4Provider({ measurementId: GA4_MEASUREMENT_ID }),
+        createMetaPixelProvider({ pixelId: META_PIXEL_ID }),
+        createClarityProvider({ projectId: CLARITY_PROJECT_ID }),
+      );
     }
 
     return {

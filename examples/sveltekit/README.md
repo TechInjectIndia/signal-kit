@@ -6,4 +6,6 @@ Pinned SvelteKit 3.0.1, Svelte 5.57.2, adapter-node 6.0.0, Vite 8.3.4, plugin 7.
 
 Browser consent starts denied. Grant synthetic analytics/observability, navigate, add a cart event and call API. Records remain local. Server observability is enabled only as a synthetic fixture policy; real hosts supply actual request consent. /api/records is an in-memory test inspector, explicitly excluded from telemetry. It is not a production endpoint, persistence layer or dashboard. Pages are noindex. No provider account or secret required.
 
+The root `signalkit.config.ts` contains fake public GA4, Meta Pixel and Clarity IDs. External providers stay disabled by default; replace the IDs and opt in only for a host-owned provider test. Keep CAPI tokens, OTLP headers and webhook secrets in server-only environment variables, never in this browser-imported config.
+
 The production browser test verifies SSR/hydration, navigation page counts, consent withdrawal, cart/request records and internal SvelteKit fetch trace correlation. This is local runtime evidence, not provider acceptance, matching or attribution. Other SvelteKit majors and Edge deployments remain unverified.
