@@ -4,7 +4,7 @@ node_modules
 .turbo
 **/.turbo
 coverage
-pnpm-lock.yaml
+bun.lock
 playwright-report
 test-results
 *.tsbuildinfo
