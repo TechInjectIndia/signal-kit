@@ -1,6 +1,7 @@
+import type { EventDefinition, SignalsOptions } from '@techinject/core';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createSignals, safeRoute, safeProviderUrl, parseTraceparent } from '@techinject/core';
-import { safeCustomEventAction } from '@techinject/contracts';
+import { getProviderEvent } from '@techinject/contracts';
 import type {
   Consent,
   Observer,
@@ -9,15 +10,16 @@ import type {
   Provider,
 } from '@techinject/contracts';
 
-export type ServerConfig = Parameters<typeof createSignals>[0] & {
-  observer?: Observer;
-  /** Propagate traceparent to relative fetch URLs when the host transport supports them. Default false. */
-  traceRelative?: boolean;
-  /** Exact origins allowed to receive traceparent on absolute fetch URLs. */
-  traceOrigins?: string[];
-  excludeUrls?: string[];
-  fetch?: typeof globalThis.fetch;
-};
+export type ServerConfig<Events extends readonly EventDefinition[] = readonly []> =
+  SignalsOptions<Events> & {
+    observer?: Observer;
+    /** Propagate traceparent to relative fetch URLs when the host transport supports them. Default false. */
+    traceRelative?: boolean;
+    /** Exact origins allowed to receive traceparent on absolute fetch URLs. */
+    traceOrigins?: string[];
+    excludeUrls?: string[];
+    fetch?: typeof globalThis.fetch;
+  };
 type Trace = { traceId: string; spanId: string; flags: string; parentSpanId?: string };
 const randomHex = (bytes: number) =>
   Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (b) =>
@@ -29,7 +31,9 @@ function trace(header: string | null): Trace {
     ? { traceId: match[1]!, parentSpanId: match[2]!, spanId: randomHex(8), flags: match[3]! }
     : { traceId: randomHex(16), spanId: randomHex(8), flags: '01' };
 }
-export function createServerSignals(config: ServerConfig = {}) {
+export function createServerSignals<const Events extends readonly EventDefinition[] = readonly []>(
+  config: ServerConfig<Events> = {},
+) {
   const signals = createSignals(config);
   const context = new AsyncLocalStorage<Trace>();
   let disposed = false;
@@ -199,21 +203,10 @@ export function createServerSignals(config: ServerConfig = {}) {
     },
   };
 }
-export type ServerSignals = ReturnType<typeof createServerSignals>;
+export type ServerSignals<Events extends readonly EventDefinition[] = readonly []> = ReturnType<
+  typeof createServerSignals<Events>
+>;
 
-const metaNames: Record<Exclude<SignalEvent['name'], 'custom_event'>, string> = {
-  page_view: 'PageView',
-  product_view: 'ViewContent',
-  add_to_cart: 'AddToCart',
-  begin_checkout: 'InitiateCheckout',
-  purchase: 'Purchase',
-  generate_lead: 'Lead',
-  phone_click: 'Contact',
-  whatsapp_click: 'Contact',
-  sign_up: 'CompleteRegistration',
-  login: 'Login',
-  search: 'Search',
-};
 export interface MetaCapiOptions {
   pixelId: string;
   accessToken: string;
@@ -270,24 +263,11 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
     : undefined;
   return {
     name: 'meta-capi',
+    eventFamily: 'meta',
     category: 'marketing',
     async send(event, signal) {
+      const mapped = getProviderEvent(event, 'meta');
       const data = safeUserData(options.userData?.() ?? {});
-      const items = event.properties.items as
-        | Array<{ item_id?: string; quantity?: number; price?: number }>
-        | undefined;
-      const customData = {
-        currency: event.properties.currency,
-        value: event.properties.value,
-        order_id: event.properties.transaction_id,
-        content_type: 'product',
-        content_ids: items?.map((item) => item.item_id).filter(Boolean),
-        contents: items?.map((item) => ({
-          id: item.item_id,
-          quantity: item.quantity ?? 1,
-          item_price: item.price,
-        })),
-      };
       const response = await transport(endpoint, {
         method: 'POST',
         signal: signal ?? null,
@@ -297,16 +277,13 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
           test_event_code: options.testEventCode,
           data: [
             {
-              event_name:
-                event.name === 'custom_event'
-                  ? safeCustomEventAction(event)
-                  : metaNames[event.name],
+              event_name: mapped.name,
               event_time: Math.floor(event.timestamp / 1000),
               event_id: event.eventId,
               action_source: 'website',
               event_source_url: source,
               user_data: data,
-              custom_data: customData,
+              custom_data: mapped.properties,
             },
           ],
         }),
@@ -453,3 +430,6 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
 
 export { createSentryObserver, combineObservers } from './observers.js';
 export type { SentryClient, SentryEvent, SentryOptions } from './observers.js';
+
+export { defineEvent } from '@techinject/core';
+export type { EventDefinition, RegisteredEventInput } from '@techinject/core';

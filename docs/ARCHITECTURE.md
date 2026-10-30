@@ -72,3 +72,7 @@ Sentry uses a small host-injected SDK client interface in @techinject/server. Si
 ## Local connections observability catalog — 13 October 2026
 
 Owner requested visibility of the new integrations on the local /connections page. The portable dashboard accepts optional host-declared observability metadata and renders Sentry, Grafana and SigNoz separately from event-provider outcomes. Next.js and SvelteKit labs list these as not configured because their observers are synthetic. Backend labels and setup guidance are fixed, while configuration/policy flags are supplied by the host. No credentials, endpoints, provider objects, health probes or invented delivery counters are exposed. Existing two-argument dashboard calls remain supported. Configuration is unverified host information, not evidence of a connection.
+
+## Instance event registry — B5
+
+Contracts own the nine predefined schemas/mappings, `defineEvent` types and the shared bounded privacy/validation guard. Core snapshots app-supplied definitions from `events` at construction and resolves mappings after provider consent. Transport adapters declare their GA4, Meta or Clarity mapping family; Pixel and CAPI use the same Meta mapping while keeping browser/server transports separate. Each provider gets an independent payload clone and the same event identity. Consumer event definitions belong to the host examples and have no global registration or SDK-to-example import.

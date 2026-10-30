@@ -55,6 +55,9 @@ importers:
       '@techinject/server':
         specifier: workspace:*
         version: link:../../packages/features/signals/server
+      zod:
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/bun':
         specifier: 1.4.2
@@ -86,6 +89,9 @@ importers:
       react-dom:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
+      zod:
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: 22.20.5
@@ -114,6 +120,9 @@ importers:
       '@techinject/sveltekit-server':
         specifier: workspace:*
         version: link:../../packages/features/signals/sveltekit-server
+      zod:
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@sveltejs/adapter-node':
         specifier: 6.0.0

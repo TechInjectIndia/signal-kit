@@ -1,6 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { sanitizeEvent } from './index.js';
+import { sanitizeEvent as parseEvent, createEventRegistry, getProviderEvent } from './index.js';
+import { exampleEvents } from '../test/consumer-events.js';
+const registry = createEventRegistry(exampleEvents);
+const sanitizeEvent = (input: unknown, eventId: string) => parseEvent(input, eventId, registry);
 describe('event boundary', () => {
+  it('validates all nine predefined contracts and resolves each provider mapping', () => {
+    const commerce = { currency: 'USD', value: 10, items: [{ item_id: 'sku-1' }] };
+    for (const [name, properties, ga4, meta] of [
+      ['page_view', { page_path: '/' }, 'page_view', 'PageView'],
+      ['product_view', commerce, 'view_item', 'ViewContent'],
+      ['add_to_cart', commerce, 'add_to_cart', 'AddToCart'],
+      ['begin_checkout', commerce, 'begin_checkout', 'InitiateCheckout'],
+      ['purchase', { ...commerce, transaction_id: 'order-1' }, 'purchase', 'Purchase'],
+      ['generate_lead', { lead_type: 'quote' }, 'generate_lead', 'Lead'],
+      ['search', { search_term: 'notebook' }, 'search', 'Search'],
+      ['sign_up', { method: 'password' }, 'sign_up', 'CompleteRegistration'],
+      ['login', { method: 'password' }, 'login', 'Login'],
+    ] as const) {
+      const event = parseEvent({ name, properties }, 'predefined-1')!;
+      expect(event).toBeDefined();
+      expect(getProviderEvent(event, 'ga4').name).toBe(ga4);
+      expect(getProviderEvent(event, 'meta')).toMatchObject({
+        name: meta,
+        mode: name === 'login' ? 'custom' : 'standard',
+      });
+      expect(getProviderEvent(event, 'clarity')).toMatchObject({ name, properties: {} });
+    }
+  });
+  it('rejects consumer names unless registered', () => {
+    for (const name of ['phone_click', 'whatsapp_click', 'custom_event']) {
+      expect(
+        parseEvent(
+          { name, properties: { channel: 'phone', action: 'video_play' } },
+          'unregistered',
+        ),
+      ).toBeUndefined();
+    }
+  });
   it('strips unknown customer fields and nested item metadata', () => {
     const result = sanitizeEvent(
       {
@@ -92,7 +128,7 @@ describe('event boundary', () => {
       ).toBeUndefined();
     }
   });
-  it('supports lead, search, auth, contact and custom action events (2.1)', () => {
+  it('supports predefined events and explicitly registered consumer definitions', () => {
     expect(
       sanitizeEvent(
         { name: 'generate_lead', properties: { value: 100, currency: 'USD', lead_type: 'quote' } },

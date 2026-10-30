@@ -340,34 +340,66 @@ export const handleFetch = hooks.handleFetch;
 
 Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. The declared peer range is `@sveltejs/kit >=3 <4`; SvelteKit 3.0.1 with Svelte 5 has consumer runtime evidence, while Kit 2 is unverified.
 
-## Supported event contracts
+## Predefined event contracts
 
-All events are validated and sanitized before dispatch. Unknown properties are stripped. Each configured provider receives the event only when its consent category is granted; CAPI requires a separate server-side `track` call with approved matching data.
+The SDK keeps the following nine predefined events. All events are validated and sanitized before dispatch. Unknown properties are stripped. Each configured provider receives the event only when its consent category is granted; CAPI requires a separate server-side `track` call with approved matching data.
 
-| SDK event        | GA4 event          | Meta Pixel event                  | Clarity behavior                   | Meta CAPI support                 |
-| ---------------- | ------------------ | --------------------------------- | ---------------------------------- | --------------------------------- |
-| `page_view`      | `page_view`        | `PageView` (standard)             | Page/session capture; no API event | `PageView` (standard)             |
-| `product_view`   | `view_item`        | `ViewContent` (standard)          | `product_view` event               | `ViewContent` (standard)          |
-| `add_to_cart`    | `add_to_cart`      | `AddToCart` (standard)            | `add_to_cart` event                | `AddToCart` (standard)            |
-| `begin_checkout` | `begin_checkout`   | `InitiateCheckout` (standard)     | `begin_checkout` event             | `InitiateCheckout` (standard)     |
-| `purchase`       | `purchase`         | `Purchase` (standard)             | `purchase` event                   | `Purchase` (standard)             |
-| `generate_lead`  | `generate_lead`    | `Lead` (standard)                 | `generate_lead` event              | `Lead` (standard)                 |
-| `phone_click`    | `phone_click`      | `Contact` (standard)              | `phone_click` event                | `Contact` (standard)              |
-| `whatsapp_click` | `whatsapp_click`   | `Contact` (standard)              | `whatsapp_click` event             | `Contact` (standard)              |
-| `sign_up`        | `sign_up`          | `CompleteRegistration` (standard) | `sign_up` event                    | `CompleteRegistration` (standard) |
-| `login`          | `login`            | `Login` (custom)                  | `login` event                      | `Login` (custom)                  |
-| `search`         | `search`           | `Search` (standard)               | `search` event                     | `Search` (standard)               |
-| `custom_event`   | validated `action` | validated `action` (custom)       | validated `action` event           | validated `action` (custom)       |
+| SDK event        | GA4 event        | Meta Pixel event                  | Clarity behavior                   | Meta CAPI support                 |
+| ---------------- | ---------------- | --------------------------------- | ---------------------------------- | --------------------------------- |
+| `page_view`      | `page_view`      | `PageView` (standard)             | Page/session capture; no API event | `PageView` (standard)             |
+| `product_view`   | `view_item`      | `ViewContent` (standard)          | `product_view` event               | `ViewContent` (standard)          |
+| `add_to_cart`    | `add_to_cart`    | `AddToCart` (standard)            | `add_to_cart` event                | `AddToCart` (standard)            |
+| `begin_checkout` | `begin_checkout` | `InitiateCheckout` (standard)     | `begin_checkout` event             | `InitiateCheckout` (standard)     |
+| `purchase`       | `purchase`       | `Purchase` (standard)             | `purchase` event                   | `Purchase` (standard)             |
+| `generate_lead`  | `generate_lead`  | `Lead` (standard)                 | `generate_lead` event              | `Lead` (standard)                 |
+| `sign_up`        | `sign_up`        | `CompleteRegistration` (standard) | `sign_up` event                    | `CompleteRegistration` (standard) |
+| `login`          | `login`          | `Login` (custom)                  | `login` event                      | `Login` (custom)                  |
+| `search`         | `search`         | `Search` (standard)               | `search` event                     | `Search` (standard)               |
 
-`add_to_cart`, `begin_checkout`, and `purchase` require at least one item. `product_view` may carry an empty item list. `custom_event.properties.value`, when supplied, must be finite and nonnegative.
+`add_to_cart`, `begin_checkout`, and `purchase` require at least one item. `product_view` may carry an empty item list. The app-owned custom example also requires finite nonnegative `value` when supplied.
 
-`custom_event.properties.action` must match `^[a-z][a-z0-9_]{0,39}$`; invalid names are rejected before dispatch. Meta Pixel uses `trackSingleCustom` for custom names. GA4 receives `event_id`, and Meta Pixel/CAPI receive the corresponding event ID. Clarity's browser event API accepts only a name, so it does not receive an event-level ID or provide cross-platform deduplication. `page_view` starts Clarity's page/session capture without emitting an explicit Clarity event. All other listed events use Clarity's `event` API.
+The registered example `custom_event.properties.action` must match `^[a-z][a-z0-9_]{0,39}$`; invalid names are rejected before dispatch. Meta Pixel uses `trackSingleCustom` for custom names. GA4 receives `event_id`, and Meta Pixel/CAPI receive the corresponding event ID. Clarity's browser event API accepts only a name, so it does not receive an event-level ID or provide cross-platform deduplication. `page_view` starts Clarity's page/session capture without emitting an explicit Clarity event. All other listed events use Clarity's `event` API.
 
 `search_term`, `custom_event` `action`/`label`/`category`, `lead_type` and sign-up/login `method` reject email- or phone-like values; the whole event is dropped before provider dispatch. The shared contract check also catches common percent-encoded forms. A ten-digit identifier may be rejected as phone-like, so use short non-identifying categories for these fields. Pattern checks do not replace host-side privacy review of every event property.
 
-### Example: Tracking leads and contacts
+### Register consumer-defined events once
+
+`phone_click`, `whatsapp_click` and `custom_event` are not built-ins. Import the [Next.js example definitions](../../../examples/nextjs/signalkit.events.ts) or write your own with Zod and `defineEvent`. Each example has its own event module; its root passes the same readonly tuple to the browser/server SDK configuration. Definitions are immutable per instance and cannot override predefined names.
 
 ```ts
+import * as z from 'zod/mini';
+import { createBrowserSignals, defineEvent } from '@techinject/browser';
+
+const helpOpen = defineEvent({
+  name: 'help_open',
+  schema: z.object({ section: z.string().check(z.minLength(1), z.maxLength(128)) }),
+  map: {
+    ga4: { name: 'help_open', properties: { section: 'section' } },
+    meta: { name: 'help_open', mode: 'custom', properties: { section: 'section' } },
+    clarity: { name: 'help_open' },
+  },
+});
+const events = [helpOpen] as const;
+const signals = createBrowserSignals({ events, providers, consent });
+await signals.track({ name: 'help_open', properties: { section: 'shipping' } });
+```
+
+The property type is inferred from the schema. Use the same tuple in a typed Next hook wrapper, for example `const useAppSignals = () => useSignals<typeof events>()`; pass `events` to the root `SignalKitProvider` config. SvelteKit and server constructors infer the tuple directly. A schema must be a synchronous Zod object with recursively stripping objects and bounded JSON output; passthrough objects, arbitrary records, transforms and non-JSON schema types are rejected. Limits are 8 nested levels, 100 fields/items per container, 2,048 characters per string, 5,000 values and 65,536 serialized characters. All parsed values and mapped properties pass the same PII guard; the host remains responsible for privacy.
+
+Mappings project declared schema keys, with no arbitrary callback. A name may use `{ from: 'action' }`; unsafe or predefined provider names are rejected. Meta mappings require `standard` or `custom` mode and are shared by Pixel/CAPI. Clarity accepts only a name. A consented provider without a mapping returns `invalid` with `event_mapping_missing`; denied providers return `denied` without replay. Local custom providers without a mapping family receive the sanitized canonical event. Registration is root-only; remount/recreate an instance to change definitions.
+
+| Example definition | GA4                | Meta Pixel / CAPI           | Clarity            |
+| ------------------ | ------------------ | --------------------------- | ------------------ |
+| `phone_click`      | `phone_click`      | `Contact` (standard)        | `phone_click`      |
+| `whatsapp_click`   | `whatsapp_click`   | `Contact` (standard)        | `whatsapp_click`   |
+| `custom_event`     | validated `action` | validated `action` (custom) | validated `action` |
+
+Contact definitions require literal non-identifying channels. The generic example projects only category, label and value; it never forwards `action` as a property. For server CAPI calls, register the same definitions and supply the existing approved matching-data callback. Registration does not move credentials or purchase verification into browser code. The standalone script bundle exposes only predefined events.
+
+### Example: Tracking leads and registered contacts
+
+```ts
+// Register contact/custom definitions at the root before using them.
 // Track a lead form submission
 await signals.track({
   name: 'generate_lead',

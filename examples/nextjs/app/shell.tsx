@@ -9,7 +9,7 @@ import {
   createClarityProvider,
   type BrowserConfig,
 } from '@techinject/nextjs';
-import type { Consent, EventInput, DispatchResult } from '@techinject/contracts';
+import type { Consent, RegisteredEventInput, DispatchResult } from '@techinject/contracts';
 import {
   GA4_MEASUREMENT_ID,
   META_PIXEL_ID,
@@ -17,7 +17,9 @@ import {
   ENABLE_EXTERNAL_PROVIDERS,
 } from '../signalkit.config';
 
-type Demo = { track(input: EventInput): Promise<DispatchResult> };
+import { exampleEvents } from '../signalkit.events';
+type AppEventInput = RegisteredEventInput<typeof exampleEvents>;
+type Demo = { track(input: AppEventInput): Promise<DispatchResult> };
 const Context = createContext<Demo | null>(null);
 export function useDemo() {
   const ctx = useContext(Context);
@@ -31,10 +33,10 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
     observability: false,
   });
   const [lines, setLines] = useState<string[]>([]);
-  const config = useMemo<BrowserConfig>(() => {
+  const config = useMemo<BrowserConfig<typeof exampleEvents>>(() => {
     const append = (line: string) => setLines((previous) => [line, ...previous].slice(0, 30));
 
-    const providers: BrowserConfig['providers'] = [
+    const providers: BrowserConfig<typeof exampleEvents>['providers'] = [
       {
         name: 'local-analytics',
         category: 'analytics',
@@ -54,6 +56,7 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
     }
 
     return {
+      events: exampleEvents,
       traceOrigins: typeof location === 'undefined' ? [] : [location.origin],
       providers,
       observer: {
@@ -96,8 +99,8 @@ function Lab({
   lines: string[];
   setLines: (value: string[]) => void;
 }) {
-  const signals = useSignals();
-  const track = (input: EventInput) => signals.track(input);
+  const signals = useSignals<typeof exampleEvents>();
+  const track = (input: AppEventInput) => signals.track(input);
   return (
     <Context.Provider value={{ track }}>
       <header className="top">

@@ -1,4 +1,9 @@
-import type { CommerceProperties, ContactProperties, EventInput } from '../src/index.js';
+import { exampleEvents } from './consumer-events.js';
+type ContactProperties = Extract<
+  RegisteredEventInput<typeof exampleEvents>,
+  { name: 'phone_click' }
+>['properties'];
+import type { CommerceProperties, EventInput, RegisteredEventInput } from '../src/index.js';
 const page: EventInput = { name: 'page_view', properties: { page_path: '/' } };
 const purchase: EventInput = {
   name: 'purchase',

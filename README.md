@@ -32,7 +32,8 @@ Open `/connections` in the Next.js lab to see configured event providers, consen
 
 ## What is included
 
-- Typed product_view, add_to_cart, begin_checkout and purchase events; runtime payload validation.
+- Nine predefined ecommerce, lead, search and account events with runtime schemas and provider mappings.
+- Consumer-defined events registered once through `defineEvent` and the root `events` option, sharing consent, privacy and delivery handling.
 - Browser initial/navigation pages and fetch/XHR failures, status and duration.
 - Bun incoming handler and server outbound fetch instrumentation with trace correlation.
 - Next React root provider and separate Node OpenTelemetry registration for automatic framework requests.
@@ -54,6 +55,8 @@ await signals.track({
   },
 });
 ```
+
+Contact/custom event examples require explicit root registration; see [consumer event setup](packages/features/signals/INTEGRATION.md#register-consumer-defined-events-once).
 
 The owner-selected package scope is `@techinject`; all nine packages are published as `0.1.0-alpha.2` on the `alpha` tag. Pin this exact version or use the workspace. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
 

@@ -1,6 +1,10 @@
 import {
   DENIED_CONSENT,
   sanitizeEvent,
+  createEventRegistry,
+  resolveProviderEvent,
+  type EventDefinition,
+  type RegisteredEventInput,
   type Consent,
   type DispatchResult,
   type EventInput,
@@ -19,9 +23,17 @@ export type {
   PurchaseProperties,
   PageViewProperties,
 } from '@techinject/contracts';
-export { DENIED_CONSENT } from '@techinject/contracts';
+export { DENIED_CONSENT, defineEvent } from '@techinject/contracts';
 
-export type SignalsOptions = {
+export type {
+  EventDefinition,
+  EventMapping,
+  EventMappings,
+  RegisteredEventInput,
+} from '@techinject/contracts';
+
+export type SignalsOptions<Events extends readonly EventDefinition[] = readonly []> = {
+  events?: Events;
   providers?: Provider[];
   consent?: Consent;
   timeoutMs?: number;
@@ -42,7 +54,9 @@ export type ConnectionStatus = {
   lastStatus?: DispatchResult['outcomes'][number]['status'];
   lastUpdated?: number;
 };
-export type Signals = ReturnType<typeof createSignals>;
+export type Signals<Events extends readonly EventDefinition[] = readonly []> = ReturnType<
+  typeof createSignals<Events>
+>;
 export function generateId(): string {
   return globalThis.crypto.randomUUID();
 }
@@ -110,7 +124,10 @@ export function formatTraceparent(context: TraceContext): string {
   return `00-${context.traceId}-${context.spanId}-${context.sampled ? '01' : '00'}`;
 }
 
-export function createSignals(options: SignalsOptions = {}) {
+export function createSignals<const Events extends readonly EventDefinition[] = readonly []>(
+  options: SignalsOptions<Events> = {},
+) {
+  const registry = createEventRegistry(options.events);
   const providers = [...(options.providers ?? [])];
   function normalizeConsent(value?: Consent): Consent {
     return {
@@ -176,6 +193,27 @@ export function createSignals(options: SignalsOptions = {}) {
     if (!consent[provider.category]) {
       return { provider: provider.name, status: 'denied', reason: 'consent' };
     }
+    if (provider.eventFamily) {
+      try {
+        event = {
+          ...event,
+          providerEvent: resolveProviderEvent(
+            event,
+            provider.eventFamily,
+            registry.get(event.name),
+          ),
+        };
+      } catch (error) {
+        return {
+          provider: provider.name,
+          status: 'invalid',
+          reason:
+            error instanceof Error && error.message === 'event_mapping_missing'
+              ? 'event_mapping_missing'
+              : 'event_mapping',
+        };
+      }
+    }
     const controller = new AbortController();
     active.set(controller, provider.category);
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -207,7 +245,7 @@ export function createSignals(options: SignalsOptions = {}) {
       active.delete(controller);
     }
   }
-  function track(input: EventInput): Promise<DispatchResult> {
+  function track(input: RegisteredEventInput<Events>): Promise<DispatchResult> {
     let suppliedId: string | undefined;
     try {
       suppliedId = input?.eventId;
@@ -223,7 +261,7 @@ export function createSignals(options: SignalsOptions = {}) {
       event =
         suppliedId !== undefined && suppliedId !== eventId
           ? undefined
-          : sanitizeEvent(input, eventId);
+          : sanitizeEvent(input, eventId, registry);
     } catch {
       event = undefined;
     }

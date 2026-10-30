@@ -235,6 +235,35 @@ export default function Catalog() {
         Purchases must originate from verified server state; see the Bun signed-webhook example
         above.
       </p>
+      <h2>Consumer-defined events</h2>
+      <p>
+        These definitions are registered once in the lab root. Only non-identifying choices leave
+        the app.
+      </p>
+      <div className="controls">
+        <button
+          onClick={() => void track({ name: 'phone_click', properties: { channel: 'phone' } })}
+        >
+          Track phone contact
+        </button>
+        <button
+          onClick={() =>
+            void track({ name: 'whatsapp_click', properties: { channel: 'whatsapp' } })
+          }
+        >
+          Track WhatsApp contact
+        </button>
+        <button
+          onClick={() =>
+            void track({
+              name: 'custom_event',
+              properties: { action: 'help_open', label: 'catalog_help' },
+            })
+          }
+        >
+          Track help opened
+        </button>
+      </div>
     </section>
   );
 }

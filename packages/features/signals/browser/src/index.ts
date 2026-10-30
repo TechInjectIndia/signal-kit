@@ -1,15 +1,19 @@
+import type { EventDefinition, SignalsOptions } from '@techinject/core';
 import { createSignals, generateId, safeRoute, parseTraceparent } from '@techinject/core';
 import type { Consent, Observer, RequestRecord } from '@techinject/contracts';
 export { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
-export type BrowserConfig = Parameters<typeof createSignals>[0] & {
-  observer?: Observer;
-  traceOrigins?: string[];
-  excludeUrls?: string[];
-  autoTrack?: boolean;
-  trackHash?: boolean;
-};
+export type BrowserConfig<Events extends readonly EventDefinition[] = readonly []> =
+  SignalsOptions<Events> & {
+    observer?: Observer;
+    traceOrigins?: string[];
+    excludeUrls?: string[];
+    autoTrack?: boolean;
+    trackHash?: boolean;
+  };
 let activeOwner: object | undefined;
-export function createBrowserSignals(config: BrowserConfig = {}) {
+export function createBrowserSignals<const Events extends readonly EventDefinition[] = readonly []>(
+  config: BrowserConfig<Events> = {},
+) {
   const core = createSignals(config);
   let running = false;
   const owner = {};
@@ -292,4 +296,9 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   if (config.autoTrack !== false) start();
   return api;
 }
-export type BrowserSignals = ReturnType<typeof createBrowserSignals>;
+export type BrowserSignals<Events extends readonly EventDefinition[] = readonly []> = ReturnType<
+  typeof createBrowserSignals<Events>
+>;
+
+export { defineEvent } from '@techinject/core';
+export type { EventDefinition, RegisteredEventInput } from '@techinject/core';

@@ -45,7 +45,7 @@ Meta CAPI injected-transport tests verify that only prehashed SHA-256 `em`, `ph`
 
 Server tests verify that relative fetch trace propagation requires `traceRelative: true`; magic `traceOrigins` entries do not enable it, and absolute third-party origins remain denied.
 
-All exported browser adapters bundled with esbuild: 31,464 bytes minified / 10,625 bytes gzip. Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
+All exported browser adapters bundled with esbuild: 42,161 bytes minified / 14,173 bytes gzip. Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
 
 ## SvelteKit runtime evidence
 
@@ -64,3 +64,9 @@ Workspace build, typecheck, tests (including the local Bun runtime), repository 
 ## Local observability catalog verification
 
 Next.js and SvelteKit production-browser tests pass with Sentry, Grafana and SigNoz shown as not configured. Existing consent/outcome updates and cleanup remain verified; Next mobile checks confirm no horizontal overflow at 390px. Browser unit tests cover fixed labels, safe metadata and configured-but-unverified states. Workspace build, typecheck, tests, formatting, repository and boundary checks pass on Node 22.21.1. These cards are configuration summaries, not live backend verification.
+
+## B5 event registry (unreleased)
+
+The SDK retains nine predefined contracts. Contact and generic custom events are registered consumer definitions in the Next.js, SvelteKit and Bun examples. Contracts tests cover all nine provider mappings and reject unregistered consumer names. Core registry tests cover nested stripping/privacy, mapping failures, identity, snapshots, consent withdrawal and no replay; compiler assertions check inferred properties and registration. Browser simulated-script tests verify consumer names, projected properties and shared GA4/Meta identity; CAPI uses injected transport. These checks do not establish live vendor delivery.
+
+Final local verification on Node 22.23.4 passed: frozen-lockfile install, repository and formatting checks, workspace build/typecheck/tests (including the Bun socket/webhook fixture), dependency boundaries, both Next.js Chromium tests, the SvelteKit Chromium test and browser bundle guards. The Next runtime test exercises all three consumer examples through the root registry and all three simulated vendor adapters.

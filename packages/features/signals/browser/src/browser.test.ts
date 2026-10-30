@@ -1,3 +1,4 @@
+import { exampleEvents } from '../../contracts/test/consumer-events.js';
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createBrowserSignals } from './index.js';
@@ -238,7 +239,12 @@ describe('browser providers', () => {
         await provider.send(event, signal);
       },
     }));
-    const sdk = createBrowserSignals({ autoTrack: false, consent, providers });
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers,
+      events: exampleEvents,
+    });
     disposals.push(sdk.dispose);
     const dispatch = sdk.track({
       name: 'add_to_cart',
@@ -280,14 +286,19 @@ describe('browser providers', () => {
     await sdk.track({
       name: 'custom_event',
       eventId: 'custom-shared-123',
-      properties: { action: 'video_play' },
+      properties: { action: 'video_play', label: 'intro', value: 0 },
     });
     expect(globals.dataLayer.findLast((args) => args[0] === 'event')?.[1]).toBe('video_play');
+    const customGa4 = globals.dataLayer.findLast((args) => args[0] === 'event')?.[2];
+    expect(customGa4).toMatchObject({ label: 'intro', value: 0, event_id: 'custom-shared-123' });
+    expect(customGa4).not.toHaveProperty('action');
     expect(globals.fbq.queue.at(-1)?.slice(0, 3)).toEqual([
       'trackSingleCustom',
       '123',
       'video_play',
     ]);
+    expect(globals.fbq.queue.at(-1)?.[3]).toMatchObject({ label: 'intro', value: 0 });
+    expect(globals.fbq.queue.at(-1)?.[4]).toEqual({ eventID: 'custom-shared-123' });
     expect(globals.clarity.q.findLast((args) => args[0] === 'event')).toEqual([
       'event',
       'video_play',
@@ -336,7 +347,12 @@ describe('browser providers', () => {
   });
   it('maps purchase event ID for Meta deduplication and reports blocked scripts', async () => {
     const provider = createMetaPixelProvider({ pixelId: '123' });
-    const sdk = createBrowserSignals({ autoTrack: false, consent, providers: [provider] });
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [provider],
+      events: exampleEvents,
+    });
     disposals.push(sdk.dispose);
     const dispatch = sdk.track({
       name: 'purchase',

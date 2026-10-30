@@ -1,6 +1,12 @@
+import { exampleEvents, z } from '../../contracts/test/consumer-events.js';
 import { describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
-import { createServerSignals, createMetaCapiProvider, createOTLPObserver } from '../src/index.js';
+import {
+  createServerSignals,
+  createMetaCapiProvider,
+  createOTLPObserver,
+  defineEvent,
+} from '../src/index.js';
 import type { RequestRecord } from '@techinject/contracts';
 const consent = { analytics: true, marketing: true, observability: true };
 describe('server instrumentation', () => {
@@ -122,6 +128,51 @@ describe('server instrumentation', () => {
   });
 });
 describe('Meta CAPI', () => {
+  it('preserves explicit consumer vendor properties without predefined commerce rewriting', async () => {
+    const definition = defineEvent({
+      name: 'support_open',
+      schema: z.object({ order: z.string(), products: z.array(z.string()) }),
+      map: {
+        meta: {
+          name: 'support_open',
+          mode: 'custom',
+          properties: { order_id: 'order', content_ids: 'products' },
+        },
+      },
+    });
+    let payload: any;
+    const signals = createServerSignals({
+      events: [definition],
+      consent,
+      providers: [
+        createMetaCapiProvider({
+          pixelId: '123',
+          accessToken: 'synthetic',
+          endpoint: 'https://collector.test/',
+          userData: () => ({ em: 'a'.repeat(64) }),
+          fetch: async (_url, init) => {
+            payload = JSON.parse(init!.body as string);
+            return Response.json({ events_received: 1 });
+          },
+        }),
+      ],
+    });
+    expect(
+      (
+        await signals.track({
+          name: 'support_open',
+          eventId: 'consumer-projection',
+          properties: { order: 'order_demo', products: ['notebook'] },
+        })
+      ).outcomes[0]?.status,
+    ).toBe('sent');
+    expect(payload.data[0]).toMatchObject({
+      event_name: 'support_open',
+      event_id: 'consumer-projection',
+      custom_data: { order_id: 'order_demo', content_ids: ['notebook'] },
+    });
+    signals.dispose();
+  });
   const event = {
     name: 'purchase' as const,
     eventId: 'stable-order-id',
@@ -167,13 +218,20 @@ describe('Meta CAPI', () => {
     });
     expect(payload.data[0].event_name).toBe('Login');
 
-    await provider.send({
+    const consumerSignals = createServerSignals({
+      events: exampleEvents,
+      consent,
+      providers: [provider],
+    });
+    await consumerSignals.track({
       name: 'custom_event',
       eventId: 'custom-server-123',
       timestamp: 1700000000000,
       properties: { action: 'video_play' },
     });
     expect(payload.data[0].event_name).toBe('video_play');
+    expect(payload.data[0].custom_data).not.toHaveProperty('action');
+    consumerSignals.dispose();
     const hash = (value: string) => createHash('sha256').update(value).digest('hex');
     const prehashed = createMetaCapiProvider({
       pixelId: '123',

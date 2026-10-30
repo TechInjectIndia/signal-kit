@@ -58,9 +58,9 @@ Implemented defaults: three denied-by-default consent categories, dropped precon
 
 ## Implemented review extension — pending product acceptance
 
-The current PR adds typed `generate_lead`, `phone_click`, `whatsapp_click`, `sign_up`, `login`, `search`, and `custom_event` alongside the agreed ecommerce events. Contact events may carry a non-identifying `channel` (`phone` or `whatsapp`); event contracts exclude raw phone numbers, destinations, and user IDs. Purchases still originate from verified server state, not a browser button. These additional events are recorded here for product review; their presence in the PR does not imply separate owner approval.
+The SDK keeps nine predefined events: `page_view`, `product_view`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, `search`, `sign_up` and `login`. Consumer-defined events are registered once at the app root through `defineEvent` and `createSignals({ events: [...] })`; `phone_click`, `whatsapp_click` and generic `custom_event` are app-owned examples. Contact events may carry a non-identifying `channel` (`phone` or `whatsapp`); event contracts exclude raw phone numbers, destinations, and user IDs. Purchases still originate from verified server state, not a browser button. The B5 LLD was approved for implementation before this registry change.
 
-The review extension maps `custom_event` through a validated, non-identifying `action` name across GA4, Meta Pixel/CAPI and Clarity. The local Next lab shows each configured provider's SDK outcome using fake public IDs; those outcomes are not provider delivery or attribution proof.
+The consumer-defined `custom_event` example maps a validated, non-identifying `action` name across GA4, Meta Pixel/CAPI and Clarity. The local Next lab shows each configured provider's SDK outcome using fake public IDs; those outcomes are not provider delivery or attribution proof.
 
 The review-extension free-text fields reject email- and phone-like values before provider dispatch. Hosts must use non-identifying labels and avoid sending other personal data in event fields.
 
@@ -87,3 +87,5 @@ Maintain consent controls, bounded exports, isolated failures and server-only cr
 ## Local connections observability catalog — 13 October 2026
 
 Owner requested visibility of the new integrations on the local /connections page. The portable dashboard accepts optional host-declared observability metadata and renders Sentry, Grafana and SigNoz separately from event-provider outcomes. Next.js and SvelteKit labs list these as not configured because their observers are synthetic. Backend labels and setup guidance are fixed, while configuration/policy flags are supplied by the host. No credentials, endpoints, provider objects, health probes or invented delivery counters are exposed. Existing two-argument dashboard calls remain supported. Configuration is unverified host information, not evidence of a connection.
+
+Consumer-defined events share schema validation, unknown-field stripping, privacy checks, consent, bounded dispatch, event IDs and provider fan-out with predefined events. Definitions cannot override predefined events or impersonate their provider names. A configured consented provider without a consumer mapping reports an explicit invalid outcome. No denied event is replayed.

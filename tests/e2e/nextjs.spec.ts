@@ -23,6 +23,18 @@ test('consent, navigation, commerce and automatic API capture', async ({ page })
   for (const provider of ['ga4', 'meta-pixel', 'clarity']) {
     await expect(feed).toContainText(`${provider}: sent`);
   }
+  for (const [button, event] of [
+    ['Track phone contact', 'phone_click'],
+    ['Track WhatsApp contact', 'whatsapp_click'],
+    ['Track help opened', 'custom_event'],
+  ]) {
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await page.getByRole('button', { name: button, exact: true }).click();
+    await expect(feed).toContainText(event);
+    for (const provider of ['ga4', 'meta-pixel', 'clarity']) {
+      await expect(feed).toContainText(`${provider}: sent`);
+    }
+  }
   await page.getByRole('button', { name: 'Test API' }).click();
   await expect(feed).toContainText('GET /api/ping · 200');
   await page.getByLabel('analytics', { exact: true }).uncheck();
