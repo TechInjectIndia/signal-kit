@@ -209,7 +209,7 @@ For projects using server-rendered HTML (PHP, Laravel, Django), CMS (Shopify, Wo
 ></script>
 ```
 
-Consent is denied for all categories when `data-auto-consent` is absent. Connect your host consent banner to the standalone SDK and apply only the visitor's actual choices:
+Consent is denied for all categories until the host banner applies the visitor's actual choices to the standalone SDK:
 
 ```js
 window.signals.setConsent({

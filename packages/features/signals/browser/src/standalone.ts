@@ -20,7 +20,6 @@ function initStandalone() {
   const ga4Id = currentScript?.getAttribute('data-ga4-id') || undefined;
   const metaId = currentScript?.getAttribute('data-meta-id') || undefined;
   const clarityId = currentScript?.getAttribute('data-clarity-id') || undefined;
-  const autoConsent = currentScript?.getAttribute('data-auto-consent') === 'true';
 
   const providers = [];
   if (ga4Id && /^G-[A-Z0-9]+$/.test(ga4Id)) {
@@ -42,9 +41,9 @@ function initStandalone() {
   const signals = createBrowserSignals({
     providers,
     consent: {
-      analytics: autoConsent,
-      marketing: autoConsent,
-      observability: autoConsent,
+      analytics: false,
+      marketing: false,
+      observability: false,
     },
   });
 

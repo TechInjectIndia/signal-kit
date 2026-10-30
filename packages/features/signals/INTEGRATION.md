@@ -116,7 +116,7 @@ The browser build produces `packages/features/signals/browser/dist/cdn/signalkit
 <script src="/assets/signalkit.global.js" data-ga4-id="G-YOURID"></script>
 ```
 
-With no `data-auto-consent` attribute, all consent categories start denied. Connect the host consent banner to the visitor's actual choices after the script loads:
+All consent categories start denied. Connect the host consent banner to the visitor's actual choices after the script loads:
 
 ```js
 window.signals.setConsent({
@@ -126,7 +126,7 @@ window.signals.setConsent({
 });
 ```
 
-Only `data-auto-consent="true"` pregrants all three categories, so use it solely when the host has already established that consent. Denied events are dropped and never replayed. The bundle listens for `product_view`, `add_to_cart` and `begin_checkout` clicks marked with `[data-signal]`. Supply real `data-item-id`, `data-price` and uppercase three-letter `data-currency` values on each element. Cart and checkout clicks also require `data-quantity`; product views omit quantity when it is not provided. Missing or invalid attributes skip tracking instead of fabricating values. A host can observe safe diagnostics without receiving the attribute values:
+The script has no attribute that grants consent. Denied events are dropped and never replayed. The bundle listens for `product_view`, `add_to_cart` and `begin_checkout` clicks marked with `[data-signal]`. Supply real `data-item-id`, `data-price` and uppercase three-letter `data-currency` values on each element. Cart and checkout clicks also require `data-quantity`; product views omit quantity when it is not provided. Missing or invalid attributes skip tracking instead of fabricating values. A host can observe safe diagnostics without receiving the attribute values:
 
 ```js
 window.addEventListener('signalkit:diagnostic', (event) => {

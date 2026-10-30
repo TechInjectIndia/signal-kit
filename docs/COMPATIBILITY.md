@@ -35,6 +35,8 @@ Core route tests verify that numeric product and blog slugs remain distinct, whi
 
 Standalone browser tests verify that missing or invalid declarative click attributes are dropped with value-free diagnostics, explicit values reach the provider, and absent product-view quantity is omitted.
 
+Standalone browser tests verify that all categories remain denied with and without the former `data-auto-consent="true"` attribute; provider events begin only after the host calls `setConsent`. These are simulated provider calls, not live vendor delivery evidence.
+
 Browser observer capacity tests verify that a 33rd pending record is dropped without a synthetic `onDiagnostic` event/provider result.
 
 The Next.js lab smoke test checks that its browser shell reads fake public IDs from the root config without a GA4 environment lookup or server credentials. Its browser demo configures all three external adapters; the SvelteKit lab keeps them disabled by default. Browser tests verify three-provider dispatch, shared SDK event ID and mapped calls with simulated script loads. These checks are not live GA4, Meta or Clarity verification.
