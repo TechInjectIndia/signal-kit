@@ -62,6 +62,8 @@ The current PR adds typed `generate_lead`, `phone_click`, `whatsapp_click`, `sig
 
 The review extension maps `custom_event` through a validated, non-identifying `action` name across GA4, Meta Pixel/CAPI and Clarity. The local Next lab shows each configured provider's SDK outcome using fake public IDs; those outcomes are not provider delivery or attribution proof.
 
+The review-extension free-text fields reject email- and phone-like values before provider dispatch. Hosts must use non-identifying labels and avoid sending other personal data in event fields.
+
 The PR also adds a Bun declarative-routes wrapper and an experimental standalone browser bundle. The Bun host must pass its routes table through the wrapper to capture those handlers. The browser bundle starts with consent denied unless the host explicitly sets `data-auto-consent="true"`; the host consent banner must apply the visitor's choices through `window.signals.setConsent(...)`. Automatic hash-route tracking is opt-in and only recognizes `#/` and `#!/` routes. Ordinary anchors do not create page views. Provider URL metadata drops query strings and fragments by default; forwarding attribution parameters requires a separate product decision. These behaviors do not extend verified platform support beyond the compatibility matrix.
 
 ## Public website amendment — 2026-10-06

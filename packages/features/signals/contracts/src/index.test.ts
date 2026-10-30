@@ -140,6 +140,31 @@ describe('event boundary', () => {
       ).toBeUndefined();
     }
   });
+  it('rejects email- and phone-like values from every free-text review field', () => {
+    const unsafe = [
+      { name: 'search', properties: { search_term: 'sample@example.invalid +1 (202) 555-0100' } },
+      { name: 'search', properties: { search_term: 'sample%40example.invalid' } },
+      { name: 'search', properties: { search_term: '%2B12025550100' } },
+      { name: 'generate_lead', properties: { lead_type: 'call +1 (202) 555-0100' } },
+      { name: 'sign_up', properties: { method: 'sample@example.invalid' } },
+      { name: 'login', properties: { method: '2025550100' } },
+      { name: 'custom_event', properties: { action: 'contact_2025550100' } },
+      {
+        name: 'custom_event',
+        properties: { action: 'video_play', category: 'sample@example.invalid' },
+      },
+      {
+        name: 'custom_event',
+        properties: { action: 'video_play', label: 'call +1 (202) 555-0100' },
+      },
+    ];
+    for (const input of unsafe) expect(sanitizeEvent(input, 'pii-test')).toBeUndefined();
+
+    expect(
+      sanitizeEvent({ name: 'search', properties: { search_term: 'iphone 15 pro' } }, 'safe-search')
+        ?.properties,
+    ).toEqual({ search_term: 'iphone 15 pro' });
+  });
   it('strips raw identity fields from contact and commerce events', () => {
     for (const name of ['phone_click', 'whatsapp_click'] as const) {
       expect(

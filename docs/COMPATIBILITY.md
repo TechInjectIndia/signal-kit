@@ -25,6 +25,8 @@ Turbo dry-run graphs verify that each root `dev` script selects its intended hos
 
 Contracts unit tests verify that `purchase` rejects an empty `items` array while `add_to_cart` and `begin_checkout` accept an empty array. This is schema evidence, not live GA4 or Meta delivery evidence.
 
+Contracts tests verify that synthetic email- and phone-like values in review-extension free-text fields are rejected before dispatch, while ordinary search text remains valid. This pattern check does not prove detection of every kind of personal data.
+
 Core route tests verify that an encoded slash stays within its original path segment after sanitation.
 
 Core route tests verify that numeric product and blog slugs remain distinct, while hosts can pass a route template for an order reference. This is unit-level sanitation evidence, not a claim that arbitrary sensitive slugs can be detected.

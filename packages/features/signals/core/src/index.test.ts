@@ -26,6 +26,28 @@ describe('dispatch lifecycle', () => {
     signals.setConsent(null as never);
     expect(signals.getConsent().analytics).toBe(false);
   });
+  it('drops contact-like free text before analytics and marketing dispatch', async () => {
+    const analyticsSend = vi.fn();
+    const marketingSend = vi.fn();
+    const onDiagnostic = vi.fn();
+    const signals = createSignals({
+      consent: { analytics: true, marketing: true, observability: false },
+      onDiagnostic,
+      providers: [
+        { name: 'analytics', category: 'analytics', send: analyticsSend },
+        { name: 'marketing', category: 'marketing', send: marketingSend },
+      ],
+    });
+    const result = await signals.track({
+      name: 'search',
+      eventId: 'synthetic-search',
+      properties: { search_term: 'sample@example.invalid +1 (202) 555-0100' },
+    });
+    expect(result.outcomes.map((outcome) => outcome.status)).toEqual(['invalid', 'invalid']);
+    expect(analyticsSend).not.toHaveBeenCalled();
+    expect(marketingSend).not.toHaveBeenCalled();
+    expect(JSON.stringify(onDiagnostic.mock.calls)).not.toContain('sample@example.invalid');
+  });
   it('coerces initial runtime consent and notifies adapters before any dispatch', async () => {
     const observed: boolean[] = [];
     const signals = createSignals({

@@ -367,6 +367,8 @@ All events are validated and sanitized before dispatch. Unknown properties are s
 
 `custom_event.properties.action` must match `^[a-z][a-z0-9_]{0,39}$`; invalid names are rejected before dispatch. Meta Pixel uses `trackSingleCustom` for custom names. GA4 receives `event_id`, and Meta Pixel/CAPI receive the corresponding event ID. Clarity's browser event API accepts only a name, so it does not receive an event-level ID or provide cross-platform deduplication. `page_view` starts Clarity's page/session capture without emitting an explicit Clarity event. All other listed events use Clarity's `event` API.
 
+`search_term`, `custom_event` `action`/`label`/`category`, `lead_type` and sign-up/login `method` reject email- or phone-like values; the whole event is dropped before provider dispatch. The shared contract check also catches common percent-encoded forms. A ten-digit identifier may be rejected as phone-like, so use short non-identifying categories for these fields. Pattern checks do not replace host-side privacy review of every event property.
+
 ### Example: Tracking leads and contacts
 
 ```ts

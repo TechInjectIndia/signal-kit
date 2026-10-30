@@ -12,6 +12,7 @@ import {
   positive,
   maximum,
   regex,
+  refine,
   union,
   literal,
 } from 'zod/mini';
@@ -81,6 +82,23 @@ export type CustomProperties = {
   value?: number;
 };
 export const CUSTOM_EVENT_ACTION_PATTERN = /^[a-z][a-z0-9_]{0,39}$/;
+const EMAIL_LIKE = /[^\s@]+@[^\s@]+/;
+const PHONE_LIKE = /\+?\p{Nd}(?:[\s().-]*\p{Nd}){9,}/u;
+/** Reject contact details in free-text event fields, including common URL-encoded forms. */
+export function containsContactPii(value: string): boolean {
+  let candidate = value;
+  for (let pass = 0; pass < 3; pass++) {
+    if (EMAIL_LIKE.test(candidate) || PHONE_LIKE.test(candidate)) return true;
+    try {
+      const decoded = decodeURIComponent(candidate);
+      if (decoded === candidate) break;
+      candidate = decoded;
+    } catch {
+      break;
+    }
+  }
+  return false;
+}
 type EventIdentity = { eventId?: string; timestamp?: number };
 export type EventInput = EventIdentity &
   (
@@ -134,6 +152,8 @@ export type DispatchResult = {
 };
 
 const text = string().check(minLength(1), maxLength(128));
+const noContactPii = refine<string>((value) => !containsContactPii(value));
+const freeText = string().check(minLength(1), maxLength(128), noContactPii);
 const amount = number().check(nonnegative());
 const currency = string().check(regex(/^[A-Z]{3}$/));
 const item = object({
@@ -182,30 +202,34 @@ const schemas = {
   generate_lead: object({
     value: optional(amount),
     currency: optional(currency),
-    lead_type: optional(text),
+    lead_type: optional(freeText),
   }),
   phone_click: object({ channel: optional(union([literal('whatsapp'), literal('phone')])) }),
   whatsapp_click: object({ channel: optional(union([literal('whatsapp'), literal('phone')])) }),
   sign_up: object({
-    method: optional(text),
+    method: optional(freeText),
   }),
   login: object({
-    method: optional(text),
+    method: optional(freeText),
   }),
   search: object({
-    search_term: string().check(minLength(1), maxLength(256)),
+    search_term: string().check(minLength(1), maxLength(256), noContactPii),
   }),
   custom_event: object({
-    action: string().check(regex(CUSTOM_EVENT_ACTION_PATTERN)),
-    category: optional(text),
-    label: optional(text),
+    action: string().check(regex(CUSTOM_EVENT_ACTION_PATTERN), noContactPii),
+    category: optional(freeText),
+    label: optional(freeText),
     value: optional(number()),
   }),
 };
 /** Also guard direct provider calls that bypass sanitizeEvent. */
 export function safeCustomEventAction(event: SignalEvent): string {
   const action = event.properties.action;
-  if (typeof action !== 'string' || !CUSTOM_EVENT_ACTION_PATTERN.test(action))
+  if (
+    typeof action !== 'string' ||
+    !CUSTOM_EVENT_ACTION_PATTERN.test(action) ||
+    containsContactPii(action)
+  )
     throw new Error('Invalid custom event action');
   return action;
 }
