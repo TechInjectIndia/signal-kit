@@ -6,15 +6,15 @@ Implementation baseline, 2026-10-05, under the founder's explicit end-to-end bui
 
 SignalKit ships embeddable libraries, no hosted service. Two independently runnable local consumer hosts: Next.js lab and Bun API/payment fixture. This is an explicit scope exception to a full application bootstrap: no empty standalone API/dashboard/database deployment. Hosts own identity, payment verification, storage, consent, retries, configuration and deployment.
 
-| Package                   | Consumer           | Responsibility                                  |
-| ------------------------- | ------------------ | ----------------------------------------------- |
-| @techinject/contracts     | all                | independent Zod schemas and DTOs                |
-| @techinject/core          | adapters           | consent, validation, dispatch, IDs, safe routes |
-| @techinject/browser       | browser/HTML hosts | pages, fetch/XHR and public providers           |
-| @techinject/server        | Node/Bun hosts     | request wrapper, outbound fetch, CAPI, OTLP     |
-| @techinject/nextjs        | Next browser       | root React provider/useSignals                  |
-| @techinject/nextjs-server | Next Node          | host OTel registration and safe error hook      |
-| @techinject/bun           | Bun                | Bun.serve fetch wrapper                         |
+| Package                   | Consumer           | Responsibility                                        |
+| ------------------------- | ------------------ | ----------------------------------------------------- |
+| @techinject/contracts     | all                | independent Zod schemas and DTOs                      |
+| @techinject/core          | adapters           | consent, validation, dispatch, IDs, safe routes       |
+| @techinject/browser       | browser/HTML hosts | pages, fetch/XHR, public providers, standalone bundle |
+| @techinject/server        | Node/Bun hosts     | request wrapper, outbound fetch, CAPI, OTLP           |
+| @techinject/nextjs        | Next browser       | root React provider/useSignals                        |
+| @techinject/nextjs-server | Next Node          | host OTel registration and safe error hook            |
+| @techinject/bun           | Bun                | Bun.serve fallback and route-table wrappers           |
 
 Packages are one portable signals feature family, with framework dependencies confined to adapters. Core imports contracts only; contracts imports Zod only. Client and server Next packages are separate dependency graphs. Consumers import public exports; ESM builds and declarations belong each leaf. No process.env reads in SDK core/adapters: hosts inject config. Bun demo alone owns SQLite fixture persistence; production persistence is not an SDK feature.
 
@@ -36,6 +36,8 @@ flowchart LR
 ## Trust and data boundaries
 
 Browser receives public IDs only. CAPI access token, OTLP headers, webhook secret and order database remain server-only. Raw bodies/headers/error messages never become telemetry. Routes sanitized; configure explicit templates for sensitive arbitrary slugs. Third-party scripts need host privacy/masking settings. No identity API or automatic matching data extraction.
+
+Contracts include the original ecommerce events and review-extension lead, contact, account, search and custom events. Unknown event properties are stripped; contact events accept a non-identifying channel, not a phone number or destination. Shared core URL sanitation removes query strings, fragments and credentials from provider URL metadata. The standalone browser bundle is experimental and starts denied by default; hosts connect their consent banner through `window.signals.setConsent(...)`. Bun route-table handlers are instrumented only when the host passes its table through `instrumentBunRoutes`.
 
 Marketing uses event IDs for business duplication; traces link technical requests only. Host verified order plus durable outbox decide purchase. Demo unique order outbox prevents repeated business-event creation, while retries remain at least once with stable IDs; distributed exactly-once delivery is not promised.
 

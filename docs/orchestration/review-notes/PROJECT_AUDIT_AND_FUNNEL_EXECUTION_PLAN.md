@@ -27,19 +27,19 @@ signal-kit/
 
 ### Deep Audit of Key Modules
 
-#### A. `@techinject/contracts` ([contracts/src/index.ts](../packages/features/signals/contracts/src/index.ts))
+#### A. `@techinject/contracts` ([contracts/src/index.ts](../../../packages/features/signals/contracts/src/index.ts))
 
 - **Event Types Defined:** `page_view`, `product_view`, `add_to_cart`, `begin_checkout`, `purchase`, `search`, `generate_lead`, `custom_event`.
 - **Validation:** Strict runtime parsing using Zod Mini (`text`, `amount`, `currency`, `item`, `commerce`).
 - **Consent Model:** Fully typed `Consent: { analytics: boolean; marketing: boolean; observability: boolean }`. Starts frozen in `DENIED_CONSENT` mode to satisfy GDPR / privacy mandates.
 
-#### B. `@techinject/core` ([core/src/index.ts](../packages/features/signals/core/src/index.ts))
+#### B. `@techinject/core` ([core/src/index.ts](../../../packages/features/signals/core/src/index.ts))
 
 - **Safe Routing (`safeRoute`):** Strips private query parameters, access tokens, and sensitive route segments before sending URLs to external analytics.
 - **Deterministic Event IDs (`generateId`):** Generates collision-resistant IDs (`sig_...`) for Meta Pixel $\leftrightarrow$ CAPI and GA4 deduplication.
 - **Dispatch Pipeline:** Validates payloads, filters by user consent, and dispatches concurrently to all authorized providers with a bounded 5-second deadline.
 
-#### C. `@techinject/browser` ([browser/src/providers.ts](../packages/features/signals/browser/src/providers.ts))
+#### C. `@techinject/browser` ([browser/src/providers.ts](../../../packages/features/signals/browser/src/providers.ts))
 
 - **GA4 Provider (`createGA4Provider`):**
   - Dynamically injects `https://www.googletagmanager.com/gtag/js?id=G-XXXXX`.
@@ -58,7 +58,7 @@ signal-kit/
 - **Microsoft Clarity Provider (`createClarityProvider`):**
   - Injects `https://www.clarity.ms/tag/...`.
   - Triggers named events for session recording and heatmap milestone tracking.
-- **SPA Navigation & Route Interception ([browser/src/index.ts](../packages/features/signals/browser/src/index.ts#L84-L100)):**
+- **SPA Navigation & Route Interception ([browser/src/index.ts](../../../packages/features/signals/browser/src/index.ts#L84-L100)):**
   - Monkey-patches `window.history.pushState` and `window.history.replaceState`.
   - Listens to `popstate`; listens to `hashchange` only when `trackHash: true` is configured.
   - Fires automatic `page_view` whenever the route changes without full page reload.
@@ -81,61 +81,13 @@ While the engine is complete, there are **5 critical gaps** preventing this from
 
 ## 3. Exact Code Changes Needed (Step-by-Step Implementation)
 
-### Change 1: Build the Complete 4-Step E-Commerce Funnel in `examples/nextjs`
+### Change 1: Keep the Client Funnel in `examples/nextjs` Through Checkout
 
-Currently, [`examples/nextjs/app/catalog/page.tsx`](../examples/nextjs/app/catalog/page.tsx) only has:
-
-```tsx
-track({ name: 'add_to_cart', properties: { ... } });
-```
-
-We need to expand the demo to include all 4 steps:
-
-1. **Step 1 (Product View):** Trigger `product_view` when the catalog component mounts:
-   ```tsx
-   useEffect(() => {
-     void track({
-       name: 'product_view',
-       properties: {
-         currency: 'INR',
-         value: 450,
-         items: [{ item_id: 'notebook', item_name: 'Field Notebook', price: 450, quantity: 1 }],
-       },
-     });
-   }, []);
-   ```
-2. **Step 2 (Add to Cart):** Button click triggers `add_to_cart` and increments cart count.
-3. **Step 3 (Begin Checkout):** "Proceed to Checkout" button triggers `begin_checkout`:
-   ```tsx
-   void track({
-     name: 'begin_checkout',
-     properties: {
-       currency: 'INR',
-       value: 450 * cartCount,
-       items: [
-         { item_id: 'notebook', item_name: 'Field Notebook', price: 450, quantity: cartCount },
-       ],
-     },
-   });
-   ```
-4. **Step 4 (Purchase Confirmation):** "Place Order" button triggers `purchase` with a unique transaction ID:
-   ```tsx
-   void track({
-     name: 'purchase',
-     properties: {
-       transaction_id: `ORD_${Date.now()}`,
-       currency: 'INR',
-       value: 450 * cartCount,
-       items: [
-         { item_id: 'notebook', item_name: 'Field Notebook', price: 450, quantity: cartCount },
-       ],
-     },
-   });
-   ```
+The [catalog lab](../../../examples/nextjs/app/catalog/page.tsx) lets visitors trigger `product_view`, `add_to_cart`, and `begin_checkout`. It stops at checkout. Do not emit `purchase` from a browser button or invent a transaction ID. Purchases must originate from verified server state; the [Bun signed-webhook example](../../../examples/bun/src/index.ts) shows the server-side path.
 
 ### Change 2: Connect Live GA4 in `examples/nextjs/app/shell.tsx`
 
-Replace the demo's local mock with live providers when `NEXT_PUBLIC_GA4_ID` is present:
+Keep the local demo recorders and add a GA4 provider only when `NEXT_PUBLIC_GA4_ID` is present:
 
 ```tsx
 import {
@@ -157,7 +109,7 @@ const providers = [
 
 ### Change 3: Build the Universal Standalone Bundle (`signalkit.bundle.js`)
 
-Update [`scripts/build-cdn.mjs`](../scripts/build-cdn.mjs) to produce both an ESM module and a browser IIFE bundle:
+Update [`scripts/build-cdn.mjs`](../../../scripts/build-cdn.mjs) to produce both an ESM module and a browser IIFE bundle:
 
 ```javascript
 // Standalone IIFE bundle for plain HTML, PHP, Shopify, WordPress
@@ -179,7 +131,7 @@ await build({
 
 ### How the Script Loads Under the Hood
 
-In [`packages/features/signals/browser/src/providers.ts`](../packages/features/signals/browser/src/providers.ts#L130-L160):
+In [`packages/features/signals/browser/src/providers.ts`](../../../packages/features/signals/browser/src/providers.ts#L130-L160):
 
 1. **Dynamic DOM Injection:**
    ```javascript
@@ -412,7 +364,7 @@ For any HTML/CSS button where developers do not want to write JavaScript:
 1. In `examples/nextjs/app/catalog/page.tsx`:
    - Add `product_view` on component mount.
    - Add a "Checkout" button firing `begin_checkout`.
-   - Add a "Confirm Purchase" button firing `purchase`.
+   - Stop the client demo at checkout. Emit `purchase` only after verified server state; see the [Bun signed-webhook example](../../../examples/bun/src/index.ts).
 2. In `examples/nextjs/app/shell.tsx`:
    - Replace mock provider with `createGA4Provider` using `process.env.NEXT_PUBLIC_GA4_ID`.
 
@@ -429,7 +381,7 @@ For any HTML/CSS button where developers do not want to write JavaScript:
    - View Notebook $\rightarrow$ `view_item` appears in DebugView.
    - Click "Add to Cart" $\rightarrow$ `add_to_cart` appears.
    - Click "Proceed to Checkout" $\rightarrow$ `begin_checkout` appears.
-   - Click "Place Order" $\rightarrow$ `purchase` appears.
+   - The client lab does not emit `purchase`. Verify a server-confirmed purchase separately with the [Bun signed-webhook example](../../../examples/bun/src/index.ts).
 
 ### Phase 3: GA4 Funnel Report Setup
 

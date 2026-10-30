@@ -351,8 +351,8 @@ To see where users went before and after checkout:
 
 ### 1. Purchase Reliability (Server-Side vs. Client-Side)
 
-- **Problem:** Users may close the browser tab immediately after payment, causing the client `purchase` event to drop.
-- **Solution:** Verify purchases via server webhook (e.g., Razorpay/Stripe webhook) and emit a server-side `purchase` event with the exact same `eventId` and `transaction_id`.
+- **Problem:** A client button or success page cannot prove payment and can emit a false `purchase`.
+- **Solution:** Verify purchases via server webhook (e.g., Razorpay/Stripe webhook) and emit `purchase` only from verified server state, with a stable `eventId` and `transaction_id`.
 
 ### 2. Event Deduplication
 
@@ -371,11 +371,11 @@ To see where users went before and after checkout:
 
 ## 10. Implementation Roadmap & Timeline
 
-| Phase                     | Task                                                                | Target Timeline   | Deliverable                     |
-| :------------------------ | :------------------------------------------------------------------ | :---------------- | :------------------------------ |
-| **Phase 1: Setup**        | Collect GA4 Measurement IDs and Meta Pixel IDs per project          | Day 1 (Morning)   | Credentials list                |
-| **Phase 2: Core SDK**     | Build universal browser bundle with `data-signal` auto-listener     | Day 1 (Midday)    | `dist/signalkit.bundle.js`      |
-| **Phase 3: Integration**  | Inject script / providers into target projects (Next.js & HTML/PHP) | Day 1 (Afternoon) | Root layout injection           |
-| **Phase 4: Events**       | Wire `product_view`, `add_to_cart`, `begin_checkout`, `purchase`    | Day 1 (Evening)   | Catalog, Cart, & Checkout wired |
-| **Phase 5: Verification** | Test via GA4 DebugView and Chrome GA Debugger extension             | Day 2 (Morning)   | Verified event stream in GA4    |
-| **Phase 6: Reporting**    | Build Funnel Exploration & Path Exploration reports in GA4          | Day 2 (Midday)    | Completed visual funnels        |
+| Phase                     | Task                                                                | Target Timeline   | Deliverable                       |
+| :------------------------ | :------------------------------------------------------------------ | :---------------- | :-------------------------------- |
+| **Phase 1: Setup**        | Collect GA4 Measurement IDs and Meta Pixel IDs per project          | Day 1 (Morning)   | Credentials list                  |
+| **Phase 2: Core SDK**     | Build universal browser bundle with `data-signal` auto-listener     | Day 1 (Midday)    | `dist/signalkit.bundle.js`        |
+| **Phase 3: Integration**  | Inject script / providers into target projects (Next.js & HTML/PHP) | Day 1 (Afternoon) | Root layout injection             |
+| **Phase 4: Events**       | Wire client view/cart/checkout; verify server purchase              | Day 1 (Evening)   | Catalog, Cart, Checkout & webhook |
+| **Phase 5: Verification** | Test via GA4 DebugView and Chrome GA Debugger extension             | Day 2 (Morning)   | Verified event stream in GA4      |
+| **Phase 6: Reporting**    | Build Funnel Exploration & Path Exploration reports in GA4          | Day 2 (Midday)    | Completed visual funnels          |

@@ -6,8 +6,7 @@ import { useDemo } from '../shell';
 export default function Catalog() {
   const { track } = useDemo();
   const [cartCount, setCartCount] = useState(0);
-  const [step, setStep] = useState<'browse' | 'cart' | 'checkout' | 'purchased'>('browse');
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [step, setStep] = useState<'browse' | 'cart' | 'checkout'>('browse');
 
   // Step 1: Product View (maps to view_item in GA4)
   const handleProductView = () => {
@@ -73,35 +72,8 @@ export default function Catalog() {
     });
   };
 
-  // Step 4: Complete Purchase (maps to purchase in GA4)
-  const handlePurchase = () => {
-    const id = `ORD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    setOrderId(id);
-    setStep('purchased');
-    void track({
-      name: 'purchase',
-      properties: {
-        transaction_id: id,
-        currency: 'INR',
-        value: 450 * (cartCount || 1),
-        shipping: 0,
-        tax: 0,
-        items: [
-          {
-            item_id: 'notebook',
-            item_name: 'Field notebook',
-            price: 450,
-            quantity: cartCount || 1,
-            item_category: 'Stationery',
-          },
-        ],
-      },
-    });
-  };
-
   const handleReset = () => {
     setCartCount(0);
-    setOrderId(null);
     setStep('browse');
   };
 
@@ -114,8 +86,8 @@ export default function Catalog() {
         field notebook.
       </h1>
       <p className="intro">
-        Interactive 4-stage ecommerce funnel: <code>view_item</code> → <code>add_to_cart</code> →{' '}
-        <code>begin_checkout</code> → <code>purchase</code>.
+        Interactive client funnel: <code>view_item</code> → <code>add_to_cart</code> →{' '}
+        <code>begin_checkout</code>. Purchase requires verified server state.
       </p>
 
       {/* Funnel Progress Indicator */}
@@ -153,21 +125,11 @@ export default function Catalog() {
           style={{
             padding: '6px 10px',
             borderRadius: '4px',
-            background: step === 'checkout' || step === 'purchased' ? '#d9ef67' : '#e8ede5',
+            background: step === 'checkout' ? '#d9ef67' : '#e8ede5',
             color: '#1e302b',
           }}
         >
           3. Checkout
-        </span>
-        <span
-          style={{
-            padding: '6px 10px',
-            borderRadius: '4px',
-            background: step === 'purchased' ? '#d9ef67' : '#e8ede5',
-            color: '#1e302b',
-          }}
-        >
-          4. Purchase {orderId ? `✓` : ''}
         </span>
       </div>
 
@@ -181,32 +143,7 @@ export default function Catalog() {
           <h2>Field notebook</h2>
           <p>INR 450.00 · demonstration product</p>
 
-          {step === 'purchased' ? (
-            <div
-              style={{
-                border: '1px solid #1e302b',
-                padding: '18px',
-                borderRadius: '4px',
-                background: '#e0ecb8',
-                maxWidth: '380px',
-              }}
-            >
-              <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>
-                🎉 Order Placed Successfully!
-              </p>
-              <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontFamily: 'monospace' }}>
-                Order ID: <strong>{orderId}</strong>
-                <br />
-                Amount: INR {450 * (cartCount || 1)}.00
-              </p>
-              <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#437954' }}>
-                ✓ <code>purchase</code> event dispatched to GA4 with transaction ID.
-              </p>
-              <button className="action" style={{ margin: 0 }} onClick={handleReset}>
-                ↺ Test Funnel Again
-              </button>
-            </div>
-          ) : step === 'checkout' ? (
+          {step === 'checkout' ? (
             <div
               style={{
                 border: '1px solid #d3d8ce',
@@ -222,10 +159,13 @@ export default function Catalog() {
                 <br />
                 Total: <strong>INR {450 * (cartCount || 1)}.00</strong>
               </p>
+              <p style={{ fontSize: '13px' }}>
+                This lab stops at checkout. A purchase must come from a verified server webhook.{' '}
+                <a href="https://github.com/TechInjectIndia/signal-kit/blob/main/examples/bun/src/index.ts">
+                  See the Bun signed-webhook example.
+                </a>
+              </p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button className="action" style={{ margin: 0 }} onClick={handlePurchase}>
-                  Complete Purchase (Pay Now) →
-                </button>
                 <button
                   style={{
                     background: 'transparent',
@@ -291,8 +231,9 @@ export default function Catalog() {
 
       <p className="note">
         In real production stores, <code>product_view</code> fires on page load,{' '}
-        <code>add_to_cart</code> on cart buttons, <code>begin_checkout</code> on checkout entry, and{' '}
-        <code>purchase</code> from verified server webhooks.
+        <code>add_to_cart</code> on cart buttons, and <code>begin_checkout</code> on checkout entry.
+        Purchases must originate from verified server state; see the Bun signed-webhook example
+        above.
       </p>
     </section>
   );

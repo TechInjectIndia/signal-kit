@@ -26,19 +26,7 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
   const config = useMemo<BrowserConfig>(() => {
     const append = (line: string) => setLines((previous) => [line, ...previous].slice(0, 30));
 
-    let ga4Id = process.env.NEXT_PUBLIC_GA4_ID;
-    if (!ga4Id && typeof window !== 'undefined') {
-      try {
-        const queryId = new URLSearchParams(window.location.search).get('ga4_id');
-        if (queryId && /^G-[A-Z0-9]+$/.test(queryId)) {
-          ga4Id = queryId;
-          sessionStorage.setItem('signalkit_ga4_id', queryId);
-        } else {
-          const stored = sessionStorage.getItem('signalkit_ga4_id');
-          if (stored && /^G-[A-Z0-9]+$/.test(stored)) ga4Id = stored;
-        }
-      } catch {}
-    }
+    const ga4Id = process.env.NEXT_PUBLIC_GA4_ID;
 
     const providers: BrowserConfig['providers'] = [
       {

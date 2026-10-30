@@ -83,7 +83,42 @@ const signals = createServerSignals({
 Bun.serve({ fetch: instrumentBunFetch(signals, async (req) => Response.json({ ok: true })) });
 ```
 
-Wrap every Bun routes-table handler too: routes bypass fallback fetch. Supply routeResolver for arbitrary dynamic/sensitive slugs. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Browser flush now waits for bounded observer records and its optional flush hook; browser observer deadlines default to2s and use timeoutMs when supplied (clamped1–30,000ms), separately from the core default5s dispatch deadline. Server telemetry preserves valid existing outbound traceparent IDs in emitted records. Configure observer errors/onDiagnostic for overload/rejection visibility. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
+Declarative Bun routes bypass fallback fetch. Pass the routes table through `instrumentBunRoutes` to capture both direct handlers and method-map handlers with their route patterns:
+
+```ts
+import { instrumentBunRoutes } from '@techinject/bun';
+
+Bun.serve({
+  routes: instrumentBunRoutes(signals, {
+    '/orders/:id': {
+      GET: () => Response.json({ ok: true }),
+    },
+  }),
+  fetch: instrumentBunFetch(signals, () => new Response('Not found', { status: 404 })),
+});
+```
+
+Supply routeResolver for arbitrary dynamic/sensitive slugs in the fallback handler. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Browser flush now waits for bounded observer records and its optional flush hook; browser observer deadlines default to2s and use timeoutMs when supplied (clamped1–30,000ms), separately from the core default5s dispatch deadline. Server telemetry preserves valid existing outbound traceparent IDs in emitted records. Configure observer errors/onDiagnostic for overload/rejection visibility. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
+
+## Experimental standalone browser bundle
+
+The browser build produces `packages/features/signals/browser/dist/cdn/signalkit.global.js` for a plain script tag. This is an experimental bundle, not a verified HTML, PHP, Shopify or WordPress integration. Use only public provider IDs:
+
+```html
+<script src="/assets/signalkit.global.js" data-ga4-id="G-YOURID"></script>
+```
+
+With no `data-auto-consent` attribute, all consent categories start denied. Connect the host consent banner to the visitor's actual choices after the script loads:
+
+```js
+window.signals.setConsent({
+  analytics: analyticsAllowed,
+  marketing: marketingAllowed,
+  observability: observabilityAllowed,
+});
+```
+
+Only `data-auto-consent="true"` pregrants all three categories, so use it solely when the host has already established that consent. Denied events are dropped and never replayed. The bundle can also listen for supported `[data-signal]` clicks; host code should still track verified purchases from trusted server state.
 
 ## Verified purchase and provider delivery
 
