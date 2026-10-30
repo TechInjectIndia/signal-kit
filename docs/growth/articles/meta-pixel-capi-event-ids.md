@@ -19,11 +19,11 @@ Clone and build the workspace, then run its Next.js and Bun labs. The local insp
 ```sh
 git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
-pnpm install --frozen-lockfile
-pnpm build
-pnpm --filter @signalkit/example-nextjs dev
+bun install --frozen-lockfile
+bun run build
+bun run --filter @signalkit/example-nextjs dev
 # In another terminal from repository root:
-pnpm --filter @signalkit/example-bun dev
+bun run --filter @signalkit/example-bun dev
 ```
 
 ## Configure the public Pixel ID in the browser

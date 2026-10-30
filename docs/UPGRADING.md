@@ -17,12 +17,13 @@ All nine `@techinject` packages share one exact version. Install only the packag
 Current published release:
 
 ```sh
+# Use any package manager: npm shown; pnpm add --save-exact, yarn add --exact and bun add --exact work the same way.
 # Next.js
-pnpm add --save-exact @techinject/nextjs@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2
+npm install --save-exact @techinject/nextjs@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2
 # SvelteKit
-pnpm add --save-exact @techinject/sveltekit@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2
+npm install --save-exact @techinject/sveltekit@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2
 # Bun
-pnpm add --save-exact @techinject/bun@0.1.0-alpha.2
+npm install --save-exact @techinject/bun@0.1.0-alpha.2
 ```
 
 Update optional server adapters and other directly installed SDK packages to the same version. Check the release's framework/runtime compatibility, run your app's tests, check consent withdrawal, page/API instrumentation and the connections dashboard, then rebuild and deploy. Never send fake purchases to verify an upgrade. Dependabot or Renovate can open update PRs in consumer repositories; consumers must configure these separately.
@@ -43,7 +44,7 @@ The CDN module includes the browser SDK and dashboard without external package i
 
 ## Source / local packages
 
-Fetch the reviewed GitHub release commit or `vVERSION` tag when it exists, install with the lockfile and rebuild. Regenerate local tarballs with `pnpm release:prepare` and replace the consumer's local dependencies. Copying a package folder once does not subscribe it to future updates.
+Fetch the reviewed GitHub release commit or `vVERSION` tag when it exists, install with the lockfile and rebuild. Regenerate local tarballs with `bun run release:prepare` and replace the consumer's local dependencies. Copying a package folder once does not subscribe it to future updates.
 
 ## Rollback and version policy
 

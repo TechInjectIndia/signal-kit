@@ -13,7 +13,7 @@ Read README.md, docs/PRD.md, CONTRIBUTING.md, and SECURITY.md before editing.
 - Use injected configuration; avoid machine-specific paths and secrets.
 - No real customer payloads or credentials in fixtures, issues, examples, or logs.
 - Update docs and compatibility evidence with behavior changes.
-- Run pnpm check/format:check/build/typecheck/test/test:boundaries and affected runtime checks. Local socket tests require permission to listen.
+- Run bun run check/format:check/build/typecheck/test/test:boundaries and affected runtime checks. Local socket tests require permission to listen.
 - Do not publish npm packages, create release tags, or widen provider support without an explicitly authorized release and completed release checklist.
 
 <!-- BEGIN:turborepo-agent-rules -->

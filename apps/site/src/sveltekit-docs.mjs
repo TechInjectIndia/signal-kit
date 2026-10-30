@@ -36,13 +36,13 @@ export const sveltekitPage = {
     {
       title: 'Build and try the local lab',
       paragraphs: [
-        'Alpha 0.1.0-alpha.2 is published on npm. Pin @techinject/sveltekit, @techinject/browser and any server adapter to this version, or use the source lab with Node 22 and pnpm 10.24.0. The fixture uses SvelteKit 3.0.1, Svelte 5.57.2 and adapter-node 6.0.0. Kit 2 and Edge are not certified by this build.',
+        'Alpha 0.1.0-alpha.2 is published on npm. Pin @techinject/sveltekit, @techinject/browser and any server adapter to this version, or use the source lab with Bun 1.4.4 or newer. The fixture uses SvelteKit 3.0.1, Svelte 5.57.2 and adapter-node 6.0.0. Kit 2 and Edge are not certified by this build.',
       ],
       code: `git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
-pnpm install --frozen-lockfile
-pnpm build
-pnpm --filter @signalkit/example-sveltekit dev
+bun install --frozen-lockfile
+bun run build
+bun run --filter @signalkit/example-sveltekit dev
 # http://127.0.0.1:3400`,
       label: 'Terminal',
     },
@@ -88,7 +88,7 @@ pnpm --filter @signalkit/example-sveltekit dev
     {
       title: 'Verify behavior and boundaries',
       paragraphs: [
-        'Run pnpm test:sveltekit after building. The real Node production app checks SSR/hydration, navigation page counts, consent withdrawal, commerce/request records and internal-fetch trace correlation.',
+        'Run bun run test:sveltekit after building. The real Node production app checks SSR/hydration, navigation page counts, consent withdrawal, commerce/request records and internal-fetch trace correlation.',
         'Prerender can invoke handle; use denied policy during builds when appropriate. Static assets and platform requests outside the hook pipeline are not included. Streaming/background work after resolve is outside the request lifecycle. Flush is bounded and best effort; the host owns durable purchases and retries. Live provider matching, attribution and delivery remain unverified.',
       ],
       links: [

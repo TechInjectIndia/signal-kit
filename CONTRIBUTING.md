@@ -4,20 +4,20 @@ SignalKit has a local SDK implementation and Next/Bun fixtures; npm publication 
 
 ## Local workflow
 
-Use Node.js 22 and pnpm 10.
+Use Bun 1.4.4 or newer (`.bun-version`). Node.js 22 is only needed to run `bun run test:consumers`, which checks client apps on npm, pnpm and yarn.
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm check
-pnpm build
-pnpm typecheck
-pnpm test
-pnpm test:boundaries
-pnpm format:check
-pnpm format
+bun install --frozen-lockfile
+bun run check
+bun run build
+bun run typecheck
+bun run test
+bun run test:boundaries
+bun run format:check
+bun run format
 ```
 
-These commands cover repository hygiene, builds, types and local/unit runtime behavior. Use pnpm test:e2e and pnpm test:next-otel for Next browser and local collector verification. They do not establish live provider delivery, attribution or universal production compatibility.
+These commands cover repository hygiene, builds, types and local/unit runtime behavior. Use bun run test:e2e and bun run test:next-otel for Next browser and local collector verification. They do not establish live provider delivery, attribution or universal production compatibility.
 
 ## Pull requests
 
