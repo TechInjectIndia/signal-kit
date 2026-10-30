@@ -1,6 +1,6 @@
 # SignalKit integration
 
-These packages are local workspace packages, not yet available on npm. Build the cloned repo first. ESM exports/declarations live in each dist directory. Pack them with bun pm pack (or npm pack) to test outside this workspace; do not publish before the release checklist.
+These packages are local workspace packages, not yet available on npm. Build the cloned repo first. ESM exports/declarations live in each dist directory. Pack them with bun pm pack, which rewrites workspace:\* dependency ranges (npm pack does not), to test outside this workspace; do not publish before the release checklist.
 
 ## Platform availability
 

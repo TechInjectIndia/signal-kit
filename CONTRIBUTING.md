@@ -4,7 +4,7 @@ SignalKit has a local SDK implementation and Next/Bun fixtures; npm publication 
 
 ## Local workflow
 
-Use Bun 1.4.4 or newer (`.bun-version`). Node.js 22 is only needed to run `bun run test:consumers`, which checks client apps on npm, pnpm and yarn.
+Use Bun 1.4.4 or newer (`.bun-version`). Node.js 22 with npm is also needed for `bun run test:consumers` (client apps on npm, pnpm and yarn), `bun run test:sveltekit` (the SvelteKit production app runs on real Node), and the generated `artifacts/<version>/install-local.mjs` installer, which uses npm.
 
 ```sh
 bun install --frozen-lockfile
