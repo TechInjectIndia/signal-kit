@@ -5,7 +5,8 @@ export default defineConfig({
   timeout: 30000,
   use: { baseURL: 'http://127.0.0.1:3400' },
   webServer: {
-    command: 'pnpm --filter @signalkit/example-sveltekit exec node build/index.js',
+    command: 'bun run start',
+    cwd: 'examples/sveltekit',
     url: 'http://127.0.0.1:3400',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,
