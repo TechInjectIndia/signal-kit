@@ -41,7 +41,7 @@ Browser observer capacity tests verify that a 33rd pending record is dropped wit
 
 The Next.js lab smoke test checks that its browser shell reads fake public IDs from the root config without a GA4 environment lookup or server credentials. Its browser demo configures all three external adapters; the SvelteKit lab keeps them disabled by default. Browser tests verify three-provider dispatch, shared SDK event ID and mapped calls with simulated script loads. These checks are not live GA4, Meta or Clarity verification.
 
-Meta CAPI injected-transport tests verify field-specific plaintext normalization and SHA-256 hashing for city, postal code, country, date of birth and gender, plus rejection of invalid country/date input. Live match quality remains unverified.
+Meta CAPI injected-transport tests verify that only prehashed SHA-256 `em`, `ph` and `external_id` (or validated cookies) reach the payload. Plaintext and extra matching fields are rejected, and the case-sensitive external ID hash is passed through. Live match quality remains unverified.
 
 Server tests verify that relative fetch trace propagation requires `traceRelative: true`; magic `traceOrigins` entries do not enable it, and absolute third-party origins remain denied.
 

@@ -1,5 +1,4 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { createHash } from 'node:crypto';
 import { createSignals, safeRoute, safeProviderUrl, parseTraceparent } from '@techinject/core';
 import { safeCustomEventAction } from '@techinject/contracts';
 import type {
@@ -223,89 +222,26 @@ export interface MetaCapiOptions {
   endpoint?: string;
   fetch?: typeof globalThis.fetch;
   testEventCode?: string;
-  /** SHA-256 hashed matching data (or supported plaintext normalized before hashing) and validated cookies/IP/UA. */
-  userData?: () => Record<string, unknown>;
+  /** Prehashed SHA-256 em/ph/external_id or validated fbp/fbc only. */
+  userData?: () => Record<string, string | string[]>;
   eventSourceUrl?: string;
 }
-function sha256(val: string): string {
-  return createHash('sha256').update(val).digest('hex');
-}
-function hashPhone(val: string): string {
-  const trimmed = val.trim();
-  if (/^[a-f0-9]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
-  const digits = trimmed.replace(/\D/g, '');
-  return createHash('sha256').update(digits).digest('hex');
-}
-const HASHED_FIELDS = ['em', 'fn', 'ln', 'ct', 'zp', 'country', 'db', 'ge', 'external_id'] as const;
-type HashedField = (typeof HASHED_FIELDS)[number];
-function normalizeMatchingValue(key: HashedField, value: string): string {
-  const normalized = value.trim().toLowerCase();
-  if (!normalized) throw new Error('Invalid matching data');
-  switch (key) {
-    case 'ct': {
-      const city = normalized.replace(/[^\p{L}]/gu, '');
-      if (!city) throw new Error('Invalid matching data');
-      return city;
-    }
-    case 'zp': {
-      const postalCode = normalized.replace(/\s/g, '').split('-')[0] ?? '';
-      if (!postalCode) throw new Error('Invalid matching data');
-      return postalCode;
-    }
-    case 'country': {
-      const country = normalized.replace(/[^a-z]/g, '');
-      if (!/^[a-z]{2}$/.test(country)) throw new Error('Invalid matching data');
-      return country;
-    }
-    case 'db': {
-      const birthDate = /^\d{4}-\d{2}-\d{2}$/.test(normalized)
-        ? normalized.replace(/-/g, '')
-        : normalized;
-      if (!/^\d{8}$/.test(birthDate)) throw new Error('Invalid matching data');
-      const year = Number(birthDate.slice(0, 4));
-      const month = Number(birthDate.slice(4, 6));
-      const day = Number(birthDate.slice(6, 8));
-      const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-      const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-      if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]!)
-        throw new Error('Invalid matching data');
-      return birthDate;
-    }
-    case 'ge':
-      if (normalized === 'male') return 'm';
-      if (normalized === 'female') return 'f';
-      if (normalized !== 'm' && normalized !== 'f') throw new Error('Invalid matching data');
-      return normalized;
-    default:
-      return normalized;
-  }
-}
-function safeUserData(input: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const key of HASHED_FIELDS) {
+function safeUserData(input: Record<string, string | string[]>): Record<string, string | string[]> {
+  const result: Record<string, string | string[]> = {};
+  for (const key of ['em', 'ph', 'external_id']) {
     const raw = input[key];
-    if (raw === undefined || raw === null) continue;
+    if (raw === undefined) continue;
     const values = Array.isArray(raw) ? raw : [raw];
-    if (values.length > 10) throw new Error('Invalid hashed matching data');
-    result[key] = values.map((val) => {
-      if (typeof val !== 'string') throw new Error('Invalid hashed matching data');
-      const trimmed = val.trim();
-      if (/^[a-f0-9]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
-      return sha256(normalizeMatchingValue(key, trimmed));
-    });
-  }
-  if (input.ph !== undefined && input.ph !== null) {
-    const raw = input.ph;
-    const values = Array.isArray(raw) ? raw : [raw];
-    if (values.length > 10) throw new Error('Invalid hashed matching data');
-    result.ph = values.map((val) => {
-      if (typeof val !== 'string') throw new Error('Invalid hashed matching data');
-      return hashPhone(String(val));
-    });
+    if (
+      values.length > 10 ||
+      !values.every((value) => typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value))
+    )
+      throw new Error('Invalid hashed matching data');
+    result[key] = values;
   }
   for (const key of ['fbp', 'fbc'] as const) {
     const value = input[key];
-    if (value !== undefined && value !== null) {
+    if (value !== undefined) {
       if (
         typeof value !== 'string' ||
         value.length > 256 ||
@@ -315,22 +251,7 @@ function safeUserData(input: Record<string, unknown>): Record<string, unknown> {
       result[key] = value;
     }
   }
-  for (const key of ['client_ip_address', 'client_user_agent'] as const) {
-    const value = input[key];
-    if (value !== undefined && value !== null) {
-      if (typeof value !== 'string' || value.length > 512) throw new Error(`Invalid ${key}`);
-      result[key] = value;
-    }
-  }
-  const ALLOWED_KEYS = new Set([
-    ...HASHED_FIELDS,
-    'ph',
-    'fbp',
-    'fbc',
-    'client_ip_address',
-    'client_user_agent',
-  ]);
-  if (Object.keys(input).some((key) => !ALLOWED_KEYS.has(key)))
+  if (Object.keys(input).some((key) => !['em', 'ph', 'external_id', 'fbp', 'fbc'].includes(key)))
     throw new Error('Unsupported matching data');
   if (Object.keys(result).length === 0) throw new Error('Matching data required');
   return result;

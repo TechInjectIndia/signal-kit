@@ -154,19 +154,13 @@ Host code should still track verified purchases from trusted server state.
 
 Store eventId with the trusted host order. Browser and server copies both emit purchase using same eventId and transaction_id. Verify payment signatures and captured/paid state against trusted order currency/amount; never trust a client success page. The Bun example shows raw HMAC and a durable local SQLite outbox with replay tests. Production applications supply their own persistence, per-user consent, signed webhook rotation, currency exponents and order line items.
 
-createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and a userData callback. Matching fields may be prehashed SHA-256 hex or plaintext normalized by the adapter before hashing. The adapter rejects unsupported fields and invalid country/date/gender formats. Plaintext rules are:
+createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and a userData callback. Supply only SHA-256 prehashed `em`, `ph` and `external_id`, or validated `fbp`/`fbc` cookies. Plaintext values and other matching fields are rejected. The host normalizes and hashes before calling the adapter:
 
-| Field                           | Normalization before SHA-256                                                               |
-| :------------------------------ | :----------------------------------------------------------------------------------------- |
-| `em`, `fn`, `ln`, `external_id` | Trim and lowercase.                                                                        |
-| `ph`                            | Keep digits only. Include the country calling code in the host value.                      |
-| `ct`                            | Lowercase and remove spaces, digits and punctuation.                                       |
-| `zp`                            | Lowercase, remove whitespace and discard the suffix after `-`.                             |
-| `country`                       | Lowercase two-letter ISO country code; host supplies the correct code, not a country name. |
-| `db`                            | `YYYYMMDD`; `YYYY-MM-DD` is converted and invalid calendar dates are rejected.             |
-| `ge`                            | `m` or `f`; `male` and `female` are converted.                                             |
+- Normalize `ph` to E.164 with the country calling code (for example, synthetic `+12025550199`), then remove the leading `+` and SHA-256 hash the remaining digits. Supply that hash as `ph`.
+- Use the **exact same case-sensitive `external_id` preimage** as the Pixel before SHA-256 hashing. Do not lowercase it or the Pixel and CAPI hashes may differ.
+- Normalize `em` under Meta's email rules before SHA-256 hashing.
 
-Already hashed 64-character hex values pass through without rehashing. `fbp`/`fbc` are validated rather than hashed; IP address and user agent are passed through when explicitly supplied. These rules follow Meta's server-side SDK [normalization](https://github.com/meta/facebook-python-business-sdk/blob/main/facebook_business/adobjects/serverside/normalize.py) and [field formats](https://github.com/meta/facebook-python-business-sdk/blob/main/facebook_business/adobjects/serverside/user_data.py). Hashes remain personal data; host supplies consent/retention policy and must provide correctly normalized input where local conventions matter. No access token belongs browser config. A stable event ID enables Meta dedup but actual matching/dedup is unverified until sandbox/live tests.
+The adapter passes valid 64-character SHA-256 hex values through without rehashing; it validates `fbp`/`fbc` without hashing. Extra plaintext normalization and matching fields (`fn`, `ln`, `ct`, `zp`, `country`, `db`, `ge`, IP address and user agent) need a separate owner-approved PR. Hashes remain personal data; the host supplies consent and retention policy. No access token belongs in browser config. A stable event ID enables Meta dedup, but actual matching and dedup remain unverified until sandbox or live tests.
 
 Default denied consent drops data without replay; resource limits drop overload. Custom providers should honour AbortSignal and implement setConsent/dispose. Telemetry delivery is best effort; persisted outbox/retry belongs host. GA4 page location/referrer and Meta CAPI event source URL omit query strings and fragments. Safe route heuristics cannot remove every sensitive pathname: supply templates/exclusions and avoid PII in named commerce fields. External scripts can inspect host URL/DOM/cookies independently.
 

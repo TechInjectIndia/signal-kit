@@ -174,19 +174,28 @@ describe('Meta CAPI', () => {
       properties: { action: 'video_play' },
     });
     expect(payload.data[0].event_name).toBe('video_play');
-    const autoHashed = createMetaCapiProvider({
+    const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+    const prehashed = createMetaCapiProvider({
       pixelId: '123',
       accessToken: 'synthetic',
       endpoint: 'https://collector.test/',
-      userData: () => ({ em: 'raw@example.test', client_ip_address: '1.2.3.4' }),
+      userData: () => ({
+        em: hash('sample@example.test'),
+        ph: hash('12025550199'),
+        external_id: hash('CustomerAbC'),
+      }),
       fetch: async (_url, init) => {
         payload = JSON.parse(init!.body as string);
         return Response.json({ events_received: 1 });
       },
     });
-    await autoHashed.send(event);
-    expect(payload.data[0].user_data.em[0]).toHaveLength(64);
-    expect(payload.data[0].user_data.client_ip_address).toBe('1.2.3.4');
+    await prehashed.send(event);
+    expect(payload.data[0].user_data).toMatchObject({
+      em: [hash('sample@example.test')],
+      ph: [hash('12025550199')],
+      external_id: [hash('CustomerAbC')],
+    });
+    expect(payload.data[0].user_data.external_id[0]).not.toBe(hash('customerabc'));
 
     const invalidMatching = createMetaCapiProvider({
       pixelId: '123',
@@ -196,43 +205,38 @@ describe('Meta CAPI', () => {
     });
     await expect(invalidMatching.send(event)).rejects.toThrow('Invalid hashed');
   });
-  it('normalizes plaintext matching fields before hashing', async () => {
-    let payload: any;
-    const hash = (value: string) => createHash('sha256').update(value).digest('hex');
-    const provider = createMetaCapiProvider({
-      pixelId: '123',
-      accessToken: 'synthetic',
-      endpoint: 'https://collector.test/',
-      userData: () => ({
-        em: ' Sample@Example.Test ',
-        ct: 'New York',
-        zp: '94025-1234',
-        country: 'US',
-        db: '1990-12-31',
-        ge: 'Female',
-      }),
-      fetch: async (_url, init) => {
-        payload = JSON.parse(init!.body as string);
-        return Response.json({ events_received: 1 });
-      },
-    });
-    await provider.send(event);
-    expect(payload.data[0].user_data).toMatchObject({
-      em: [hash('sample@example.test')],
-      ct: [hash('newyork')],
-      zp: [hash('94025')],
-      country: [hash('us')],
-      db: [hash('19901231')],
-      ge: [hash('f')],
-    });
-    for (const userData of [{ country: 'United States' }, { db: '1990-02-30' }]) {
+  it('rejects plaintext and matching fields outside the approved CAPI allowlist', async () => {
+    for (const userData of [
+      { em: 'raw@example.test' },
+      { external_id: 'CustomerAbC' },
+      { ph: '+12025550199' },
+    ]) {
       const invalid = createMetaCapiProvider({
         pixelId: '123',
         accessToken: 'synthetic',
         endpoint: 'https://collector.test/',
         userData: () => userData,
       });
-      await expect(invalid.send(event)).rejects.toThrow('Invalid matching data');
+      await expect(invalid.send(event)).rejects.toThrow('Invalid hashed matching data');
+    }
+    for (const key of [
+      'fn',
+      'ln',
+      'ct',
+      'zp',
+      'country',
+      'db',
+      'ge',
+      'client_ip_address',
+      'client_user_agent',
+    ]) {
+      const invalid = createMetaCapiProvider({
+        pixelId: '123',
+        accessToken: 'synthetic',
+        endpoint: 'https://collector.test/',
+        userData: () => ({ [key]: 'a'.repeat(64) }),
+      });
+      await expect(invalid.send(event)).rejects.toThrow('Unsupported matching data');
     }
   });
   it('rejects unsuccessful acknowledgment', async () => {

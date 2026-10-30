@@ -233,7 +233,7 @@ const browser = createBrowserSignals({
       {
         title: 'Keep CAPI credentials and matching data on the server',
         paragraphs: [
-          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version and supported matching data. The adapter accepts SHA-256 hashed em, ph and external_id or validated fbp/fbc. Normalize matching values under the provider’s rules before hashing. Hashes still represent personal data and require an appropriate host consent and retention policy.',
+          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version and supported matching data. The adapter accepts only SHA-256 hashed em, ph and external_id or validated fbp/fbc. Normalize ph to E.164 before removing its leading plus and hashing the digits. Hash the exact case-sensitive external_id preimage shared with Pixel; do not lowercase it. Hashes still represent personal data and require an appropriate host consent and retention policy.',
           'This configuration is illustrative: replace environment values with your server’s validated configuration. Avoid a long-lived userData callback tied to one customer on a shared server instance; create the provider for the correct order context. Never put the access token in a NEXT_PUBLIC variable.',
         ],
         code: `import { createServerSignals, createMetaCapiProvider } from '@techinject/server';
