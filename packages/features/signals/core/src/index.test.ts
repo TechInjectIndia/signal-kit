@@ -209,11 +209,15 @@ describe('telemetry context', () => {
     expect(safeRoute('https://example.invalid/orders/123?token=secret')).toBe('/orders/:id');
     expect(safeRoute('/orders/abc', '/orders/:orderId')).toBe('/orders/:orderId');
     expect(safeRoute('/users/customer%40example.invalid')).toBe('/users/:redacted');
-    // Alphanumeric ID redaction (4.1)
+    // Recognized ID formats are redacted; ordinary slugs remain distinct.
     expect(safeRoute('/users/507f1f77bcf86cd799439011')).toBe('/users/:id'); // MongoDB ObjectID
     expect(safeRoute('/orders/cs_test_a1b2c3d4e5f6g7h8')).toBe('/orders/:id'); // Stripe ID
-    expect(safeRoute('/orders/ORD-98721')).toBe('/orders/:id'); // Order ID
+    expect(safeRoute('/orders/ORD-98721')).toBe('/orders/ORD-98721'); // Host supplies a route template.
+    expect(safeRoute('/orders/ORD-98721', '/orders/:orderId')).toBe('/orders/:orderId');
     expect(safeRoute('/collections/new-arrivals')).toBe('/collections/new-arrivals'); // Normal slug
+    expect(safeRoute('/products/iphone-15-pro')).toBe('/products/iphone-15-pro');
+    expect(safeRoute('/products/air-max-90')).toBe('/products/air-max-90');
+    expect(safeRoute('/blog/best-running-shoes-2026')).toBe('/blog/best-running-shoes-2026');
     expect(safeRoute('/collections/summer%2Fwinter')).toBe('/collections/summer%2Fwinter');
     expect(safeRoute('/posts/c123456789012345678901234')).toBe('/posts/:id'); // CUID
     // Route groups stripping (4.2)

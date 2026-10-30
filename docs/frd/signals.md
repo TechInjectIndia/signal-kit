@@ -21,7 +21,7 @@ Bun once around its fetch handler: incoming request plus explicit signals.fetch 
 
 Server outbound fetch adds trace context to absolute URLs only for exact `traceOrigins` matches. Relative URLs require `traceRelative: true` and a host transport that supports relative fetch; the default is false. Existing trace headers are never replaced.
 
-Default redaction removes query/hash, numeric/UUID/email/long token path segments. The shared core URL sanitizer removes query strings, fragments and URL credentials from GA4 page metadata and Meta CAPI event-source URLs; attribution parameters are not forwarded. Arbitrary sensitive slugs cannot be inferred; host route templates/exclusions remain necessary. Known browser provider telemetry domains excluded; custom collector endpoints require excludeUrls.
+Default redaction removes query/hash, numeric/UUID/email/long token path segments and recognized ObjectID, Stripe ID and CUID formats. The shared core URL sanitizer removes query strings, fragments and URL credentials from GA4 page metadata and Meta CAPI event-source URLs; attribution parameters are not forwarded. Product slugs containing numbers remain distinct paths. Arbitrary sensitive slugs and order/reference IDs cannot be inferred safely; hosts must supply route templates or exclusions for those paths. Known browser provider telemetry domains excluded; custom collector endpoints require excludeUrls.
 
 ## Failure and resource policy
 

@@ -17,13 +17,15 @@ SDK v1 local implementation, 2026-10-05. All nine packages are published on npm 
 
 Requirements: modern browser crypto.randomUUID, structuredClone, fetch/Headers, URL and performance. SSR import/start guards supported. Outbound server instrumentation is signals.fetch, not global Node/Bun fetch. Browser JS error/rejection capture is outside the v1 request telemetry contract; the optional Next request-error hook is separate. Declarative Bun routes are supported via `instrumentBunRoutes`. The declared peer ranges are SvelteKit >=3 <4 and Next.js >=15 <17; only the recorded versions above have consumer runtime evidence.
 
-The workspace and Node server packages declare Node `>=22 <23`, matching `.nvmrc` and CI. Node 23 and later have no compatibility evidence.
+The workspace uses Node 22 via `.nvmrc` and CI. The `server`, `nextjs-server` and `sveltekit-server` packages declare `engines.node: ">=22"` because Bun 1.3.11 reports `process.version` as `v24.3.0`; a `<23` bound rejects Bun consumers. This engine range is an installation constraint, not runtime verification for Node 23 or later. The recorded Node runtime evidence remains Node 22.
 
 Counts, commands, graph and local runtime outcomes are recorded in the build report. Setup-time usability, independent developer onboarding and live provider dedup/attribution remain release gates. No synthetic test should be described as live tracking verification.
 
 Contracts unit tests verify that `purchase` rejects an empty `items` array while `add_to_cart` and `begin_checkout` accept an empty array. This is schema evidence, not live GA4 or Meta delivery evidence.
 
 Core route tests verify that an encoded slash stays within its original path segment after sanitation.
+
+Core route tests verify that numeric product and blog slugs remain distinct, while hosts can pass a route template for an order reference. This is unit-level sanitation evidence, not a claim that arbitrary sensitive slugs can be detected.
 
 Standalone browser tests verify that missing or invalid declarative click attributes are dropped with value-free diagnostics, explicit values reach the provider, and absent product-view quantity is omitted.
 

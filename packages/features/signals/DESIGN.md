@@ -9,7 +9,7 @@ Independent contracts contain Zod validation and discriminated event DTOs. Core 
 
 Core track: generate/preserve event ID → parse schema → strip unknown fields → capacity/dispose check → consent gate each provider → clone payload → bounded send/abort deadline → collect safe outcomes → diagnostic callback isolated. No automatic retries. setConsent coerces actual booleans and aborts category in-flight work; hooks propagate provider consent. Each event copy remains independent.
 
-Route sanitation decodes each path segment for identity checks, then returns the original encoded segment when it is safe. An encoded slash remains inside its segment.
+Route sanitation decodes each path segment for identity checks, then returns the original encoded segment when it is safe. An encoded slash remains inside its segment. Numeric, UUID, ObjectID, Stripe ID and CUID formats are redacted; order prefixes and general alphanumeric slugs are preserved. Hosts provide route templates or exclusions for sensitive slugs and reference IDs.
 
 Browser: one active owner per window, deduplication on the resolved route path, owned History/fetch/XHR patches. `trackHash: true` alone enables `#/` and `#!/` hash routes; ordinary anchors remain ignored. stop only restores owned references; retained wrappers become inert. Existing valid W3C traceparent is preserved; generation only for exact origin allowlist. WeakMap per-XHR state, once loadend and send-throw cleanup. Browser observers have bounded pending work; slow/custom work cannot be forcibly cancelled without implementing disposal/consent hooks. The experimental standalone bundle exposes `window.signals`; only explicit `data-auto-consent="true"` pregrants consent, otherwise the host banner calls `setConsent`.
 

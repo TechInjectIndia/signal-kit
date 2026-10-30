@@ -45,7 +45,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=22 <23"
+    "node": ">=22"
   },
   "description": "SignalKit nextjs-server consent-aware telemetry package"
 }

@@ -260,7 +260,7 @@ describe('Meta CAPI', () => {
       },
     });
     await provider.send(event);
-    expect(payload.data[0].event_source_url).toBe('https://app.test/products/:id');
+    expect(payload.data[0].event_source_url).toBe('https://app.test/products/item-123');
   });
 });
 describe('OTLP', () => {
