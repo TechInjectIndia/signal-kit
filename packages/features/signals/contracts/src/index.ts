@@ -174,7 +174,10 @@ const schemas = {
   product_view: productViewSchema,
   add_to_cart: commerce,
   begin_checkout: commerce,
-  purchase: extend(commerce, { transaction_id: text }),
+  purchase: extend(commerce, {
+    items: array(item).check(minLength(1), maxLength(100)),
+    transaction_id: text,
+  }),
   generate_lead: object({
     value: optional(amount),
     currency: optional(currency),

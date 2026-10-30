@@ -213,6 +213,8 @@ describe('telemetry context', () => {
     expect(safeRoute('/users/507f1f77bcf86cd799439011')).toBe('/users/:id'); // MongoDB ObjectID
     expect(safeRoute('/orders/cs_test_a1b2c3d4e5f6g7h8')).toBe('/orders/:id'); // Stripe ID
     expect(safeRoute('/orders/ORD-98721')).toBe('/orders/:id'); // Order ID
+    expect(safeRoute('/collections/new-arrivals')).toBe('/collections/new-arrivals'); // Normal slug
+    expect(safeRoute('/collections/summer%2Fwinter')).toBe('/collections/summer%2Fwinter');
     expect(safeRoute('/posts/c123456789012345678901234')).toBe('/posts/:id'); // CUID
     // Route groups stripping (4.2)
     expect(safeRoute('/(marketing)/about')).toBe('/about');

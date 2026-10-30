@@ -52,6 +52,30 @@ describe('browser lifecycle', () => {
     await window.fetch('/api');
     await sdk.flush();
   });
+  it('silently drops observer records at capacity without a fake event diagnostic', async () => {
+    window.fetch = vi.fn(async () => new Response('ok'));
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const record = vi.fn(() => waiting);
+    const onDiagnostic = vi.fn();
+    const sdk = createBrowserSignals({
+      consent,
+      autoTrack: false,
+      observer: { record },
+      onDiagnostic,
+    });
+    disposals.push(sdk.dispose);
+    sdk.start();
+    await sdk.flush();
+    onDiagnostic.mockClear();
+    for (let index = 0; index < 33; index++) await window.fetch(`/api/${index}`);
+    expect(record).toHaveBeenCalledTimes(32);
+    expect(onDiagnostic).not.toHaveBeenCalled();
+    release();
+    await sdk.flush();
+  });
   it('tracks initial and distinct navigation once, handles dynamic IDs and restores history', async () => {
     const events: unknown[] = [];
     const original = history.pushState;
@@ -237,6 +261,22 @@ describe('browser providers', () => {
     const queue = (window as unknown as { fbq: { queue: unknown[][] } }).fbq.queue;
     expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingle', '123', 'Purchase']);
     expect(queue.at(-1)?.[4]).toEqual({ eventID: 'purchase-123' });
+
+    await sdk.track({
+      name: 'login',
+      eventId: 'login-123',
+      properties: { method: 'password' },
+    });
+    expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingleCustom', '123', 'Login']);
+    expect(queue.at(-1)?.[4]).toEqual({ eventID: 'login-123' });
+
+    await sdk.track({
+      name: 'custom_event',
+      eventId: 'custom-123',
+      properties: { action: 'video_play' },
+    });
+    expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingleCustom', '123', 'CustomEvent']);
+    expect(queue.at(-1)?.[4]).toEqual({ eventID: 'custom-123' });
     const blocked = createBrowserSignals({
       autoTrack: false,
       consent,

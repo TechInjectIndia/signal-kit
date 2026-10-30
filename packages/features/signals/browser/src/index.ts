@@ -75,15 +75,7 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   const record = (value: RequestRecord) => {
     if (!core.getConsent().observability || !running) return;
     if (!config.observer) return;
-    if (pendingRecords.size >= 32) {
-      try {
-        config.onDiagnostic?.({
-          eventId: 'dropped',
-          outcomes: [{ provider: 'observer', status: 'dropped', reason: 'capacity' }],
-        });
-      } catch {}
-      return;
-    }
+    if (pendingRecords.size >= 32) return;
     const operation = boundedObservation(() => config.observer!.record(value)).finally(() => {
       pendingRecords.delete(operation);
     });

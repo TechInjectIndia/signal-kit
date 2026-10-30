@@ -138,6 +138,17 @@ const metaNames: Record<SignalEvent['name'], string> = {
   search: 'Search',
   custom_event: 'CustomEvent',
 };
+const STANDARD_META_EVENTS = new Set([
+  'PageView',
+  'ViewContent',
+  'AddToCart',
+  'InitiateCheckout',
+  'Purchase',
+  'Lead',
+  'Contact',
+  'CompleteRegistration',
+  'Search',
+]);
 export function createMetaPixelProvider(
   config: ScriptConfig & { pixelId: string },
 ): ConsentProvider {
@@ -189,7 +200,9 @@ export function createMetaPixelProvider(
           : {}),
       };
       win().fbq?.('consent', 'grant');
-      win().fbq?.('trackSingle', config.pixelId, metaNames[event.name], properties, {
+      const eventName = metaNames[event.name];
+      const method = STANDARD_META_EVENTS.has(eventName) ? 'trackSingle' : 'trackSingleCustom';
+      win().fbq?.(method, config.pixelId, eventName, properties, {
         eventID: event.eventId,
       });
     },

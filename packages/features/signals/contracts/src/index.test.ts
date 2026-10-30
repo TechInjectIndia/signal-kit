@@ -38,6 +38,17 @@ describe('event boundary', () => {
       ),
     ).toBeUndefined();
   });
+  it('rejects a purchase with zero items', () => {
+    expect(
+      sanitizeEvent(
+        {
+          name: 'purchase',
+          properties: { transaction_id: 'order-empty', currency: 'USD', value: 0, items: [] },
+        },
+        'purchase-empty',
+      ),
+    ).toBeUndefined();
+  });
   it('strips page queries and rejects external URLs', () => {
     expect(
       sanitizeEvent(
@@ -221,21 +232,23 @@ describe('event boundary', () => {
     });
   });
   it('allows empty cart and empty checkout items (2.4)', () => {
-    const res = sanitizeEvent(
-      {
-        name: 'begin_checkout',
-        properties: {
-          currency: 'USD',
-          value: 0,
-          items: [],
+    for (const name of ['add_to_cart', 'begin_checkout'] as const) {
+      const res = sanitizeEvent(
+        {
+          name,
+          properties: {
+            currency: 'USD',
+            value: 0,
+            items: [],
+          },
         },
-      },
-      'checkout-empty',
-    );
-    expect(res?.properties).toEqual({
-      currency: 'USD',
-      value: 0,
-      items: [],
-    });
+        `${name}-empty`,
+      );
+      expect(res?.properties).toEqual({
+        currency: 'USD',
+        value: 0,
+        items: [],
+      });
+    }
   });
 });

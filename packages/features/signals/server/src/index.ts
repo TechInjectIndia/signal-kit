@@ -11,6 +11,9 @@ import type {
 
 export type ServerConfig = Parameters<typeof createSignals>[0] & {
   observer?: Observer;
+  /** Propagate traceparent to relative fetch URLs when the host transport supports them. Default false. */
+  traceRelative?: boolean;
+  /** Exact origins allowed to receive traceparent on absolute fetch URLs. */
   traceOrigins?: string[];
   excludeUrls?: string[];
   fetch?: typeof globalThis.fetch;
@@ -98,14 +101,11 @@ export function createServerSignals(config: ServerConfig = {}) {
         : parent
           ? { ...parent, parentSpanId: parent.spanId, spanId: randomHex(8) }
           : trace(null);
-      const traceOrigins = config.traceOrigins ?? [];
       const isAllowedOrigin =
         !headers.has('traceparent') &&
         (isRelative
-          ? traceOrigins.some(
-              (o) => o === '' || o === '/' || o === 'relative' || o === parsedUrl.origin,
-            )
-          : traceOrigins.includes(parsedUrl.origin));
+          ? config.traceRelative === true
+          : (config.traceOrigins ?? []).includes(parsedUrl.origin));
       if (isAllowedOrigin) {
         headers.set('traceparent', `00-${span.traceId}-${span.spanId}-${span.flags}`);
       }
@@ -223,12 +223,12 @@ export interface MetaCapiOptions {
   endpoint?: string;
   fetch?: typeof globalThis.fetch;
   testEventCode?: string;
-  /** SHA-256 hashed matching data (or plaintext auto-hashed) and validated cookies/IP/UA. */
+  /** SHA-256 hashed matching data (or supported plaintext normalized before hashing) and validated cookies/IP/UA. */
   userData?: () => Record<string, unknown>;
   eventSourceUrl?: string;
 }
 function sha256(val: string): string {
-  return createHash('sha256').update(val.trim().toLowerCase()).digest('hex');
+  return createHash('sha256').update(val).digest('hex');
 }
 function hashPhone(val: string): string {
   const trimmed = val.trim();
@@ -237,6 +237,49 @@ function hashPhone(val: string): string {
   return createHash('sha256').update(digits).digest('hex');
 }
 const HASHED_FIELDS = ['em', 'fn', 'ln', 'ct', 'zp', 'country', 'db', 'ge', 'external_id'] as const;
+type HashedField = (typeof HASHED_FIELDS)[number];
+function normalizeMatchingValue(key: HashedField, value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) throw new Error('Invalid matching data');
+  switch (key) {
+    case 'ct': {
+      const city = normalized.replace(/[^\p{L}]/gu, '');
+      if (!city) throw new Error('Invalid matching data');
+      return city;
+    }
+    case 'zp': {
+      const postalCode = normalized.replace(/\s/g, '').split('-')[0] ?? '';
+      if (!postalCode) throw new Error('Invalid matching data');
+      return postalCode;
+    }
+    case 'country': {
+      const country = normalized.replace(/[^a-z]/g, '');
+      if (!/^[a-z]{2}$/.test(country)) throw new Error('Invalid matching data');
+      return country;
+    }
+    case 'db': {
+      const birthDate = /^\d{4}-\d{2}-\d{2}$/.test(normalized)
+        ? normalized.replace(/-/g, '')
+        : normalized;
+      if (!/^\d{8}$/.test(birthDate)) throw new Error('Invalid matching data');
+      const year = Number(birthDate.slice(0, 4));
+      const month = Number(birthDate.slice(4, 6));
+      const day = Number(birthDate.slice(6, 8));
+      const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+      const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]!)
+        throw new Error('Invalid matching data');
+      return birthDate;
+    }
+    case 'ge':
+      if (normalized === 'male') return 'm';
+      if (normalized === 'female') return 'f';
+      if (normalized !== 'm' && normalized !== 'f') throw new Error('Invalid matching data');
+      return normalized;
+    default:
+      return normalized;
+  }
+}
 function safeUserData(input: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const key of HASHED_FIELDS) {
@@ -248,7 +291,7 @@ function safeUserData(input: Record<string, unknown>): Record<string, unknown> {
       if (typeof val !== 'string') throw new Error('Invalid hashed matching data');
       const trimmed = val.trim();
       if (/^[a-f0-9]{64}$/i.test(trimmed)) return trimmed.toLowerCase();
-      return sha256(trimmed);
+      return sha256(normalizeMatchingValue(key, trimmed));
     });
   }
   if (input.ph !== undefined && input.ph !== null) {

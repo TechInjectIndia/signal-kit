@@ -83,6 +83,8 @@ const signals = createServerSignals({
 Bun.serve({ fetch: instrumentBunFetch(signals, async (req) => Response.json({ ok: true })) });
 ```
 
+`traceOrigins` accepts exact origins for absolute outbound URLs. Relative `signals.fetch('/api/...')` calls do not receive a new `traceparent` header by default. If your host fetch transport supports relative URLs and you want propagation for them, set `traceRelative: true` in `createServerSignals` config. Existing `traceparent` headers are preserved. Do not put `''`, `'/'` or `'relative'` in `traceOrigins`; those values have no special meaning.
+
 Declarative Bun routes bypass fallback fetch. Pass the routes table through `instrumentBunRoutes` to capture both direct handlers and method-map handlers with their route patterns:
 
 ```ts
@@ -98,7 +100,7 @@ Bun.serve({
 });
 ```
 
-Supply routeResolver for arbitrary dynamic/sensitive slugs in the fallback handler. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Browser flush now waits for bounded observer records and its optional flush hook; browser observer deadlines default to2s and use timeoutMs when supplied (clamped1–30,000ms), separately from the core default5s dispatch deadline. Server telemetry preserves valid existing outbound traceparent IDs in emitted records. Configure observer errors/onDiagnostic for overload/rejection visibility. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
+Supply routeResolver for arbitrary dynamic/sensitive slugs in the fallback handler. Use signals.fetch for outbound calls; global fetch is untouched. Call flush on shutdown before dispose with your host shutdown budget. Browser flush now waits for bounded observer records and its optional flush hook; browser observer deadlines default to2s and use timeoutMs when supplied (clamped1–30,000ms), separately from the core default5s dispatch deadline. Server telemetry preserves valid existing outbound traceparent IDs in emitted records. `onDiagnostic` reports core event outcomes; browser observer records above the 32-pending bound are silently dropped and do not produce event/provider outcomes. OTLP HTTP JSON works with collectors configured for that protocol; SigNoz examples require collector deployment/credentials and are not live-tested here.
 
 ## Experimental standalone browser bundle
 
@@ -118,13 +120,47 @@ window.signals.setConsent({
 });
 ```
 
-Only `data-auto-consent="true"` pregrants all three categories, so use it solely when the host has already established that consent. Denied events are dropped and never replayed. The bundle can also listen for supported `[data-signal]` clicks; host code should still track verified purchases from trusted server state.
+Only `data-auto-consent="true"` pregrants all three categories, so use it solely when the host has already established that consent. Denied events are dropped and never replayed. The bundle listens for `product_view`, `add_to_cart` and `begin_checkout` clicks marked with `[data-signal]`. Supply real `data-item-id`, `data-price` and uppercase three-letter `data-currency` values on each element. Cart and checkout clicks also require `data-quantity`; product views omit quantity when it is not provided. Missing or invalid attributes skip tracking instead of fabricating values. A host can observe safe diagnostics without receiving the attribute values:
+
+```js
+window.addEventListener('signalkit:diagnostic', (event) => {
+  console.log(event.detail); // { status: 'invalid', reason: 'missing_attribute', attribute: 'data-price' }
+});
+```
+
+For example, this cart button supplies every required value:
+
+```html
+<button
+  data-signal="add_to_cart"
+  data-item-id="sku-1"
+  data-price="450"
+  data-currency="INR"
+  data-quantity="1"
+>
+  Add to cart
+</button>
+```
+
+Host code should still track verified purchases from trusted server state.
 
 ## Verified purchase and provider delivery
 
 Store eventId with the trusted host order. Browser and server copies both emit purchase using same eventId and transaction_id. Verify payment signatures and captured/paid state against trusted order currency/amount; never trust a client success page. The Bun example shows raw HMAC and a durable local SQLite outbox with replay tests. Production applications supply their own persistence, per-user consent, signed webhook rotation, currency exponents and order line items.
 
-createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and userData callback with SHA-256 hashed em/ph/external_id or validated fbp/fbc. It deliberately refuses arbitrary matching fields. Hashes remain personal data; host supplies consent/retention policy. No access token belongs browser config. A stable event ID enables Meta dedup but actual matching/dedup is unverified until sandbox/live tests.
+createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and a userData callback. Matching fields may be prehashed SHA-256 hex or plaintext normalized by the adapter before hashing. The adapter rejects unsupported fields and invalid country/date/gender formats. Plaintext rules are:
+
+| Field                           | Normalization before SHA-256                                                               |
+| :------------------------------ | :----------------------------------------------------------------------------------------- |
+| `em`, `fn`, `ln`, `external_id` | Trim and lowercase.                                                                        |
+| `ph`                            | Keep digits only. Include the country calling code in the host value.                      |
+| `ct`                            | Lowercase and remove spaces, digits and punctuation.                                       |
+| `zp`                            | Lowercase, remove whitespace and discard the suffix after `-`.                             |
+| `country`                       | Lowercase two-letter ISO country code; host supplies the correct code, not a country name. |
+| `db`                            | `YYYYMMDD`; `YYYY-MM-DD` is converted and invalid calendar dates are rejected.             |
+| `ge`                            | `m` or `f`; `male` and `female` are converted.                                             |
+
+Already hashed 64-character hex values pass through without rehashing. `fbp`/`fbc` are validated rather than hashed; IP address and user agent are passed through when explicitly supplied. These rules follow Meta's server-side SDK [normalization](https://github.com/meta/facebook-python-business-sdk/blob/main/facebook_business/adobjects/serverside/normalize.py) and [field formats](https://github.com/meta/facebook-python-business-sdk/blob/main/facebook_business/adobjects/serverside/user_data.py). Hashes remain personal data; host supplies consent/retention policy and must provide correctly normalized input where local conventions matter. No access token belongs browser config. A stable event ID enables Meta dedup but actual matching/dedup is unverified until sandbox/live tests.
 
 Default denied consent drops data without replay; resource limits drop overload. Custom providers should honour AbortSignal and implement setConsent/dispose. Telemetry delivery is best effort; persisted outbox/retry belongs host. GA4 page location/referrer and Meta CAPI event source URL omit query strings and fragments. Safe route heuristics cannot remove every sensitive pathname: supply templates/exclusions and avoid PII in named commerce fields. External scripts can inspect host URL/DOM/cookies independently.
 
@@ -308,20 +344,20 @@ Create fresh observer/provider instances per request. The adapter uses route.id 
 
 All events are strictly validated and sanitized before dispatch to providers. Unknown or dangerous fields are stripped to protect privacy.
 
-| Event Name       | Schema Properties                                                 | Provider Mapping                                      |
-| :--------------- | :---------------------------------------------------------------- | :---------------------------------------------------- |
-| `page_view`      | `page_path`                                                       | GA4 `page_view`, Meta `PageView`, Clarity `page_view` |
-| `product_view`   | `item_id`, `item_name`, `price`, `currency`, `items`, etc.        | GA4 `view_item`, Meta `ViewContent`                   |
-| `add_to_cart`    | `currency`, `value`, `items` (can be empty), `coupon`             | GA4 `add_to_cart`, Meta `AddToCart`                   |
-| `begin_checkout` | `currency`, `value`, `items`, `coupon`                            | GA4 `begin_checkout`, Meta `InitiateCheckout`         |
-| `purchase`       | `transaction_id`, `currency`, `value`, `items`, `shipping`, `tax` | GA4 `purchase`, Meta `Purchase`                       |
-| `generate_lead`  | `value`, `currency`, `lead_type`                                  | Meta `Lead`, GA4 `generate_lead`                      |
-| `phone_click`    | Optional `channel` (`phone` or `whatsapp`)                        | Meta `Contact`, GA4 `phone_click`                     |
-| `whatsapp_click` | Optional `channel` (`phone` or `whatsapp`)                        | Meta `Contact`, GA4 `whatsapp_click`                  |
-| `sign_up`        | `method`                                                          | Meta `CompleteRegistration`, GA4 `sign_up`            |
-| `login`          | `method`                                                          | Meta `Login`, GA4 `login`                             |
-| `search`         | `search_term`                                                     | Meta `Search`, GA4 `search`                           |
-| `custom_event`   | `action`, `category`, `label`, `value`                            | Meta `CustomEvent`, GA4 custom                        |
+| Event Name       | Schema Properties                                                                | Provider Mapping                                      |
+| :--------------- | :------------------------------------------------------------------------------- | :---------------------------------------------------- |
+| `page_view`      | `page_path`                                                                      | GA4 `page_view`, Meta `PageView`, Clarity `page_view` |
+| `product_view`   | `item_id`, `item_name`, `price`, `currency`, `items`, etc.                       | GA4 `view_item`, Meta `ViewContent`                   |
+| `add_to_cart`    | `currency`, `value`, `items` (can be empty), `coupon`                            | GA4 `add_to_cart`, Meta `AddToCart`                   |
+| `begin_checkout` | `currency`, `value`, `items`, `coupon`                                           | GA4 `begin_checkout`, Meta `InitiateCheckout`         |
+| `purchase`       | `transaction_id`, `currency`, `value`, `items` (at least one), `shipping`, `tax` | GA4 `purchase`, Meta `Purchase`                       |
+| `generate_lead`  | `value`, `currency`, `lead_type`                                                 | Meta `Lead`, GA4 `generate_lead`                      |
+| `phone_click`    | Optional `channel` (`phone` or `whatsapp`)                                       | Meta `Contact`, GA4 `phone_click`                     |
+| `whatsapp_click` | Optional `channel` (`phone` or `whatsapp`)                                       | Meta `Contact`, GA4 `whatsapp_click`                  |
+| `sign_up`        | `method`                                                                         | Meta `CompleteRegistration`, GA4 `sign_up`            |
+| `login`          | `method`                                                                         | Meta `Login`, GA4 `login`                             |
+| `search`         | `search_term`                                                                    | Meta `Search`, GA4 `search`                           |
+| `custom_event`   | `action`, `category`, `label`, `value`                                           | Meta `CustomEvent`, GA4 custom                        |
 
 ### Example: Tracking leads and contacts
 

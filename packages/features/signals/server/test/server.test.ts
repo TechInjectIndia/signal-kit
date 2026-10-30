@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
 import { createServerSignals, createMetaCapiProvider, createOTLPObserver } from '../src/index.js';
 import type { RequestRecord } from '@techinject/contracts';
 const consent = { analytics: true, marketing: true, observability: true };
@@ -149,6 +150,7 @@ describe('Meta CAPI', () => {
       event_name: 'Purchase',
       event_id: 'stable-order-id',
       event_time: 1700000000,
+      user_data: { em: ['a'.repeat(64)] },
       custom_data: {
         order_id: 'order-1',
         currency: 'INR',
@@ -156,6 +158,22 @@ describe('Meta CAPI', () => {
         contents: [{ id: 'sku', quantity: 2, item_price: 50 }],
       },
     });
+
+    await provider.send({
+      name: 'login',
+      eventId: 'login-server-123',
+      timestamp: 1700000000000,
+      properties: { method: 'otp' },
+    });
+    expect(payload.data[0].event_name).toBe('Login');
+
+    await provider.send({
+      name: 'custom_event',
+      eventId: 'custom-server-123',
+      timestamp: 1700000000000,
+      properties: { action: 'video_play' },
+    });
+    expect(payload.data[0].event_name).toBe('CustomEvent');
     const autoHashed = createMetaCapiProvider({
       pixelId: '123',
       accessToken: 'synthetic',
@@ -177,6 +195,45 @@ describe('Meta CAPI', () => {
       userData: () => ({ em: Array(11).fill('a'.repeat(64)) }),
     });
     await expect(invalidMatching.send(event)).rejects.toThrow('Invalid hashed');
+  });
+  it('normalizes plaintext matching fields before hashing', async () => {
+    let payload: any;
+    const hash = (value: string) => createHash('sha256').update(value).digest('hex');
+    const provider = createMetaCapiProvider({
+      pixelId: '123',
+      accessToken: 'synthetic',
+      endpoint: 'https://collector.test/',
+      userData: () => ({
+        em: ' Sample@Example.Test ',
+        ct: 'New York',
+        zp: '94025-1234',
+        country: 'US',
+        db: '1990-12-31',
+        ge: 'Female',
+      }),
+      fetch: async (_url, init) => {
+        payload = JSON.parse(init!.body as string);
+        return Response.json({ events_received: 1 });
+      },
+    });
+    await provider.send(event);
+    expect(payload.data[0].user_data).toMatchObject({
+      em: [hash('sample@example.test')],
+      ct: [hash('newyork')],
+      zp: [hash('94025')],
+      country: [hash('us')],
+      db: [hash('19901231')],
+      ge: [hash('f')],
+    });
+    for (const userData of [{ country: 'United States' }, { db: '1990-02-30' }]) {
+      const invalid = createMetaCapiProvider({
+        pixelId: '123',
+        accessToken: 'synthetic',
+        endpoint: 'https://collector.test/',
+        userData: () => userData,
+      });
+      await expect(invalid.send(event)).rejects.toThrow('Invalid matching data');
+    }
   });
   it('rejects unsuccessful acknowledgment', async () => {
     const provider = createMetaCapiProvider({
@@ -332,5 +389,29 @@ describe('relative server fetch (1.1)', () => {
     expect(recorded).toBeDefined();
     expect(recorded?.route).toBe('/api/cart');
     expect(recorded?.status).toBe(200);
+  });
+  it('propagates to relative URLs only with traceRelative, not magic traceOrigins values', async () => {
+    const headers: (string | null)[] = [];
+    const transport: typeof fetch = async (input, init) => {
+      headers.push(
+        new Headers(input instanceof Request ? input.headers : init?.headers).get('traceparent'),
+      );
+      return new Response('ok');
+    };
+    const denied = createServerSignals({
+      consent,
+      traceOrigins: ['', '/', 'relative'],
+      fetch: transport,
+    });
+    await denied.fetch('/api/cart');
+    expect(headers[0]).toBeNull();
+    denied.dispose();
+
+    const allowed = createServerSignals({ consent, traceRelative: true, fetch: transport });
+    await allowed.fetch('/api/cart');
+    await allowed.fetch('https://third-party.test/api');
+    expect(headers[1]).toMatch(/^00-[a-f0-9]{32}-[a-f0-9]{16}-01$/);
+    expect(headers[2]).toBeNull();
+    allowed.dispose();
   });
 });

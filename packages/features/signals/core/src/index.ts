@@ -69,13 +69,13 @@ export function safeRoute(url: string | URL, routeTemplate?: string): string {
           // Stripe ID (cs_..., pi_..., ch_..., cus_..., etc.)
           if (/^(cs|pi|ch|cus|sub|in|evt|tok)_[a-zA-Z0-9_]{8,}$/i.test(decoded)) return ':id';
           // Order / reference prefixes (e.g., ORD-98721, REF-1234)
-          if (/^[A-Za-z]{2,6}-[0-9A-Za-z_-]{3,}$/.test(decoded)) return ':id';
+          if (/^[A-Za-z]{2,6}-(?=.*[0-9])[0-9A-Za-z_-]{3,}$/.test(decoded)) return ':id';
           // CUID (starts with c, 24 alphanumeric characters)
           if (/^c[0-9a-z]{24}$/i.test(decoded)) return ':id';
           // High entropy IDs (20+ alphanumeric characters with both digits and letters)
           if (decoded.length >= 20 && /[0-9]/.test(decoded) && /[a-zA-Z]/.test(decoded))
             return ':id';
-          return decoded;
+          return segment;
         })
         .join('/')
         .replace(/\/[0-9]+(?=\/|$)/g, '/:id')

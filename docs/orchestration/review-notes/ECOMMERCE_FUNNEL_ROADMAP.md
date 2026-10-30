@@ -288,6 +288,7 @@ Usage in any HTML/CSS button:
   data-item-name="Running Shoes"
   data-price="2499"
   data-currency="INR"
+  data-quantity="1"
 >
   Add to Cart
 </button>

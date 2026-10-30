@@ -350,6 +350,7 @@ For any HTML/CSS button where developers do not want to write JavaScript:
   data-item-name="Field Notebook"
   data-price="450"
   data-currency="INR"
+  data-quantity="1"
 >
   Add to Cart
 </button>
