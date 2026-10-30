@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import { createSignals, safeRoute, safeProviderUrl, parseTraceparent } from '@techinject/core';
+import { safeCustomEventAction } from '@techinject/contracts';
 import type {
   Consent,
   Observer,
@@ -201,7 +202,7 @@ export function createServerSignals(config: ServerConfig = {}) {
 }
 export type ServerSignals = ReturnType<typeof createServerSignals>;
 
-const metaNames: Record<SignalEvent['name'], string> = {
+const metaNames: Record<Exclude<SignalEvent['name'], 'custom_event'>, string> = {
   page_view: 'PageView',
   product_view: 'ViewContent',
   add_to_cart: 'AddToCart',
@@ -213,7 +214,6 @@ const metaNames: Record<SignalEvent['name'], string> = {
   sign_up: 'CompleteRegistration',
   login: 'Login',
   search: 'Search',
-  custom_event: 'CustomEvent',
 };
 export interface MetaCapiOptions {
   pixelId: string;
@@ -376,7 +376,10 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
           test_event_code: options.testEventCode,
           data: [
             {
-              event_name: metaNames[event.name],
+              event_name:
+                event.name === 'custom_event'
+                  ? safeCustomEventAction(event)
+                  : metaNames[event.name],
               event_time: Math.floor(event.timestamp / 1000),
               event_id: event.eventId,
               action_source: 'website',

@@ -173,7 +173,7 @@ describe('Meta CAPI', () => {
       timestamp: 1700000000000,
       properties: { action: 'video_play' },
     });
-    expect(payload.data[0].event_name).toBe('CustomEvent');
+    expect(payload.data[0].event_name).toBe('video_play');
     const autoHashed = createMetaCapiProvider({
       pixelId: '123',
       accessToken: 'synthetic',

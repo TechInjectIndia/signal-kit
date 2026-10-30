@@ -14,7 +14,10 @@ export default function Page() {
       <Link className="action" href="/catalog">
         Open the sample store →
       </Link>
-      <div className="note">Local recorder only. No events are sent to advertising providers.</div>
+      <div className="note">
+        GA4, Meta Pixel and Clarity use fake public IDs here. Grant consent to see each adapter
+        outcome; “sent” does not prove provider acceptance.
+      </div>
     </section>
   );
 }

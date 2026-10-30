@@ -80,6 +80,7 @@ export type CustomProperties = {
   label?: string;
   value?: number;
 };
+export const CUSTOM_EVENT_ACTION_PATTERN = /^[a-z][a-z0-9_]{0,39}$/;
 type EventIdentity = { eventId?: string; timestamp?: number };
 export type EventInput = EventIdentity &
   (
@@ -195,12 +196,19 @@ const schemas = {
     search_term: string().check(minLength(1), maxLength(256)),
   }),
   custom_event: object({
-    action: text,
+    action: string().check(regex(CUSTOM_EVENT_ACTION_PATTERN)),
     category: optional(text),
     label: optional(text),
     value: optional(number()),
   }),
 };
+/** Also guard direct provider calls that bypass sanitizeEvent. */
+export function safeCustomEventAction(event: SignalEvent): string {
+  const action = event.properties.action;
+  if (typeof action !== 'string' || !CUSTOM_EVENT_ACTION_PATTERN.test(action))
+    throw new Error('Invalid custom event action');
+  return action;
+}
 /** Unknown fields are stripped; request URLs, identity, and arbitrary metadata never pass through. */
 export function sanitizeEvent(value: unknown, eventId: string): SignalEvent | undefined {
   const input = value as EventInput;

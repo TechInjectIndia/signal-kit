@@ -11,7 +11,7 @@ test('demo keeps credentials out of browser and pages non-indexable', async () =
   assert.match(shell, /createGA4Provider\(\{ measurementId: GA4_MEASUREMENT_ID \}\)/);
   assert.match(shell, /createMetaPixelProvider\(\{ pixelId: META_PIXEL_ID \}\)/);
   assert.match(shell, /createClarityProvider\(\{ projectId: CLARITY_PROJECT_ID \}\)/);
-  assert.match(publicConfig, /ENABLE_EXTERNAL_PROVIDERS = false/);
+  assert.match(publicConfig, /ENABLE_EXTERNAL_PROVIDERS = true/);
   assert.doesNotMatch(publicConfig, /process\.env|accessToken|RAZORPAY_WEBHOOK_SECRET/);
   assert.match(shell, /analytics:\s*false,\s*marketing:\s*false,\s*observability:\s*false/);
 });

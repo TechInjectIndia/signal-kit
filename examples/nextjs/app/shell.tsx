@@ -64,7 +64,14 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
         },
       },
       onDiagnostic(result) {
-        append(result.outcomes.map((o) => `${o.provider}: ${o.status}`).join(' / '));
+        setLines((previous) =>
+          [
+            ...result.outcomes.map(
+              ({ provider, status }) => `${result.eventId.slice(0, 8)} · ${provider}: ${status}`,
+            ),
+            ...previous,
+          ].slice(0, 30),
+        );
       },
     };
   }, []);
@@ -120,7 +127,8 @@ function Lab({
           </div>
           <p className="note">
             All categories start denied. Grant consent, then navigate or emit a new event. Dropped
-            events are never replayed.
+            events are never replayed. Grant analytics and marketing to see all three provider
+            outcomes.
           </p>
           <div className="controls">
             <button onClick={() => void fetch('/api/ping')}>Test API</button>
@@ -128,7 +136,7 @@ function Lab({
             <button onClick={() => setLines([])}>Clear</button>
           </div>
           <p className="status" role="status">
-            {'SDK ready · local transports'}
+            {'SDK ready · fake public provider IDs'}
           </p>
           {lines.length ? (
             <ol className="feed" aria-label="Recorded activity">

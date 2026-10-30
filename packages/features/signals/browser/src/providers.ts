@@ -1,4 +1,5 @@
 import { safeProviderUrl } from '@techinject/core';
+import { safeCustomEventAction } from '@techinject/contracts';
 import type { Consent, Provider, SignalEvent } from '@techinject/contracts';
 type ConsentProvider = Provider & { setConsent(consent: Consent): void };
 type ScriptConfig = { nonce?: string; timeoutMs?: number };
@@ -100,11 +101,17 @@ export function createGA4Provider(
     name: 'ga4',
     category: 'analytics',
     async send(event, signal) {
+      const eventName =
+        event.name === 'custom_event'
+          ? safeCustomEventAction(event)
+          : event.name === 'product_view'
+            ? 'view_item'
+            : event.name;
       setup();
       await script.load(signal);
       if (signal?.aborted) throw new Error('Dispatch aborted');
       win().gtag?.('consent', 'update', { analytics_storage: 'granted' });
-      win().gtag?.('event', event.name === 'product_view' ? 'view_item' : event.name, {
+      win().gtag?.('event', eventName, {
         ...event.properties,
         page_location: safeProviderUrl(location.href),
         page_referrer: document.referrer ? safeProviderUrl(document.referrer) : '',
@@ -124,7 +131,7 @@ export function createGA4Provider(
     },
   };
 }
-const metaNames: Record<SignalEvent['name'], string> = {
+const metaNames: Record<Exclude<SignalEvent['name'], 'custom_event'>, string> = {
   page_view: 'PageView',
   product_view: 'ViewContent',
   add_to_cart: 'AddToCart',
@@ -136,7 +143,6 @@ const metaNames: Record<SignalEvent['name'], string> = {
   sign_up: 'CompleteRegistration',
   login: 'Login',
   search: 'Search',
-  custom_event: 'CustomEvent',
 };
 const STANDARD_META_EVENTS = new Set([
   'PageView',
@@ -178,6 +184,8 @@ export function createMetaPixelProvider(
     name: 'meta-pixel',
     category: 'marketing',
     async send(event, signal) {
+      const eventName =
+        event.name === 'custom_event' ? safeCustomEventAction(event) : metaNames[event.name];
       setup();
       await script.load(signal);
       if (signal?.aborted) throw new Error('Dispatch aborted');
@@ -200,7 +208,6 @@ export function createMetaPixelProvider(
           : {}),
       };
       win().fbq?.('consent', 'grant');
-      const eventName = metaNames[event.name];
       const method = STANDARD_META_EVENTS.has(eventName) ? 'trackSingle' : 'trackSingleCustom';
       win().fbq?.(method, config.pixelId, eventName, properties, {
         eventID: event.eventId,
@@ -228,6 +235,7 @@ export function createClarityProvider(
     name: 'clarity',
     category: 'analytics',
     async send(event, signal) {
+      const eventName = event.name === 'custom_event' ? safeCustomEventAction(event) : event.name;
       if (!initialized) {
         const w = win();
         if (!w.clarity) {
@@ -243,7 +251,7 @@ export function createClarityProvider(
       await script.load(signal);
       if (signal?.aborted) throw new Error('Dispatch aborted');
       win().clarity?.('consentv2', { analytics_Storage: 'granted', ad_Storage: 'denied' });
-      if (event.name !== 'page_view') win().clarity?.('event', event.name);
+      if (event.name !== 'page_view') win().clarity?.('event', eventName);
     },
     setConsent(consent) {
       if (initialized)

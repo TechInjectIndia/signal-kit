@@ -60,6 +60,8 @@ Implemented defaults: three denied-by-default consent categories, dropped precon
 
 The current PR adds typed `generate_lead`, `phone_click`, `whatsapp_click`, `sign_up`, `login`, `search`, and `custom_event` alongside the agreed ecommerce events. Contact events may carry a non-identifying `channel` (`phone` or `whatsapp`); event contracts exclude raw phone numbers, destinations, and user IDs. Purchases still originate from verified server state, not a browser button. These additional events are recorded here for product review; their presence in the PR does not imply separate owner approval.
 
+The review extension maps `custom_event` through a validated, non-identifying `action` name across GA4, Meta Pixel/CAPI and Clarity. The local Next lab shows each configured provider's SDK outcome using fake public IDs; those outcomes are not provider delivery or attribution proof.
+
 The PR also adds a Bun declarative-routes wrapper and an experimental standalone browser bundle. The Bun host must pass its routes table through the wrapper to capture those handlers. The browser bundle starts with consent denied unless the host explicitly sets `data-auto-consent="true"`; the host consent banner must apply the visitor's choices through `window.signals.setConsent(...)`. Automatic hash-route tracking is opt-in and only recognizes `#/` and `#!/` routes. Ordinary anchors do not create page views. Provider URL metadata drops query strings and fragments by default; forwarding attribution parameters requires a separate product decision. These behaviors do not extend verified platform support beyond the compatibility matrix.
 
 ## Public website amendment — 2026-10-06

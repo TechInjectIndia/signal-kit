@@ -79,7 +79,7 @@ export default function Catalog() {
 
   return (
     <section>
-      <p className="eyebrow">02 / SAMPLE STORE · GA4 FUNNEL DEMO</p>
+      <p className="eyebrow">02 / SAMPLE STORE · THREE-PROVIDER FUNNEL DEMO</p>
       <h1>
         The everyday
         <br />

@@ -24,7 +24,7 @@ pnpm --filter @signalkit/example-bun dev
 # http://localhost:3200 — API and signed payment fixture
 ```
 
-The examples use local recorders and synthetic data. The Next lab starts with all consent denied. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
+The examples use local recorders and synthetic data. The Next lab starts with all consent denied and configures GA4, Meta Pixel and Clarity with fake public IDs to show adapter outcomes after consent; those outcomes do not verify a real account. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
 
 ## Connections dashboard
 

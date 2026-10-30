@@ -124,6 +124,22 @@ describe('event boundary', () => {
       )?.properties,
     ).toEqual({ action: 'video_play', category: 'tutorial', value: 10 });
   });
+  it('accepts only bounded, non-identifying custom event names', () => {
+    expect(
+      sanitizeEvent({ name: 'custom_event', properties: { action: `a${'b'.repeat(39)}` } }, 'ok'),
+    ).toBeDefined();
+    for (const action of [
+      'CustomEvent',
+      'video-play',
+      '123start',
+      'email@example',
+      `a${'b'.repeat(40)}`,
+    ]) {
+      expect(
+        sanitizeEvent({ name: 'custom_event', properties: { action } }, 'bad'),
+      ).toBeUndefined();
+    }
+  });
   it('strips raw identity fields from contact and commerce events', () => {
     for (const name of ['phone_click', 'whatsapp_click'] as const) {
       expect(

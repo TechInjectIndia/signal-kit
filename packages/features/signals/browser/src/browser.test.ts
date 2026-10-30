@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createBrowserSignals } from './index.js';
 import { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
+import type { SignalEvent } from '@techinject/contracts';
 const consent = { analytics: true, marketing: true, observability: true };
 const disposals: (() => void)[] = [];
 afterEach(() => {
@@ -9,6 +10,8 @@ afterEach(() => {
   vi.restoreAllMocks();
   history.replaceState(null, '', '/');
   document.head.innerHTML = '';
+  const globals = window as unknown as Record<string, unknown>;
+  for (const key of ['dataLayer', 'gtag', 'fbq', 'clarity']) delete globals[key];
 });
 describe('browser lifecycle', () => {
   it('flush waits for observer records and invokes its flush hook', async () => {
@@ -200,6 +203,74 @@ describe('browser lifecycle', () => {
   });
 });
 describe('browser providers', () => {
+  it('dispatches one cart event to GA4, Meta Pixel and Clarity with the same SDK event ID', async () => {
+    const observed: { provider: string; name: string; eventId: string }[] = [];
+    const providers = [
+      createGA4Provider({ measurementId: 'G-TRIPLE' }),
+      createMetaPixelProvider({ pixelId: '123' }),
+      createClarityProvider({ projectId: 'demo123' }),
+    ].map((provider) => ({
+      ...provider,
+      async send(event: SignalEvent, signal?: AbortSignal) {
+        observed.push({ provider: provider.name, name: event.name, eventId: event.eventId });
+        await provider.send(event, signal);
+      },
+    }));
+    const sdk = createBrowserSignals({ autoTrack: false, consent, providers });
+    disposals.push(sdk.dispose);
+    const dispatch = sdk.track({
+      name: 'add_to_cart',
+      eventId: 'cart-shared-123',
+      properties: {
+        currency: 'INR',
+        value: 450,
+        items: [{ item_id: 'notebook', price: 450, quantity: 1 }],
+      },
+    });
+    await Promise.resolve();
+    const scripts = [...document.querySelectorAll('script')];
+    expect(scripts).toHaveLength(3);
+    scripts.forEach((script) => script.dispatchEvent(new Event('load')));
+    expect((await dispatch).outcomes).toEqual([
+      { provider: 'ga4', status: 'sent' },
+      { provider: 'meta-pixel', status: 'sent' },
+      { provider: 'clarity', status: 'sent' },
+    ]);
+    expect(observed).toHaveLength(3);
+    expect(observed.map(({ eventId }) => eventId)).toEqual(Array(3).fill('cart-shared-123'));
+
+    const globals = window as unknown as {
+      dataLayer: unknown[][];
+      fbq: { queue: unknown[][] };
+      clarity: { q: unknown[][] };
+    };
+    const ga4Call = globals.dataLayer.findLast((args) => args[0] === 'event');
+    expect(ga4Call?.[1]).toBe('add_to_cart');
+    expect(ga4Call?.[2]).toMatchObject({ event_id: 'cart-shared-123' });
+    const metaCall = globals.fbq.queue.findLast((args) => args[0] === 'trackSingle');
+    expect(metaCall?.slice(0, 3)).toEqual(['trackSingle', '123', 'AddToCart']);
+    expect(metaCall?.[4]).toEqual({ eventID: 'cart-shared-123' });
+    expect(globals.clarity.q.findLast((args) => args[0] === 'event')).toEqual([
+      'event',
+      'add_to_cart',
+    ]);
+
+    await sdk.track({
+      name: 'custom_event',
+      eventId: 'custom-shared-123',
+      properties: { action: 'video_play' },
+    });
+    expect(globals.dataLayer.findLast((args) => args[0] === 'event')?.[1]).toBe('video_play');
+    expect(globals.fbq.queue.at(-1)?.slice(0, 3)).toEqual([
+      'trackSingleCustom',
+      '123',
+      'video_play',
+    ]);
+    expect(globals.clarity.q.findLast((args) => args[0] === 'event')).toEqual([
+      'event',
+      'video_play',
+    ]);
+  });
   it('loads GA4 only after consent and sets explicit page dispatch', async () => {
     const provider = createGA4Provider({ measurementId: 'G-TEST' });
     const sdk = createBrowserSignals({ autoTrack: false, providers: [provider] });
@@ -275,7 +346,7 @@ describe('browser providers', () => {
       eventId: 'custom-123',
       properties: { action: 'video_play' },
     });
-    expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingleCustom', '123', 'CustomEvent']);
+    expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingleCustom', '123', 'video_play']);
     expect(queue.at(-1)?.[4]).toEqual({ eventID: 'custom-123' });
     const blocked = createBrowserSignals({
       autoTrack: false,

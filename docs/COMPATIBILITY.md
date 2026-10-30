@@ -31,7 +31,7 @@ Standalone browser tests verify that missing or invalid declarative click attrib
 
 Browser observer capacity tests verify that a 33rd pending record is dropped without a synthetic `onDiagnostic` event/provider result.
 
-The Next.js lab smoke test checks that its browser shell reads public IDs from the root config without a GA4 environment lookup or server credentials. The local labs keep external providers disabled by default; this source-level check is not live GA4, Meta or Clarity verification.
+The Next.js lab smoke test checks that its browser shell reads fake public IDs from the root config without a GA4 environment lookup or server credentials. Its browser demo configures all three external adapters; the SvelteKit lab keeps them disabled by default. Browser tests verify three-provider dispatch, shared SDK event ID and mapped calls with simulated script loads. These checks are not live GA4, Meta or Clarity verification.
 
 Meta CAPI injected-transport tests verify field-specific plaintext normalization and SHA-256 hashing for city, postal code, country, date of birth and gender, plus rejection of invalid country/date input. Live match quality remains unverified.
 

@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test('connections page follows real consent and SDK outcomes on mobile', async ({ page }) => {
+  await page.route(/googletagmanager\.com\/gtag\/js|fbevents\.js|clarity\.ms\/tag\//, (route) =>
+    route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }),
+  );
   await page.goto('/');
   await page.getByRole('link', { name: 'Connections' }).click();
   const dashboard = page.getByRole('region', { name: 'SignalKit connections' });
@@ -14,7 +17,7 @@ test('connections page follows real consent and SDK outcomes on mobile', async (
     await expect(card).toContainText('Not configured');
   }
 
-  await expect(events.getByRole('article')).toHaveCount(2);
+  await expect(events.getByRole('article')).toHaveCount(5);
   await expect(events).toContainText('Blocked by consent');
   await page.getByLabel('analytics', { exact: true }).check();
   await page.getByRole('button', { name: 'Track this page' }).click();

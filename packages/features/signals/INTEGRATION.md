@@ -30,7 +30,7 @@ The portable browser/server building blocks already exist, but that does not est
 
 ## Public IDs and server secrets
 
-Each local example has a root `signalkit.config.ts` for public GA4, Meta Pixel and Clarity IDs. The Next.js and SvelteKit browser labs import those constants and register external providers only when `ENABLE_EXTERNAL_PROVIDERS` is set after replacing the clearly fake placeholders. The Bun fixture is server-only, so its public ID file does not register browser providers. Keep real customer IDs out of this repository. Standalone static HTML continues to pass public IDs with `data-ga4-id`, `data-meta-id` and `data-clarity-id` attributes.
+Each local example has a root `signalkit.config.ts` for public GA4, Meta Pixel and Clarity IDs. The Next.js lab configures all three with clearly fake IDs so the inspector can show per-provider adapter outcomes after analytics and marketing consent. These outcomes do not verify a real provider account. The SvelteKit browser lab keeps external providers disabled by default. The Bun fixture is server-only, so its public ID file does not register browser providers. Replace IDs locally for host-owned account tests; keep real customer IDs out of this repository. Standalone static HTML continues to pass public IDs with `data-ga4-id`, `data-meta-id` and `data-clarity-id` attributes.
 
 Keep the Meta CAPI access token, OTLP authentication headers and webhook secret in server-only environment variables. Never put them in `signalkit.config.ts` or any file imported by browser code.
 
@@ -348,22 +348,24 @@ Create fresh observer/provider instances per request. The adapter uses route.id 
 
 ## Supported event contracts
 
-All events are strictly validated and sanitized before dispatch to providers. Unknown or dangerous fields are stripped to protect privacy.
+All events are validated and sanitized before dispatch. Unknown properties are stripped. Each configured provider receives the event only when its consent category is granted; CAPI requires a separate server-side `track` call with approved matching data.
 
-| Event Name       | Schema Properties                                                                | Provider Mapping                                      |
-| :--------------- | :------------------------------------------------------------------------------- | :---------------------------------------------------- |
-| `page_view`      | `page_path`                                                                      | GA4 `page_view`, Meta `PageView`, Clarity `page_view` |
-| `product_view`   | `item_id`, `item_name`, `price`, `currency`, `items`, etc.                       | GA4 `view_item`, Meta `ViewContent`                   |
-| `add_to_cart`    | `currency`, `value`, `items` (can be empty), `coupon`                            | GA4 `add_to_cart`, Meta `AddToCart`                   |
-| `begin_checkout` | `currency`, `value`, `items`, `coupon`                                           | GA4 `begin_checkout`, Meta `InitiateCheckout`         |
-| `purchase`       | `transaction_id`, `currency`, `value`, `items` (at least one), `shipping`, `tax` | GA4 `purchase`, Meta `Purchase`                       |
-| `generate_lead`  | `value`, `currency`, `lead_type`                                                 | Meta `Lead`, GA4 `generate_lead`                      |
-| `phone_click`    | Optional `channel` (`phone` or `whatsapp`)                                       | Meta `Contact`, GA4 `phone_click`                     |
-| `whatsapp_click` | Optional `channel` (`phone` or `whatsapp`)                                       | Meta `Contact`, GA4 `whatsapp_click`                  |
-| `sign_up`        | `method`                                                                         | Meta `CompleteRegistration`, GA4 `sign_up`            |
-| `login`          | `method`                                                                         | Meta `Login`, GA4 `login`                             |
-| `search`         | `search_term`                                                                    | Meta `Search`, GA4 `search`                           |
-| `custom_event`   | `action`, `category`, `label`, `value`                                           | Meta `CustomEvent`, GA4 custom                        |
+| SDK event        | GA4 event          | Meta Pixel event                  | Clarity behavior                   | Meta CAPI support                 |
+| ---------------- | ------------------ | --------------------------------- | ---------------------------------- | --------------------------------- |
+| `page_view`      | `page_view`        | `PageView` (standard)             | Page/session capture; no API event | `PageView` (standard)             |
+| `product_view`   | `view_item`        | `ViewContent` (standard)          | `product_view` event               | `ViewContent` (standard)          |
+| `add_to_cart`    | `add_to_cart`      | `AddToCart` (standard)            | `add_to_cart` event                | `AddToCart` (standard)            |
+| `begin_checkout` | `begin_checkout`   | `InitiateCheckout` (standard)     | `begin_checkout` event             | `InitiateCheckout` (standard)     |
+| `purchase`       | `purchase`         | `Purchase` (standard)             | `purchase` event                   | `Purchase` (standard)             |
+| `generate_lead`  | `generate_lead`    | `Lead` (standard)                 | `generate_lead` event              | `Lead` (standard)                 |
+| `phone_click`    | `phone_click`      | `Contact` (standard)              | `phone_click` event                | `Contact` (standard)              |
+| `whatsapp_click` | `whatsapp_click`   | `Contact` (standard)              | `whatsapp_click` event             | `Contact` (standard)              |
+| `sign_up`        | `sign_up`          | `CompleteRegistration` (standard) | `sign_up` event                    | `CompleteRegistration` (standard) |
+| `login`          | `login`            | `Login` (custom)                  | `login` event                      | `Login` (custom)                  |
+| `search`         | `search`           | `Search` (standard)               | `search` event                     | `Search` (standard)               |
+| `custom_event`   | validated `action` | validated `action` (custom)       | validated `action` event           | validated `action` (custom)       |
+
+`custom_event.properties.action` must match `^[a-z][a-z0-9_]{0,39}$`; invalid names are rejected before dispatch. Meta Pixel uses `trackSingleCustom` for custom names. GA4 receives `event_id`, and Meta Pixel/CAPI receive the corresponding event ID. Clarity's browser event API accepts only a name, so it does not receive an event-level ID or provide cross-platform deduplication. `page_view` starts Clarity's page/session capture without emitting an explicit Clarity event. All other listed events use Clarity's `event` API.
 
 ### Example: Tracking leads and contacts
 
