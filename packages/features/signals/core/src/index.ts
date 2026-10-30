@@ -27,7 +27,6 @@ export type SignalsOptions = {
   timeoutMs?: number;
   maxPending?: number;
   onDiagnostic?: (result: DispatchResult) => void;
-  persistKey?: string;
 };
 export type ConnectionStatus = {
   name: string;
@@ -131,27 +130,6 @@ export function createSignals(options: SignalsOptions = {}) {
     dropped: 0,
     invalid: 0,
   }));
-  if (options.persistKey && typeof globalThis.sessionStorage !== 'undefined') {
-    try {
-      const saved = sessionStorage.getItem(options.persistKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Partial<ConnectionStatus>[];
-        for (const conn of connections) {
-          const match = parsed.find((p) => p.name === conn.name && p.category === conn.category);
-          if (match) {
-            conn.attempts = match.attempts ?? 0;
-            conn.sent = match.sent ?? 0;
-            conn.failed = match.failed ?? 0;
-            conn.denied = match.denied ?? 0;
-            conn.dropped = match.dropped ?? 0;
-            conn.invalid = match.invalid ?? 0;
-            conn.lastStatus = match.lastStatus;
-            conn.lastUpdated = match.lastUpdated;
-          }
-        }
-      }
-    } catch {}
-  }
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of listeners) {
@@ -180,11 +158,6 @@ export function createSignals(options: SignalsOptions = {}) {
       connection.lastStatus = outcome.status;
       connection.lastUpdated = Date.now();
     });
-    if (options.persistKey && typeof globalThis.sessionStorage !== 'undefined') {
-      try {
-        sessionStorage.setItem(options.persistKey, JSON.stringify(connections));
-      } catch {}
-    }
     notify();
     try {
       options.onDiagnostic?.(result);

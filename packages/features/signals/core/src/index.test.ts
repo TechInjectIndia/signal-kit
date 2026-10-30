@@ -61,6 +61,35 @@ describe('dispatch lifecycle', () => {
     expect((await signals.track(event)).eventId).toBe('stable');
     expect(calls).toBe(1);
   });
+  it('keeps connection counts per instance even when legacy storage data exists', async () => {
+    const getItem = vi
+      .fn()
+      .mockReturnValue(
+        JSON.stringify([{ name: 'recorder', category: 'analytics', attempts: 999, sent: 999 }]),
+      );
+    const setItem = vi.fn();
+    vi.stubGlobal('sessionStorage', { getItem, setItem });
+    const options = {
+      persistKey: 'legacy-key',
+      consent: { analytics: true, marketing: false, observability: false },
+      providers: [{ name: 'recorder', category: 'analytics' as const, send: vi.fn() }],
+    };
+    try {
+      const first = createSignals(options);
+      expect(first.getConnections()[0]).toMatchObject({ attempts: 0, sent: 0 });
+      await first.track(event);
+      expect(first.getConnections()[0]).toMatchObject({ attempts: 1, sent: 1 });
+
+      const second = createSignals(options);
+      expect(second.getConnections()[0]).toMatchObject({ attempts: 0, sent: 0 });
+      expect(getItem).not.toHaveBeenCalled();
+      expect(setItem).not.toHaveBeenCalled();
+      first.dispose();
+      second.dispose();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   it('does not replay a denied provider copy or duplicate a sent copy after consent changes', async () => {
     const analyticsSend = vi.fn();
     const marketingSend = vi.fn();

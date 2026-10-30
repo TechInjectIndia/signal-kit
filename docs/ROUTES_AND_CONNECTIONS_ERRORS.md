@@ -18,7 +18,7 @@ This document catalogs all confirmed bugs, framework edge cases, import traps, a
   - [2.1 Subpath Export Missing in Framework Wrappers](#21-subpath-export-missing-in-framework-wrappers)
   - [2.2 Strict Package Manager Transitive Dependency Failure](#22-strict-package-manager-transitive-dependency-failure)
   - [2.3 SSR / Server Component Crash (`document is not defined`)](#23-ssr--server-component-crash-document-is-not-defined)
-  - [2.4 Ephemeral In-Memory Counters (Resets on Refresh / Route Change)](#24-ephemeral-in-memory-counters-resets-on-refresh--route-change)
+  - [2.4 Per-Instance In-Memory Counters](#24-per-instance-in-memory-counters)
   - [2.5 \"SDK Send Completed\" Does NOT Prove Live Upstream Vendor Delivery](#25-sdk-send-completed-does-not-prove-live-upstream-vendor-delivery)
   - [2.6 Server vs. Client Boundary Bundle Crash](#26-server-vs-client-boundary-bundle-crash)
 - [3. Safe Implementation Patterns for External Websites](#3-safe-implementation-patterns-for-external-websites)
@@ -197,21 +197,13 @@ This document catalogs all confirmed bugs, framework edge cases, import traps, a
 
 ---
 
-### 2.4 Ephemeral In-Memory Counters (Resets on Refresh / Route Change)
+### 2.4 Per-Instance In-Memory Counters
 
 - **File:** `packages/features/signals/browser/src/dashboard.ts`, `packages/features/signals/core/src/index.ts`
-- **The Issue:**
-  By default, `ConnectionStatus` counts (`sent`, `failed`, `denied`, `dropped`, `invalid`) reside in an in-memory array scoped to the active JavaScript instance.
-- **The Error:**
-  When a user reloads the `/connections` page, switches browser tabs, or performs a full document navigation, all statistics immediately revert to zero.
-- **Correction:**
-  Configure `persistKey` in client configuration to preserve counters in `sessionStorage`:
-  ```ts
-  createBrowserSignals({
-    persistKey: 'signalkit_connections_state',
-    ...
-  });
-  ```
+- **Behavior:**
+  `ConnectionStatus` counts (`sent`, `failed`, `denied`, `dropped`, `invalid`) live only in the current SDK instance. Reloading the page or creating a new instance starts its counts at zero; navigation that keeps the same instance does not reset them.
+- **Persistent reporting:**
+  The host owns any authenticated, durable aggregation of these local outcomes. Adding SDK persistence would first require a PRD/FRD/design change and validated storage data.
 
 ---
 
