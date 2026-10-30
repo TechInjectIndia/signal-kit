@@ -10,12 +10,11 @@
     "pnpm": ">=10 <11"
   },
   "scripts": {
-    "dev": "pnpm --filter @signalkit/example-nextjs dev",
-    "dev:all": "pnpm --parallel --filter \"@signalkit/example-nextjs\" --filter \"@signalkit/example-bun\" dev",
-    "dev:bun": "pnpm --filter @signalkit/example-bun dev",
-    "dev:sveltekit": "pnpm --filter @signalkit/example-sveltekit dev",
-    "dev:site": "pnpm --filter @signalkit/site dev",
-    "test:bun": "pnpm --filter @signalkit/example-bun test",
+    "dev": "turbo run dev --filter=@signalkit/example-nextjs",
+    "dev:all": "turbo run dev",
+    "dev:bun": "turbo run dev --filter=@signalkit/example-bun",
+    "dev:sveltekit": "turbo run dev --filter=@signalkit/example-sveltekit",
+    "dev:site": "turbo run dev --filter=@signalkit/site",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

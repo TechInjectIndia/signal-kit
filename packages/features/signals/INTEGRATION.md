@@ -391,7 +391,7 @@ await signals.track({
 
 ## Development
 
-Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfile; pnpm build; pnpm test; pnpm typecheck; pnpm test:boundaries. pnpm --filter @signalkit/example-nextjs dev or pnpm --filter @signalkit/example-bun dev. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
+Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfile; pnpm build; pnpm test; pnpm typecheck; pnpm test:boundaries. Use `pnpm dev` for Next, `pnpm dev:bun` for Bun, or `pnpm dev:all` for all local hosts through Turbo. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
 
 ## Technical references
 

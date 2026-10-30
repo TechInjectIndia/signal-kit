@@ -8,7 +8,7 @@ Source: apps/site. Static HTML/CSS, complete dist output, one small local progre
 
 ```sh
 pnpm --filter @signalkit/site build
-pnpm --filter @signalkit/site dev
+pnpm dev:site
 # http://localhost:3300/signal-kit/
 ```
 

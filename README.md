@@ -18,13 +18,13 @@ git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
 pnpm install --frozen-lockfile
 pnpm build
-pnpm --filter @signalkit/example-nextjs dev
+pnpm dev
 # http://localhost:3100 — consent controls and local inspector
-pnpm --filter @signalkit/example-bun dev
+pnpm dev:bun
 # http://localhost:3200 — API and signed payment fixture
 ```
 
-The examples use local recorders and synthetic data. The Next lab starts with all consent denied and configures GA4, Meta Pixel and Clarity with fake public IDs to show adapter outcomes after consent; those outcomes do not verify a real account. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
+Use `pnpm dev:sveltekit` or `pnpm dev:site` for those hosts; `pnpm dev:all` runs every example and the site through Turbo. The examples use local recorders and synthetic data. The Next lab starts with all consent denied and configures GA4, Meta Pixel and Clarity with fake public IDs to show adapter outcomes after consent; those outcomes do not verify a real account. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
 
 ## Connections dashboard
 

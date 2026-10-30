@@ -21,6 +21,8 @@ The workspace uses Node 22 via `.nvmrc` and CI. The `server`, `nextjs-server` an
 
 Counts, commands, graph and local runtime outcomes are recorded in the build report. Setup-time usability, independent developer onboarding and live provider dedup/attribution remain release gates. No synthetic test should be described as live tracking verification.
 
+Turbo dry-run graphs verify that each root `dev` script selects its intended host and `dev:all` selects the four runnable hosts. The direct Turbo JSON boundary check verifies the build graphs without parsing pnpm output. These are local tooling checks, not additional platform runtime evidence.
+
 Contracts unit tests verify that `purchase` rejects an empty `items` array while `add_to_cart` and `begin_checkout` accept an empty array. This is schema evidence, not live GA4 or Meta delivery evidence.
 
 Core route tests verify that an encoded slash stays within its original path segment after sanitation.

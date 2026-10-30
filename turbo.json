@@ -1,6 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "@signalkit/example-bun#dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["PORT", "SIGNALKIT_DEMO_DB", "RAZORPAY_WEBHOOK_SECRET"]
+    },
+    "@signalkit/site#dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["PORT", "SITE_URL"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", ".svelte-kit/**", "build/**"],
