@@ -396,7 +396,7 @@ safeReferrer('https://www.google.com/search?q=notebook');
         title: 'Routing best practices for consumer apps',
         paragraphs: [
           'Every redirect between the ad click and the page that runs your JavaScript can lose the query string. Next.js redirects() in next.config forwards it by default; middleware does not unless you build the destination from request.nextUrl so its search is kept.',
-          'createBrowserSignals reads location.href and document.referrer in start(), which SignalKitProvider calls in its mount effect. Clean the URL only from a component inside the provider, in an effect, so cleanup runs after capture. Keep the ad landing page a real route: an interstitial or login wall that navigates produces a same-origin referrer and a clean URL, which the SDK treats as internal navigation rather than a new touch.',
+          'createBrowserSignals reads location.href and document.referrer in start(), which SignalKitProvider calls in its mount effect. Clean the URL only after SignalKitProvider has called start(): a child effect in the same commit runs before the provider’s mount effect, so clean it from a later event such as the first route change, never from a layout above the provider or in middleware. Keep the ad landing page a real route: an interstitial or login wall that navigates produces a same-origin referrer and a clean URL, which the SDK treats as internal navigation rather than a new touch.',
         ],
         code: `import { NextResponse, type NextRequest } from 'next/server';
 
@@ -446,17 +446,18 @@ export function Providers({ consent, children }) {
   );
 }
 
-export function PlaceOrderButton({ cartId }) {
+export function PlaceOrderButton({ cartId }: { cartId: string }) {
   const signals = useSignals();
   return (
     <button
       type="button"
       onClick={async () => {
-        const { first, last } = signals.getAttribution();
+        // Gate the stored copy on the category that permits persisting the touch.
+        const attribution = signals.getConsent().marketing ? signals.getAttribution() : {};
         await fetch('/api/orders', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ cartId, attribution: { first, last } }),
+          body: JSON.stringify({ cartId, attribution }),
         });
       }}
     >
@@ -499,7 +500,7 @@ utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_co
         title: 'Organic search terms from Search Console and Bing Webmaster Tools',
         paragraphs: [
           'Organic terms are only available after the fact from the engines’ reporting APIs, with a delay of roughly two to three days and aggregated by query and page, not by visitor. They are reporting data, not real-time attribution. Verify the property by DNS or HTML file in both tools and submit your sitemap.',
-          'For Google, enable the Google Search Console API in Google Cloud, create an OAuth web client, and request the scope https://www.googleapis.com/auth/webmasters.readonly with access_type=offline. Your host runs the login and callback routes, exchanges the code at https://oauth2.googleapis.com/token and stores the refresh token server-side under GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET, never in NEXT_PUBLIC. For Bing, open Webmaster Tools → Settings → API access → Generate API key. The SDK never runs the OAuth flow or stores credentials, and its errors never include a token, API key or provider body.',
+          'For Google, enable the Google Search Console API in Google Cloud, create an OAuth web client, and request the scope https://www.googleapis.com/auth/webmasters.readonly with access_type=offline. Your host runs the login and callback routes, restricted to an authorized administrator with a signed state bound to that session, exchanges the code at https://oauth2.googleapis.com/token and stores the refresh token server-side under GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET, never in NEXT_PUBLIC. The search-terms route that reads the reports must require the same administrator, because the rows are private account data and each call consumes provider quota. For Bing, open Webmaster Tools → Settings → API access → Generate API key. The SDK never runs the OAuth flow or stores credentials, and its errors never include a token, API key or provider body.',
         ],
         code: `import {
   createGoogleSearchConsoleClient,
@@ -507,7 +508,8 @@ utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_co
   mergeSearchRows,
 } from '@techinject/server/search-console';
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!(await requireAdmin(request))) return new Response('Forbidden', { status: 403 });
   const google = createGoogleSearchConsoleClient({
     siteUrl: 'sc-domain:shop.example',
     accessToken: refreshAccessToken, // exchanges the stored refresh token server-side
@@ -516,9 +518,10 @@ export async function GET() {
     siteUrl: 'https://shop.example/',
     apiKey: process.env.BING_WEBMASTER_API_KEY!,
   });
-  const day = (offset) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
-  const request = { startDate: day(30), endDate: day(3), dimensions: ['query'], rowLimit: 50 };
-  const results = await Promise.allSettled([google.queries(request), bing.queries(request)]);
+  const day = (offset: number) =>
+    new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+  const query = { startDate: day(30), endDate: day(3), dimensions: ['query' as const], rowLimit: 50 };
+  const results = await Promise.allSettled([google.queries(query), bing.queries(query)]);
   const rows = mergeSearchRows(
     results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
   );
@@ -547,7 +550,7 @@ for (const f of findings) console.warn(f.id, f.message, f.hint);`,
         title: 'Verify before you trust it, and what stays private',
         paragraphs: [
           'Run the Next.js lab and open it with ?gclid=test or ?utm_source=bing&utm_medium=cpc&utm_term=notebook; the “Visit source” card shows the first and last touch, and granting marketing consent persists it across a reload. With a real GA4 stream, DebugView should show page_location still carrying gclid and page_referrer as the referrer origin. Local tests are fixture evidence; they do not establish that GA4, Google Ads or Meta attributed a real purchase. The lab’s /api/search-terms returns configured:false until the Search Console and Bing environment variables are set.',
-          'Only the eleven allowlisted parameters can leave the page, and only on page_location. A value containing @, control characters, angle brackets or quotes, or exceeding its length budget, is dropped. The referrer is reduced to scheme and host. Nothing is persisted before consent, withdrawal clears storage, maxAgeDays bounds first-touch retention, and your host owns retention of whatever it copies onto an order.',
+          'In the payloads the SDK builds, only the eleven allowlisted parameters can leave the page, and only on page_location; this bounds what SignalKit sends, not what the vendor scripts the GA4 and Meta adapters load can read from the page URL themselves, so configure each provider’s own privacy controls too. safePageLocation passes allowlisted values up to 256 characters to GA4; the first-party touch keeps click IDs up to 256 and UTMs up to 100–200 characters. A value containing @, control characters, angle brackets or quotes, or exceeding its budget, is dropped. The referrer is reduced to scheme and host. Nothing is persisted before consent, withdrawal clears storage, maxAgeDays bounds first-touch retention, and your host owns retention of whatever it copies onto an order.',
         ],
         setup: true,
         links: [

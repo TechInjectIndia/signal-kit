@@ -12,6 +12,8 @@ export const dynamic = 'force-dynamic';
  * Credentials stay server-side and are injected through environment configuration. The host owns
  * the Google OAuth flow that produced SEARCH_CONSOLE_ACCESS_TOKEN; see the attribution guide.
  * Without configuration the route reports that honestly instead of inventing rows.
+ * This handler has no authentication. Hosts must add their own access control before exposing it,
+ * because the rows are private analytics data and every call consumes provider quota.
  */
 export async function GET() {
   const clients: SearchConsoleClient[] = [];

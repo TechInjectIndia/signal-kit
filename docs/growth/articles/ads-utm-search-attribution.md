@@ -45,7 +45,7 @@ export function middleware(request: NextRequest) {
 }
 ```
 
-Do not `router.replace` the parameters away before capture. `createBrowserSignals` reads `location.href` and `document.referrer` in `start()`, which `SignalKitProvider` calls in its mount effect. If you clean the URL for aesthetics, do it from a component rendered inside the provider, in an effect, so it runs after capture. Cleaning in a layout above the provider, or in middleware, removes the parameters before any client code sees them.
+Do not `router.replace` the parameters away before capture. `createBrowserSignals` reads `location.href` and `document.referrer` in `start()`, which `SignalKitProvider` calls in its mount effect. If you clean the URL for aesthetics, do it only after `SignalKitProvider` has called `start()`. React runs a child's mount effect before its parent's, so an effect in a component rendered inside the provider in the same commit runs before capture and does not guarantee the order. Clean the URL from a later event, such as the first route change or a `setTimeout` scheduled after mount, and never in a layout above the provider or in middleware, which remove the parameters before any client code sees them.
 
 Keep the ad landing page a real route. An interstitial, splash screen, app-download gate or login wall that renders first and then navigates to the real page produces a same-origin referrer and a clean URL, which the SDK treats as internal navigation rather than a new touch. Let the landing page render; present gates after the first paint.
 
@@ -110,11 +110,13 @@ export function PlaceOrderButton({ cartId }: { cartId: string }) {
     <button
       type="button"
       onClick={async () => {
-        const { first, last } = signals.getAttribution();
+        // getAttribution() also returns the in-memory landing touch before consent, so gate the
+        // copy you store on the same category that permits persisting it.
+        const attribution = signals.getConsent().marketing ? signals.getAttribution() : {};
         await fetch('/api/orders', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ cartId, attribution: { first, last } }),
+          body: JSON.stringify({ cartId, attribution }),
         });
       }}
     >
@@ -124,7 +126,7 @@ export function PlaceOrderButton({ cartId }: { cartId: string }) {
 }
 ```
 
-Store the touch on the order record your server creates, not in a provider. A column set such as `channel`, `source`, `medium`, `campaign`, `term` and `click_ids` on the order lets you join revenue to campaigns without depending on any vendor's attribution window. Validate the posted object on the server; the browser is not a trusted source and the touch is a hint, not a verified fact.
+Store the touch on the order record your server creates, not in a provider, and only when the attribution consent category is granted at order time; the server should drop the field when its own consent record disagrees. A column set such as `channel`, `source`, `medium`, `campaign`, `term` and `click_ids` on the order lets you join revenue to campaigns without depending on any vendor's attribution window. Validate the posted object on the server; the browser is not a trusted source and the touch is a hint, not a verified fact.
 
 A few behaviours to rely on rather than discover:
 
@@ -221,12 +223,15 @@ Before any API call, verify the property (DNS TXT record or the HTML file method
 
 For Google, create an OAuth client in Google Cloud: APIs & Services → Library → enable "Google Search Console API"; APIs & Services → Credentials → Create credentials → OAuth client ID → Web application, with your callback URL as an authorized redirect. Request the read-only scope `https://www.googleapis.com/auth/webmasters.readonly`. Keep the client ID and secret in server-only environment variables.
 
-The SDK never runs the OAuth flow and never stores credentials; your host does both. A minimal pair of route handlers looks like this. It is pseudocode-level: add a signed `state` value, error handling and your own secret store.
+The SDK never runs the OAuth flow and never stores credentials; your host does both. A minimal pair of route handlers looks like this. It is pseudocode-level: `requireAdmin`, `signState`, `verifyState` and `secrets` stand for your own session check, signed-state helper and secret store, and error handling is omitted. Both routes must be restricted to an authorized administrator, with the `state` value bound to that administrator's session; otherwise any visitor could complete the flow with their own Google account and overwrite the refresh token your reporting depends on.
 
 ```ts
 // app/api/search-console/login/route.ts
-export function GET() {
+export async function GET(request: Request) {
+  const admin = await requireAdmin(request); // your session check; null for anyone else
+  if (!admin) return new Response('Forbidden', { status: 403 });
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  url.searchParams.set('state', await signState({ admin: admin.id })); // HMAC-signed, short-lived
   url.searchParams.set('client_id', process.env.GOOGLE_OAUTH_CLIENT_ID!);
   url.searchParams.set('redirect_uri', process.env.GOOGLE_OAUTH_REDIRECT_URI!);
   url.searchParams.set('response_type', 'code');
@@ -240,8 +245,12 @@ export function GET() {
 ```ts
 // app/api/search-console/callback/route.ts
 export async function GET(request: Request) {
-  const code = new URL(request.url).searchParams.get('code');
-  if (!code) return new Response('Missing code', { status: 400 });
+  const admin = await requireAdmin(request);
+  if (!admin) return new Response('Forbidden', { status: 403 });
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get('code');
+  const state = await verifyState(searchParams.get('state')); // rejects expired or tampered values
+  if (!code || state?.admin !== admin.id) return new Response('Invalid request', { status: 400 });
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -284,7 +293,9 @@ async function refreshAccessToken(): Promise<string> {
   return ((await response.json()) as { access_token: string }).access_token;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Query reports are private account data and every call consumes provider quota.
+  if (!(await requireAdmin(request))) return new Response('Forbidden', { status: 403 });
   const google = createGoogleSearchConsoleClient({
     siteUrl: 'sc-domain:shop.example',
     accessToken: refreshAccessToken,
@@ -295,13 +306,13 @@ export async function GET() {
   });
   const day = (offset: number) =>
     new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
-  const request = {
+  const query = {
     startDate: day(30),
     endDate: day(3),
     dimensions: ['query' as const],
     rowLimit: 50,
   };
-  const results = await Promise.allSettled([google.queries(request), bing.queries(request)]);
+  const results = await Promise.allSettled([google.queries(query), bing.queries(query)]);
   const rows = mergeSearchRows(
     results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
   );
@@ -329,7 +340,7 @@ cd signal-kit
 bun install --frozen-lockfile
 bun run build
 bun run --filter @signalkit/example-nextjs dev
-# http://localhost:3000/?gclid=test
+# http://localhost:3100/?gclid=test
 ```
 
 ## Run the self-check
@@ -363,7 +374,7 @@ Local tests exercise fixtures: the classification table, storage under consent, 
 
 ## Privacy boundaries
 
-Only the eleven parameters in `TRACKING_PARAMETERS` can leave the page, and only on `page_location`. Every other parameter is removed before any provider sees the URL. A tracking value that contains `@`, a control character, angle brackets or quotes, or that exceeds its length budget (256 characters for click IDs, 100–200 for UTMs) is dropped rather than truncated.
+In the payloads the SDK builds, only the eleven parameters in `TRACKING_PARAMETERS` can leave the page, and only on `page_location`; every other parameter is removed before the adapter hands the value to the provider. This bounds what SignalKit sends, not what a vendor script can read: the GA4 and Meta adapters load `gtag.js` and `fbevents.js`, which can inspect the full page URL themselves, so configure each provider's own privacy controls (GA4 data redaction, Meta's automatic advanced matching and URL settings) as well. Length limits differ by destination: `safePageLocation` passes any allowlisted value up to 256 characters to GA4, while the first-party touch keeps click IDs up to 256 characters and UTMs up to 100–200. In both cases a value that contains `@`, a control character, angle brackets or quotes, or that exceeds its budget, is dropped rather than truncated.
 
 The referrer is reduced to its scheme and host. Its path, query, fragment and any credentials never leave the page, and a same-origin referrer is not reported as a touch at all.
 
