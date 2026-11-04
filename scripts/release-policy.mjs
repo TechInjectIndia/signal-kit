@@ -7,7 +7,9 @@ export function releaseTag(version) {
   return version.includes('-') ? version.split('-')[1].split('.')[0] : 'latest';
 }
 
-export function shouldCleanupLatest(tags, version) {
+// npm refuses to delete latest, so until the first stable release it follows the newest
+// prerelease of the same channel and base version. A stable latest is never replaced.
+export function shouldAdvanceLatest(tags, version) {
   const channel = releaseTag(version);
   if (channel === 'latest' || typeof tags.latest !== 'string') return false;
   let latestChannel;
@@ -18,8 +20,14 @@ export function shouldCleanupLatest(tags, version) {
   }
   if (latestChannel !== channel || tags.latest.split('-')[0] !== version.split('-')[0])
     return false;
-  if (BigInt(tags.latest.split('-')[1].split('.')[1]) > BigInt(version.split('-')[1].split('.')[1]))
+  if (
+    BigInt(tags.latest.split('-')[1].split('.')[1]) >= BigInt(version.split('-')[1].split('.')[1])
+  )
     return false;
-  assert.equal(tags[channel], version, `Refusing cleanup: retain ${channel}@${version}`);
+  assert.equal(
+    tags[channel],
+    version,
+    `Refusing to move latest: ${channel} must point to ${version}`,
+  );
   return true;
 }

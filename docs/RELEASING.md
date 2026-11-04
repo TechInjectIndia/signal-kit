@@ -19,9 +19,9 @@ Publication is not atomic across npm packages. If interrupted, rerun using the s
 
 References: [Changesets automation](https://changesets.dev/guide/automating), [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/).
 
-## First-publication channel cleanup
+## Prerelease latest tag
 
-npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `bun run release:cleanup-tags` and complete npm's authenticator prompt. Verify the alpha tag points to the current version before cleanup. The helper refuses cleanup without that matching prerelease tag and only removes latest when it points to the current or an older prerelease in the same channel and base version; an existing stable latest is preserved. Verify all nine dist-tags afterward.
+npm assigned latest as well as alpha on the initial publication, and it refuses to delete latest (`400 Dist-tag request rejected`). Until the first stable release, latest therefore follows the newest prerelease: after each publication `bun run release:cleanup-tags` moves latest to the current version. The helper refuses without a matching channel tag and only moves latest when it points to an older prerelease in the same channel and base version; an existing stable latest is never replaced by a prerelease. Verify all nine dist-tags afterward.
 
 npm can take several minutes to serve a version it has just accepted, so the helper polls each package until the registry returns the new version under its channel tag (20 attempts, 30 seconds apart; override with `SIGNALKIT_REGISTRY_ATTEMPTS` and `SIGNALKIT_REGISTRY_WAIT_MS`) before deciding anything.
 

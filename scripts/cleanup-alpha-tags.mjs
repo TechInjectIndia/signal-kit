@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import assert from 'node:assert/strict';
 import { root } from './files.mjs';
-import { releaseTag, shouldCleanupLatest } from './release-policy.mjs';
+import { releaseTag, shouldAdvanceLatest } from './release-policy.mjs';
 import { registryField } from './registry-response.mjs';
 const version = JSON.parse(
   await readFile(join(root, 'packages/features/signals/core/package.json'), 'utf8'),
@@ -47,8 +47,10 @@ const names = [
 for (const name of names) {
   const pkg = `@techinject/${name}`;
   const tags = await publishedTags(pkg);
-  if (!shouldCleanupLatest(tags, version)) continue;
-  // Remove only this channel's current or older prerelease; preserve stable and newer tags.
-  const result = spawnSync('npm', ['dist-tag', 'rm', pkg, 'latest'], { stdio: 'inherit' });
+  if (!shouldAdvanceLatest(tags, version)) continue;
+  // Move only an older prerelease latest of this channel; preserve stable and newer tags.
+  const result = spawnSync('npm', ['dist-tag', 'add', `${pkg}@${version}`, 'latest'], {
+    stdio: 'inherit',
+  });
   assert.equal(result.status, 0, 'Complete npm 2FA in your own terminal, then retry');
 }

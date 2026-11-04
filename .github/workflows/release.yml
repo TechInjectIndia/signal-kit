@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       cleanup_only:
-        description: Remove stale prerelease latest tags without rebuilding or publishing packages
+        description: Move a stale prerelease latest tag to the current version without rebuilding or publishing packages
         type: boolean
         default: false
 permissions:
@@ -123,5 +123,5 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/signalkit-release-tools" --no-package-lock --ignore-scripts npm@12.2.0
           echo "$RUNNER_TEMP/signalkit-release-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - name: Remove only stale prerelease latest tags
+      - name: Move only stale prerelease latest tags
         run: node scripts/cleanup-alpha-tags.mjs
