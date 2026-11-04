@@ -1,10 +1,25 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { SignalKitProvider, useSignals, type BrowserConfig } from '@techinject/nextjs';
-import type { Consent, EventInput, DispatchResult } from '@techinject/contracts';
+import {
+  SignalKitProvider,
+  useSignals,
+  createGA4Provider,
+  createMetaPixelProvider,
+  createClarityProvider,
+  type BrowserConfig,
+} from '@techinject/nextjs';
+import type { Consent, RegisteredEventInput, DispatchResult } from '@techinject/contracts';
+import {
+  GA4_MEASUREMENT_ID,
+  META_PIXEL_ID,
+  CLARITY_PROJECT_ID,
+  ENABLE_EXTERNAL_PROVIDERS,
+} from '../signalkit.config';
 
-type Demo = { track(input: EventInput): Promise<DispatchResult> };
+import { exampleEvents } from '../signalkit.events';
+type AppEventInput = RegisteredEventInput<typeof exampleEvents>;
+type Demo = { track(input: AppEventInput): Promise<DispatchResult> };
 const Context = createContext<Demo | null>(null);
 export function useDemo() {
   const ctx = useContext(Context);
@@ -18,20 +33,32 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
     observability: false,
   });
   const [lines, setLines] = useState<string[]>([]);
-  const config = useMemo<BrowserConfig>(() => {
+  const config = useMemo<BrowserConfig<typeof exampleEvents>>(() => {
     const append = (line: string) => setLines((previous) => [line, ...previous].slice(0, 30));
-    return {
-      traceOrigins: typeof location === 'undefined' ? [] : [location.origin],
-      providers: [
-        {
-          name: 'local-analytics',
-          category: 'analytics',
-          send(event) {
-            append(`${event.name} · ${event.eventId.slice(0, 8)}`);
-          },
+
+    const providers: BrowserConfig<typeof exampleEvents>['providers'] = [
+      {
+        name: 'local-analytics',
+        category: 'analytics',
+        send(event) {
+          append(`${event.name} · ${event.eventId.slice(0, 8)}`);
         },
-        { name: 'local-marketing', category: 'marketing', send() {} },
-      ],
+      },
+      { name: 'local-marketing', category: 'marketing', send() {} },
+    ];
+
+    if (ENABLE_EXTERNAL_PROVIDERS) {
+      providers.push(
+        createGA4Provider({ measurementId: GA4_MEASUREMENT_ID }),
+        createMetaPixelProvider({ pixelId: META_PIXEL_ID }),
+        createClarityProvider({ projectId: CLARITY_PROJECT_ID }),
+      );
+    }
+
+    return {
+      events: exampleEvents,
+      traceOrigins: typeof location === 'undefined' ? [] : [location.origin],
+      providers,
       observer: {
         record(record) {
           append(
@@ -40,7 +67,14 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
         },
       },
       onDiagnostic(result) {
-        append(result.outcomes.map((o) => `${o.provider}: ${o.status}`).join(' / '));
+        setLines((previous) =>
+          [
+            ...result.outcomes.map(
+              ({ provider, status }) => `${result.eventId.slice(0, 8)} · ${provider}: ${status}`,
+            ),
+            ...previous,
+          ].slice(0, 30),
+        );
       },
     };
   }, []);
@@ -65,8 +99,8 @@ function Lab({
   lines: string[];
   setLines: (value: string[]) => void;
 }) {
-  const signals = useSignals();
-  const track = (input: EventInput) => signals.track(input);
+  const signals = useSignals<typeof exampleEvents>();
+  const track = (input: AppEventInput) => signals.track(input);
   return (
     <Context.Provider value={{ track }}>
       <header className="top">
@@ -96,7 +130,8 @@ function Lab({
           </div>
           <p className="note">
             All categories start denied. Grant consent, then navigate or emit a new event. Dropped
-            events are never replayed.
+            events are never replayed. Grant analytics and marketing to see all three provider
+            outcomes.
           </p>
           <div className="controls">
             <button onClick={() => void fetch('/api/ping')}>Test API</button>
@@ -104,7 +139,7 @@ function Lab({
             <button onClick={() => setLines([])}>Clear</button>
           </div>
           <p className="status" role="status">
-            {'SDK ready · local transports'}
+            {'SDK ready · fake public provider IDs'}
           </p>
           {lines.length ? (
             <ol className="feed" aria-label="Recorded activity">

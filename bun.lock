@@ -29,6 +29,7 @@
         "@techinject/bun": "workspace:*",
         "@techinject/contracts": "workspace:*",
         "@techinject/server": "workspace:*",
+        "zod": "4.6.6",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -46,6 +47,7 @@
         "next": "16.4.1",
         "react": "19.3.0",
         "react-dom": "19.3.0",
+        "zod": "4.6.6",
       },
       "devDependencies": {
         "@types/node": "22.20.5",
@@ -62,6 +64,7 @@
         "@techinject/contracts": "workspace:*",
         "@techinject/sveltekit": "workspace:*",
         "@techinject/sveltekit-server": "workspace:*",
+        "zod": "4.6.6",
       },
       "devDependencies": {
         "@sveltejs/adapter-node": "6.0.1",

@@ -1,7 +1,9 @@
+import { exampleEvents } from '../../contracts/test/consumer-events.js';
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createBrowserSignals } from './index.js';
 import { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
+import type { SignalEvent } from '@techinject/contracts';
 const consent = { analytics: true, marketing: true, observability: true };
 const disposals: (() => void)[] = [];
 afterEach(() => {
@@ -9,6 +11,8 @@ afterEach(() => {
   vi.restoreAllMocks();
   history.replaceState(null, '', '/');
   document.head.innerHTML = '';
+  const globals = window as unknown as Record<string, unknown>;
+  for (const key of ['dataLayer', 'gtag', 'fbq', 'clarity']) delete globals[key];
 });
 describe('browser lifecycle', () => {
   it('flush waits for observer records and invokes its flush hook', async () => {
@@ -52,6 +56,30 @@ describe('browser lifecycle', () => {
     await window.fetch('/api');
     await sdk.flush();
   });
+  it('silently drops observer records at capacity without a fake event diagnostic', async () => {
+    window.fetch = vi.fn(async () => new Response('ok'));
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const record = vi.fn(() => waiting);
+    const onDiagnostic = vi.fn();
+    const sdk = createBrowserSignals({
+      consent,
+      autoTrack: false,
+      observer: { record },
+      onDiagnostic,
+    });
+    disposals.push(sdk.dispose);
+    sdk.start();
+    await sdk.flush();
+    onDiagnostic.mockClear();
+    for (let index = 0; index < 33; index++) await window.fetch(`/api/${index}`);
+    expect(record).toHaveBeenCalledTimes(32);
+    expect(onDiagnostic).not.toHaveBeenCalled();
+    release();
+    await sdk.flush();
+  });
   it('tracks initial and distinct navigation once, handles dynamic IDs and restores history', async () => {
     const events: unknown[] = [];
     const original = history.pushState;
@@ -77,6 +105,28 @@ describe('browser lifecycle', () => {
     sdk.stop();
     expect(history.pushState).toBe(original);
   });
+  it('ignores query-only navigation even with a legacy trackQuery property', async () => {
+    const pages: string[] = [];
+    const legacyConfig = {
+      consent,
+      trackQuery: true,
+      providers: [
+        {
+          name: 'recorder',
+          category: 'analytics' as const,
+          send(event: { name: string; properties: Record<string, unknown> }) {
+            if (event.name === 'page_view') pages.push(event.properties.page_path as string);
+          },
+        },
+      ],
+    };
+    const sdk = createBrowserSignals(legacyConfig);
+    disposals.push(sdk.dispose);
+    history.pushState(null, '', '/products/1?ref=first');
+    history.replaceState(null, '', '/products/1?ref=second');
+    await sdk.flush();
+    expect(pages).toEqual(['/', '/products/:id']);
+  });
   it('does not load or replay pages without consent and prevents duplicate active instrumentation', async () => {
     const send = vi.fn();
     const first = createBrowserSignals({
@@ -88,6 +138,8 @@ describe('browser lifecycle', () => {
       providers: [{ name: 'recorder', category: 'analytics', send }],
     });
     disposals.push(second.dispose);
+    // A legacy caller cannot bypass the single-instance guard at runtime.
+    Reflect.apply(second.start, second, [{ force: true }]);
     first.setConsent(consent);
     await first.flush();
     expect(send).not.toHaveBeenCalled();
@@ -174,6 +226,84 @@ describe('browser lifecycle', () => {
   });
 });
 describe('browser providers', () => {
+  it('dispatches one cart event to GA4, Meta Pixel and Clarity with the same SDK event ID', async () => {
+    const observed: { provider: string; name: string; eventId: string }[] = [];
+    const providers = [
+      createGA4Provider({ measurementId: 'G-TRIPLE' }),
+      createMetaPixelProvider({ pixelId: '123' }),
+      createClarityProvider({ projectId: 'demo123' }),
+    ].map((provider) => ({
+      ...provider,
+      async send(event: SignalEvent, signal?: AbortSignal) {
+        observed.push({ provider: provider.name, name: event.name, eventId: event.eventId });
+        await provider.send(event, signal);
+      },
+    }));
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers,
+      events: exampleEvents,
+    });
+    disposals.push(sdk.dispose);
+    const dispatch = sdk.track({
+      name: 'add_to_cart',
+      eventId: 'cart-shared-123',
+      properties: {
+        currency: 'INR',
+        value: 450,
+        items: [{ item_id: 'notebook', price: 450, quantity: 1 }],
+      },
+    });
+    await Promise.resolve();
+    const scripts = [...document.querySelectorAll('script')];
+    expect(scripts).toHaveLength(3);
+    scripts.forEach((script) => script.dispatchEvent(new Event('load')));
+    expect((await dispatch).outcomes).toEqual([
+      { provider: 'ga4', status: 'sent' },
+      { provider: 'meta-pixel', status: 'sent' },
+      { provider: 'clarity', status: 'sent' },
+    ]);
+    expect(observed).toHaveLength(3);
+    expect(observed.map(({ eventId }) => eventId)).toEqual(Array(3).fill('cart-shared-123'));
+
+    const globals = window as unknown as {
+      dataLayer: unknown[][];
+      fbq: { queue: unknown[][] };
+      clarity: { q: unknown[][] };
+    };
+    const ga4Call = globals.dataLayer.findLast((args) => args[0] === 'event');
+    expect(ga4Call?.[1]).toBe('add_to_cart');
+    expect(ga4Call?.[2]).toMatchObject({ event_id: 'cart-shared-123' });
+    const metaCall = globals.fbq.queue.findLast((args) => args[0] === 'trackSingle');
+    expect(metaCall?.slice(0, 3)).toEqual(['trackSingle', '123', 'AddToCart']);
+    expect(metaCall?.[4]).toEqual({ eventID: 'cart-shared-123' });
+    expect(globals.clarity.q.findLast((args) => args[0] === 'event')).toEqual([
+      'event',
+      'add_to_cart',
+    ]);
+
+    await sdk.track({
+      name: 'custom_event',
+      eventId: 'custom-shared-123',
+      properties: { action: 'video_play', label: 'intro', value: 0 },
+    });
+    expect(globals.dataLayer.findLast((args) => args[0] === 'event')?.[1]).toBe('video_play');
+    const customGa4 = globals.dataLayer.findLast((args) => args[0] === 'event')?.[2];
+    expect(customGa4).toMatchObject({ label: 'intro', value: 0, event_id: 'custom-shared-123' });
+    expect(customGa4).not.toHaveProperty('action');
+    expect(globals.fbq.queue.at(-1)?.slice(0, 3)).toEqual([
+      'trackSingleCustom',
+      '123',
+      'video_play',
+    ]);
+    expect(globals.fbq.queue.at(-1)?.[3]).toMatchObject({ label: 'intro', value: 0 });
+    expect(globals.fbq.queue.at(-1)?.[4]).toEqual({ eventID: 'custom-shared-123' });
+    expect(globals.clarity.q.findLast((args) => args[0] === 'event')).toEqual([
+      'event',
+      'video_play',
+    ]);
+  });
   it('loads GA4 only after consent and sets explicit page dispatch', async () => {
     const provider = createGA4Provider({ measurementId: 'G-TEST' });
     const sdk = createBrowserSignals({ autoTrack: false, providers: [provider] });
@@ -217,7 +347,12 @@ describe('browser providers', () => {
   });
   it('maps purchase event ID for Meta deduplication and reports blocked scripts', async () => {
     const provider = createMetaPixelProvider({ pixelId: '123' });
-    const sdk = createBrowserSignals({ autoTrack: false, consent, providers: [provider] });
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [provider],
+      events: exampleEvents,
+    });
     disposals.push(sdk.dispose);
     const dispatch = sdk.track({
       name: 'purchase',
@@ -235,6 +370,22 @@ describe('browser providers', () => {
     const queue = (window as unknown as { fbq: { queue: unknown[][] } }).fbq.queue;
     expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingle', '123', 'Purchase']);
     expect(queue.at(-1)?.[4]).toEqual({ eventID: 'purchase-123' });
+
+    await sdk.track({
+      name: 'login',
+      eventId: 'login-123',
+      properties: { method: 'password' },
+    });
+    expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingleCustom', '123', 'Login']);
+    expect(queue.at(-1)?.[4]).toEqual({ eventID: 'login-123' });
+
+    await sdk.track({
+      name: 'custom_event',
+      eventId: 'custom-123',
+      properties: { action: 'video_play' },
+    });
+    expect(queue.at(-1)?.slice(0, 3)).toEqual(['trackSingleCustom', '123', 'video_play']);
+    expect(queue.at(-1)?.[4]).toEqual({ eventID: 'custom-123' });
     const blocked = createBrowserSignals({
       autoTrack: false,
       consent,
@@ -243,7 +394,127 @@ describe('browser providers', () => {
     disposals.push(blocked.dispose);
     const result = blocked.page('/blocked');
     await Promise.resolve();
-    [...document.querySelectorAll('script')].at(-1)?.dispatchEvent(new Event('error'));
     expect((await result).outcomes[0]?.status).toBe('failed');
+  });
+  it('excludes query parameters from GA4 page_location', async () => {
+    history.replaceState(
+      null,
+      '',
+      '/products/shoes?utm_source=google&utm_extra=%2B919876543210&gclid=gclid123&secret=token',
+    );
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [createGA4Provider({ measurementId: 'G-UTM123' })],
+    });
+    disposals.push(sdk.dispose);
+    const result = sdk.track({
+      name: 'page_view',
+      eventId: 'pv-utm',
+      properties: { page_path: '/products/shoes' },
+    });
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    await result;
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const eventCall = layer.findLast(
+      (args) => args[0] === 'event' && (args[2] as Record<string, unknown>)?.event_id === 'pv-utm',
+    );
+    expect(eventCall).toBeDefined();
+    const eventParams = eventCall![2] as Record<string, string>;
+    expect(new URL(eventParams.page_location).pathname).toBe('/products/shoes');
+    expect(new URL(eventParams.page_location).search).toBe('');
+  });
+  it('ignores in-page anchors without hash route tracking', async () => {
+    history.replaceState(null, '', '/product/x');
+    const pages: string[] = [];
+    const sdk = createBrowserSignals({
+      consent,
+      providers: [
+        {
+          name: 'recorder',
+          category: 'analytics',
+          send: (event) => {
+            pages.push(event.properties.page_path as string);
+          },
+        },
+      ],
+    });
+    disposals.push(sdk.dispose);
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
+    window.location.hash = '#reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    history.pushState(null, '', '/product/x#details');
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
+    window.location.hash = '#/catalog';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+  });
+  it('tracks hash routes only when enabled and ignores plain anchors', async () => {
+    history.replaceState(null, '', '/product/x');
+    const pages: string[] = [];
+    const sdk = createBrowserSignals({
+      consent,
+      trackHash: true,
+      providers: [
+        {
+          name: 'recorder',
+          category: 'analytics',
+          send: (event) => {
+            pages.push(event.properties.page_path as string);
+          },
+        },
+      ],
+    });
+    disposals.push(sdk.dispose);
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
+    window.location.hash = '#reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x']);
+
+    window.location.hash = '#/catalog';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x', '/catalog']);
+
+    window.location.hash = '#!/catalog?tab=reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x', '/catalog']);
+
+    window.location.hash = '#reviews';
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await sdk.flush();
+    expect(pages).toEqual(['/product/x', '/catalog']);
+  });
+  it('does not turn browser errors into request records', async () => {
+    const records: RequestRecord[] = [];
+    window.fetch = vi.fn(async () => new Response('failed', { status: 500 }));
+    const sdk = createBrowserSignals({
+      consent,
+      observer: {
+        record: (rec) => {
+          records.push(rec);
+        },
+      },
+    });
+    disposals.push(sdk.dispose);
+    window.dispatchEvent(new ErrorEvent('error', { message: 'synthetic crash' }));
+    window.dispatchEvent(new Event('unhandledrejection'));
+    await sdk.flush();
+    expect(records).toEqual([]);
+
+    await window.fetch('/api/failure');
+    await sdk.flush();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ kind: 'request', method: 'GET', status: 500, error: true });
   });
 });

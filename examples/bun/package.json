@@ -13,7 +13,8 @@
   "dependencies": {
     "@techinject/server": "workspace:*",
     "@techinject/bun": "workspace:*",
-    "@techinject/contracts": "workspace:*"
+    "@techinject/contracts": "workspace:*",
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

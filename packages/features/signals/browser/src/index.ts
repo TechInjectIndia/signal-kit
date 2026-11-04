@@ -1,14 +1,19 @@
+import type { EventDefinition, SignalsOptions } from '@techinject/core';
 import { createSignals, generateId, safeRoute, parseTraceparent } from '@techinject/core';
 import type { Consent, Observer, RequestRecord } from '@techinject/contracts';
 export { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
-export type BrowserConfig = Parameters<typeof createSignals>[0] & {
-  observer?: Observer;
-  traceOrigins?: string[];
-  excludeUrls?: string[];
-  autoTrack?: boolean;
-};
+export type BrowserConfig<Events extends readonly EventDefinition[] = readonly []> =
+  SignalsOptions<Events> & {
+    observer?: Observer;
+    traceOrigins?: string[];
+    excludeUrls?: string[];
+    autoTrack?: boolean;
+    trackHash?: boolean;
+  };
 let activeOwner: object | undefined;
-export function createBrowserSignals(config: BrowserConfig = {}) {
+export function createBrowserSignals<const Events extends readonly EventDefinition[] = readonly []>(
+  config: BrowserConfig<Events> = {},
+) {
   const core = createSignals(config);
   let running = false;
   const owner = {};
@@ -31,8 +36,11 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
       if (timer !== undefined) clearTimeout(timer);
     }
   }
-  let lastPath = '';
+  let lastRoute = '';
+  let lastPathname = '';
   const restores: (() => void)[] = [];
+  const isHashRoute = (hash: string) =>
+    config.trackHash === true && (hash.startsWith('#/') || hash.startsWith('#!/'));
   const excluded = (url: URL) =>
     [
       'googletagmanager.com',
@@ -44,28 +52,43 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     (config.excludeUrls ?? []).some(
       (value) => url.href.startsWith(value) || url.pathname.startsWith(value),
     );
-  const page = (path?: string, eventId?: string) =>
-    core.track({
+  const currentRoute = () => {
+    if (typeof location === 'undefined') return '/';
+    if (isHashRoute(location.hash)) {
+      const hashRoute =
+        location.hash.slice(location.hash.startsWith('#!') ? 2 : 1).split('#')[0] ?? '/';
+      const queryIndex = hashRoute.indexOf('?');
+      return queryIndex < 0 ? hashRoute : hashRoute.slice(0, queryIndex);
+    }
+    return location.pathname;
+  };
+  const page = (path?: string, eventId?: string) => {
+    const routePath = path || currentRoute();
+    return core.track({
       name: 'page_view',
       ...(eventId ? { eventId } : {}),
       properties: {
-        page_path: safeRoute(path ?? (typeof location === 'undefined' ? '/' : location.href)),
+        page_path: safeRoute(routePath),
       },
     });
+  };
   const record = (value: RequestRecord) => {
     if (!core.getConsent().observability || !running) return;
-    if (!config.observer || pendingRecords.size >= 32) return;
+    if (!config.observer) return;
+    if (pendingRecords.size >= 32) return;
     const operation = boundedObservation(() => config.observer!.record(value)).finally(() => {
       pendingRecords.delete(operation);
     });
     pendingRecords.add(operation);
   };
   const navigation = () => {
-    if (!running) return;
-    const path = location.pathname;
-    if (path === lastPath) return;
-    lastPath = path;
-    void page();
+    if (!running || typeof location === 'undefined') return;
+    if (location.hash && !isHashRoute(location.hash) && location.pathname === lastPathname) return;
+    lastPathname = location.pathname;
+    const current = currentRoute();
+    if (current === lastRoute) return;
+    lastRoute = current;
+    void page(current);
   };
   function start() {
     if (running || typeof window === 'undefined' || activeOwner) return;
@@ -85,6 +108,10 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     }
     window.addEventListener('popstate', navigation);
     restores.push(() => window.removeEventListener('popstate', navigation));
+    if (config.trackHash === true) {
+      window.addEventListener('hashchange', navigation);
+      restores.push(() => window.removeEventListener('hashchange', navigation));
+    }
     const originalFetch = window.fetch;
     if (originalFetch) {
       const wrapped: typeof fetch = async (input, init) => {
@@ -269,4 +296,9 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
   if (config.autoTrack !== false) start();
   return api;
 }
-export type BrowserSignals = ReturnType<typeof createBrowserSignals>;
+export type BrowserSignals<Events extends readonly EventDefinition[] = readonly []> = ReturnType<
+  typeof createBrowserSignals<Events>
+>;
+
+export { defineEvent } from '@techinject/core';
+export type { EventDefinition, RegisteredEventInput } from '@techinject/core';

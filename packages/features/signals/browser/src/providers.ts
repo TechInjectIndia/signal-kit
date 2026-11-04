@@ -1,4 +1,5 @@
-import { safeRoute } from '@techinject/core';
+import { safeProviderUrl } from '@techinject/core';
+import { getProviderEvent } from '@techinject/contracts';
 import type { Consent, Provider, SignalEvent } from '@techinject/contracts';
 type ConsentProvider = Provider & { setConsent(consent: Consent): void };
 type ScriptConfig = { nonce?: string; timeoutMs?: number };
@@ -90,24 +91,26 @@ export function createGA4Provider(
       w.gtag('js', new Date());
       w.gtag('config', config.measurementId, {
         send_page_view: false,
-        page_location: location.origin + safeRoute(location.href),
-        page_referrer: document.referrer ? safeRoute(document.referrer) : '',
+        page_location: safeProviderUrl(location.href),
+        page_referrer: document.referrer ? safeProviderUrl(document.referrer) : '',
       });
       initialized = true;
     }
   };
   return {
     name: 'ga4',
+    eventFamily: 'ga4',
     category: 'analytics',
     async send(event, signal) {
+      const mapped = getProviderEvent(event, 'ga4');
       setup();
       await script.load(signal);
       if (signal?.aborted) throw new Error('Dispatch aborted');
       win().gtag?.('consent', 'update', { analytics_storage: 'granted' });
-      win().gtag?.('event', event.name === 'product_view' ? 'view_item' : event.name, {
-        ...event.properties,
-        page_location: location.origin + safeRoute(location.href),
-        page_referrer: document.referrer ? safeRoute(document.referrer) : '',
+      win().gtag?.('event', mapped.name, {
+        ...mapped.properties,
+        page_location: safeProviderUrl(location.href),
+        page_referrer: document.referrer ? safeProviderUrl(document.referrer) : '',
         event_id: event.eventId,
         send_to: config.measurementId,
       });
@@ -124,13 +127,6 @@ export function createGA4Provider(
     },
   };
 }
-const metaNames: Record<SignalEvent['name'], string> = {
-  page_view: 'PageView',
-  product_view: 'ViewContent',
-  add_to_cart: 'AddToCart',
-  begin_checkout: 'InitiateCheckout',
-  purchase: 'Purchase',
-};
 export function createMetaPixelProvider(
   config: ScriptConfig & { pixelId: string },
 ): ConsentProvider {
@@ -158,31 +154,16 @@ export function createMetaPixelProvider(
   };
   return {
     name: 'meta-pixel',
+    eventFamily: 'meta',
     category: 'marketing',
     async send(event, signal) {
+      const mapped = getProviderEvent(event, 'meta');
       setup();
       await script.load(signal);
       if (signal?.aborted) throw new Error('Dispatch aborted');
-      const items = event.properties.items as
-        | { item_id?: string; quantity?: number; price?: number }[]
-        | undefined;
-      const properties = {
-        ...(event.properties.currency ? { currency: event.properties.currency } : {}),
-        ...(typeof event.properties.value === 'number' ? { value: event.properties.value } : {}),
-        ...(items
-          ? {
-              content_type: 'product',
-              content_ids: items.map((item) => item.item_id),
-              contents: items.map((item) => ({
-                id: item.item_id,
-                quantity: item.quantity ?? 1,
-                item_price: item.price,
-              })),
-            }
-          : {}),
-      };
       win().fbq?.('consent', 'grant');
-      win().fbq?.('trackSingle', config.pixelId, metaNames[event.name], properties, {
+      const method = mapped.mode === 'standard' ? 'trackSingle' : 'trackSingleCustom';
+      win().fbq?.(method, config.pixelId, mapped.name, mapped.properties, {
         eventID: event.eventId,
       });
     },
@@ -206,8 +187,10 @@ export function createClarityProvider(
   let initialized = false;
   return {
     name: 'clarity',
+    eventFamily: 'clarity',
     category: 'analytics',
     async send(event, signal) {
+      const mapped = getProviderEvent(event, 'clarity');
       if (!initialized) {
         const w = win();
         if (!w.clarity) {
@@ -223,7 +206,7 @@ export function createClarityProvider(
       await script.load(signal);
       if (signal?.aborted) throw new Error('Dispatch aborted');
       win().clarity?.('consentv2', { analytics_Storage: 'granted', ad_Storage: 'denied' });
-      if (event.name !== 'page_view') win().clarity?.('event', event.name);
+      if (event.name !== 'page_view') win().clarity?.('event', mapped.name);
     },
     setConsent(consent) {
       if (initialized)
