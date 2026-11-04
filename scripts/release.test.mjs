@@ -166,6 +166,49 @@ else process.exit(2);
     await rm(folder, { recursive: true, force: true });
   }
 });
+test('cleanup waits for the registry to serve a just-published version', async () => {
+  const folder = await registryFixture();
+  try {
+    const log = join(folder, 'removed.txt');
+    const views = join(folder, 'views');
+    const mock = join(folder, 'bin/npm');
+    await mkdir(views);
+    await writeFile(
+      mock,
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] === 'view') {
+  const seen = ${JSON.stringify(views)} + '/' + encodeURIComponent(args[1]);
+  const count = fs.existsSync(seen) ? Number(fs.readFileSync(seen, 'utf8')) : 0;
+  fs.writeFileSync(seen, String(count + 1));
+  if (count === 0) process.exit(1);
+  const alpha = count === 1 ? '0.1.0-alpha.1' : '0.1.0-alpha.2';
+  console.log(JSON.stringify([{ latest: '0.1.0-alpha.1', alpha }]));
+} else if (args[0] === 'dist-tag' && args[1] === 'rm' && args[3] === 'latest') fs.appendFileSync(${JSON.stringify(log)}, args[2]+'\\n');
+else process.exit(2);
+`,
+    );
+    await chmod(mock, 0o755);
+    const env = { ...process.env, PATH: join(folder, 'bin') + ':' + process.env.PATH };
+    const run = (extra) =>
+      spawnSync(process.execPath, [join(folder, 'scripts/cleanup-alpha-tags.mjs')], {
+        cwd: folder,
+        encoding: 'utf8',
+        env: { ...env, SIGNALKIT_REGISTRY_WAIT_MS: '0', ...extra },
+      });
+    const result = run({});
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal((await readFile(log, 'utf8')).trim().split('\n').length, 9);
+    await rm(views, { recursive: true });
+    await mkdir(views);
+    const exhausted = run({ SIGNALKIT_REGISTRY_ATTEMPTS: '2' });
+    assert.notEqual(exhausted.status, 0);
+    assert.match(exhausted.stderr, /Cannot verify registry tags/);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
 test('npm 12 wrapped integrity response safely retries an already-published reviewed artifact', async () => {
   const folder = await registryFixture();
   try {

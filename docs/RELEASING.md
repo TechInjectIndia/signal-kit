@@ -23,6 +23,8 @@ References: [Changesets automation](https://changesets.dev/guide/automating), [n
 
 npm assigned latest as well as alpha on the initial publication. In a maintainer terminal, run `bun run release:cleanup-tags` and complete npm's authenticator prompt. Verify the alpha tag points to the current version before cleanup. The helper refuses cleanup without that matching prerelease tag and only removes latest when it points to the current or an older prerelease in the same channel and base version; an existing stable latest is preserved. Verify all nine dist-tags afterward.
 
+npm can take several minutes to serve a version it has just accepted, so the helper polls each package until the registry returns the new version under its channel tag (20 attempts, 30 seconds apart; override with `SIGNALKIT_REGISTRY_ATTEMPTS` and `SIGNALKIT_REGISTRY_WAIT_MS`) before deciding anything.
+
 The first alpha is now published, so its bootstrap changeset is archived in `.changeset/pre` rather than generating an empty repeat release. Add a new changeset for the next SDK change.
 
 ## Maintenance after a completed release
