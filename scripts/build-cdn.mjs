@@ -5,6 +5,8 @@ import { createRequire } from 'node:module';
 import { root } from './files.mjs';
 const output = join(root, 'packages/features/signals/browser/dist/cdn');
 await mkdir(output, { recursive: true });
+
+// 1. ESM bundle for modern bundlers and ES module script tags
 await build({
   stdin: {
     contents:
@@ -18,6 +20,22 @@ await build({
   platform: 'browser',
   target: 'es2022',
 });
+
+// 2. Standalone IIFE bundle for plain HTML, PHP, Shopify, WordPress script tags
+await build({
+  stdin: {
+    contents: "export * from './packages/features/signals/browser/dist/standalone.js';",
+    resolveDir: root,
+  },
+  outfile: join(output, 'signalkit.global.js'),
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  globalName: 'SignalKit',
+  platform: 'browser',
+  target: 'es2020',
+});
+
 const require = createRequire(join(root, 'packages/features/signals/contracts/package.json'));
 const zodLicense = await readFile(
   join(dirname(require.resolve('zod/package.json')), 'LICENSE'),

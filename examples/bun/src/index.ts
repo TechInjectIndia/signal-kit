@@ -2,8 +2,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Database } from 'bun:sqlite';
 import { createServerSignals } from '@techinject/server';
 import { instrumentBunFetch } from '@techinject/bun';
-import type { EventInput } from '@techinject/contracts';
+import type { RegisteredEventInput } from '@techinject/contracts';
 
+import { exampleEvents } from './events.js';
+type EventInput = RegisteredEventInput<typeof exampleEvents>;
 const records: unknown[] = [];
 const append = (value: unknown) => {
   records.push(value);
@@ -18,6 +20,7 @@ database
   .query('INSERT OR IGNORE INTO orders(id,amount,currency,marketing_consent) VALUES(?,?,?,?)')
   .run('order_demo', 45000, 'INR', 1);
 const signals = createServerSignals({
+  events: exampleEvents,
   consent: { analytics: true, marketing: true, observability: true },
   providers: [
     {

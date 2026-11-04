@@ -1,13 +1,25 @@
 <script lang="ts">
   import { onMount, setContext } from 'svelte';
-  import { createSvelteKitClient } from '@techinject/sveltekit';
+  import { createSvelteKitClient, createGA4Provider, createMetaPixelProvider, createClarityProvider } from '@techinject/sveltekit';
   import type { SignalEvent, RequestRecord } from '@techinject/contracts';
+  import { GA4_MEASUREMENT_ID, META_PIXEL_ID, CLARITY_PROJECT_ID, ENABLE_EXTERNAL_PROVIDERS } from '../../signalkit.config';
+  import { exampleEvents } from '../../signalkit.events';
   let { children } = $props();
   let events = $state<(SignalEvent | RequestRecord)[]>([]);
   let mounted = $state(false);
   const client = createSvelteKitClient({
+    events: exampleEvents,
     consent: { analytics: false, marketing: false, observability: false },
-    providers: [{ name: 'local', category: 'analytics', send(event) { events = [...events, event]; } }],
+    providers: [
+      { name: 'local', category: 'analytics', send(event) { events = [...events, event]; } },
+      ...(ENABLE_EXTERNAL_PROVIDERS
+        ? [
+            createGA4Provider({ measurementId: GA4_MEASUREMENT_ID }),
+            createMetaPixelProvider({ pixelId: META_PIXEL_ID }),
+            createClarityProvider({ projectId: CLARITY_PROJECT_ID }),
+          ]
+        : []),
+    ],
     observer: { record(record) { events = [...events, record]; } },
   });
   setContext('signals', client);
@@ -26,6 +38,9 @@
   <button disabled={!mounted} onclick={allow}>Allow analytics and observability</button>
   <button disabled={!mounted} onclick={() => client.getSignals().setConsent({ analytics: false, marketing: false, observability: false })}>Withdraw consent</button>
   <button disabled={!mounted} onclick={() => client.getSignals().track({ name: 'add_to_cart', properties: { currency: 'INR', value: 450, items: [{ item_id: 'notebook', price: 450, quantity: 1 }] } })}>Add demo cart event</button>
+  <button disabled={!mounted} onclick={() => client.getSignals().track({ name: 'phone_click', properties: { channel: 'phone' } })}>Track phone contact</button>
+  <button disabled={!mounted} onclick={() => client.getSignals().track({ name: 'whatsapp_click', properties: { channel: 'whatsapp' } })}>Track WhatsApp contact</button>
+  <button disabled={!mounted} onclick={() => client.getSignals().track({ name: 'custom_event', properties: { action: 'help_open' } })}>Track help opened</button>
   <button onclick={() => fetch('/api/ping')}>Call API</button>
   {@render children()}
   <h2>Browser records</h2><pre id="records">{JSON.stringify(events, null, 2)}</pre>

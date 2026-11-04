@@ -63,7 +63,7 @@ for (const [consumer, forbidden] of [
   ],
 ]) {
   const result = spawnSync(
-    join(root, 'node_modules/.bin/turbo'),
+    join(root, 'node_modules', '.bin', process.platform === 'win32' ? 'turbo.cmd' : 'turbo'),
     ['run', 'build', `--filter=${consumer}`, '--dry=json'],
     { cwd: root, encoding: 'utf8' },
   );

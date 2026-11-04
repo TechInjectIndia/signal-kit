@@ -159,3 +159,26 @@ test.each([false, true])(
     ).rejects.toBe(hostError);
   },
 );
+
+test('handles a synthetic request event with a null route ID', async () => {
+  const records: { route: string }[] = [];
+  const hooks = createSvelteKitHooks(() => ({
+    consent: { analytics: false, marketing: false, observability: true },
+    observer: {
+      record(record) {
+        records.push(record);
+      },
+    },
+  }));
+  const eventWithNullRoute = {
+    request: new Request('https://shop.example/api/v2/lead'),
+    url: new URL('https://shop.example/api/v2/lead'),
+    route: { id: null },
+  } as unknown as RequestEvent;
+  const res = await hooks.handle({
+    event: eventWithNullRoute,
+    resolve: async () => new Response('ok'),
+  });
+  expect(await res.text()).toBe('ok');
+  expect(records[0]?.route).toBe('/api/v2/lead');
+});

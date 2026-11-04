@@ -8,7 +8,8 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: preview, javaScriptEnabled: false },
   webServer: {
-    command: 'bun run dev',
+    // Run the server directly so Playwright stops it (a `bun run` wrapper leaves it orphaned).
+    command: 'bun scripts/serve.mjs',
     cwd: 'apps/site',
     url: preview,
     reuseExistingServer: !process.env.CI,

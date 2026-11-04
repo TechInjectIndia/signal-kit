@@ -1,8 +1,11 @@
+import type { EventDefinition } from '@techinject/browser';
 import { createBrowserSignals, type BrowserConfig, type BrowserSignals } from '@techinject/browser';
 
 /** Construct per layout (SSR-safe); mount only from Svelte's onMount. */
-export function createSvelteKitClient(config: BrowserConfig = {}) {
-  let signals: BrowserSignals | undefined;
+export function createSvelteKitClient<
+  const Events extends readonly EventDefinition[] = readonly [],
+>(config: BrowserConfig<Events> = {}) {
+  let signals: BrowserSignals<Events> | undefined;
   return {
     mount() {
       if (typeof window === 'undefined')
@@ -27,3 +30,6 @@ export {
   createClarityProvider,
 } from '@techinject/browser';
 export type { BrowserConfig, BrowserSignals } from '@techinject/browser';
+
+export { defineEvent } from '@techinject/browser';
+export type { EventDefinition, RegisteredEventInput } from '@techinject/browser';
