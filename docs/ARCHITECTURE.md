@@ -41,7 +41,7 @@ Marketing uses event IDs for business duplication; traces link technical request
 
 ## Runtime and rollout
 
-Initial verified fixture targets Node22, Next version recorded in compatibility, Bun1.3.4. Browser needs modern fetch, crypto.randomUUID, structuredClone; older browsers need host polyfills. No Edge/native Python/PHP promise. SSR imports safe; browser start is client-only. Structural React config is init-only: remount to change provider/observer config, update consent through config or setConsent.
+Initial verified fixture targets Node22, Next version recorded in compatibility, Bun1.4.4. Contributor tooling is Bun + Turborepo; client apps may use any package manager. Browser needs modern fetch, crypto.randomUUID, structuredClone; older browsers need host polyfills. No Edge/native Python/PHP promise. SSR imports safe; browser start is client-only. Structural React config is init-only: remount to change provider/observer config, update consent through config or setConsent.
 
 Next automatic incoming spans use @vercel/otel through instrumentation.ts. Enable host technical telemetry deliberately under its own lawful processing policy, configure collector redaction, avoid competing global tracer registrations. SignalKit business/browser consent does not control an independently registered global OTel provider. Optional SigNoz collector accepts OTLP; its hosting/auth/residency is host-owned.
 

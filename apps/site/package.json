@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "dev": "node scripts/serve.mjs",
-    "typecheck": "node --check scripts/build.mjs && node --check scripts/serve.mjs && node --check src/content.mjs",
-    "lint": "node --check scripts/build.mjs && node --check scripts/serve.mjs && node --check src/content.mjs",
-    "test": "node --test test/*.test.mjs"
+    "build": "bun scripts/build.mjs",
+    "dev": "bun scripts/serve.mjs",
+    "typecheck": "bun build --no-bundle scripts/build.mjs scripts/serve.mjs src/content.mjs --outdir .turbo/syntax-check",
+    "lint": "bun build --no-bundle scripts/build.mjs scripts/serve.mjs src/content.mjs --outdir .turbo/syntax-check",
+    "test": "bun test ./test/"
   }
 }

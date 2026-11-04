@@ -66,7 +66,7 @@ export function CartDemo() {
     language: 'ts',
     label: 'examples/bun/trace-demo.ts',
     description:
-      'Save this file inside the built workspace and run pnpm --filter @signalkit/example-bun exec bun trace-demo.ts. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.',
+      'Save this file inside the built workspace and run bun trace-demo.ts from examples/bun. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.',
     code: `import { createServerSignals } from '@techinject/server';
 import { instrumentBunFetch } from '@techinject/bun';
 
