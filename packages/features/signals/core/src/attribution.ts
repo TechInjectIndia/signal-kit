@@ -116,6 +116,19 @@ function safeValue(value: string | null, max: number): string | undefined {
 function lookup(host: string, table: [RegExp, string][]): string | undefined {
   return table.find(([pattern]) => pattern.test(host))?.[1];
 }
+export type ReferrerClass = { kind: 'search' | 'ai' | 'social'; source: string };
+/** Known search engine, AI assistant or social network behind a referrer host; undefined otherwise. */
+export function classifyReferrerHost(host: string | null | undefined): ReferrerClass | undefined {
+  if (typeof host !== 'string') return undefined;
+  const name = host.trim().toLowerCase();
+  if (!name) return undefined;
+  const engine = lookup(name, SEARCH_ENGINES);
+  if (engine) return { kind: 'search', source: engine };
+  const ai = lookup(name, AI_ENGINES);
+  if (ai) return { kind: 'ai', source: ai };
+  const social = lookup(name, SOCIAL_NETWORKS);
+  return social ? { kind: 'social', source: social } : undefined;
+}
 /** Scheme and host of a referrer only; path, query, credentials and fragment never leave the page. */
 export function safeReferrer(referrer: string | URL | null | undefined): string {
   if (!referrer) return '';

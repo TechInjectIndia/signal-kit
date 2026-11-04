@@ -68,3 +68,31 @@ test('landing source survives the router and persists only under marketing conse
   const terms = await page.request.get('/api/search-terms');
   expect(await terms.json()).toEqual({ configured: false, rows: [] });
 });
+test('attribution self-check reports a clean landing and a tainted canonical link', async ({
+  page,
+}) => {
+  await page.goto('/?gclid=test');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
+  await page.getByRole('button', { name: 'Audit attribution' }).click();
+  const audit = page.getByRole('region', { name: 'Attribution audit' });
+  await expect(audit).toBeVisible();
+  await expect(audit.locator('li[data-severity="error"]')).toHaveCount(0);
+  await expect(audit).toContainText('consent-never-granted');
+  await page.getByLabel('marketing', { exact: true }).check();
+  await page.getByRole('button', { name: 'Audit attribution' }).click();
+  await expect(audit).toContainText('no findings');
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const link = document.createElement('link');
+      link.rel = 'canonical';
+      link.href = '/?utm_source=x';
+      document.head.append(link);
+    });
+  });
+  await page.goto('/?gclid=test');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
+  await page.getByRole('button', { name: 'Audit attribution' }).click();
+  await expect(audit.locator('li[data-severity="error"]')).toContainText(
+    'canonical-has-tracking-params',
+  );
+});
