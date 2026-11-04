@@ -46,7 +46,7 @@ Meta CAPI injected-transport tests verify that only prehashed SHA-256 `em`, `ph`
 
 Server tests verify that relative fetch trace propagation requires `traceRelative: true`; magic `traceOrigins` entries do not enable it, and absolute third-party origins remain denied.
 
-All exported browser adapters bundled with esbuild: 42,161 bytes minified / 14,173 bytes gzip. Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
+All exported browser adapters bundled with esbuild: 48,093 bytes minified / 16,279 bytes gzip (4 November 2026, including the event registry and attribution capture). Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
 
 ## SvelteKit runtime evidence
 
@@ -79,6 +79,10 @@ The repository's own tooling moved from pnpm to Bun 1.4.4 with Turborepo 2.11.7 
 Verified on macOS arm64 with Bun 1.4.4: frozen install, repository/format checks, build, typecheck, 62 Vitest package tests run on Bun, example/site tests under `bun test`, boundaries, Next OTel smoke (19 spans), package and bundle checks, release tests, alpha preparation and installer, and Playwright (Next 2/2 served by Bun, SvelteKit 1/1 on real Node 22, site 3/3). `bun run test:consumers` installed the `bun pm pack` tarballs into npm, pnpm and yarn client apps on Node 22.21.1 (Next 16.4.1 production build on npm and pnpm) and a Bun client.
 
 Bun 1.3.10 cannot build or serve Next.js 16.4.1 (`Expected CommonJS module to have a function wrapper`), so 1.4.4 is the minimum. Native `bun test` is not used for package tests (no DOM; `vi.advanceTimersByTimeAsync` missing). npm publishing stays on `npm publish --provenance` because `bun publish` has no provenance support. A machine without any Node install and the Linux CI run remain to be confirmed by CI.
+
+## Attribution and search sources — 4 November 2026 (unreleased)
+
+GA4 page_location/page_referrer parameters, visit-source classification, consent-gated localStorage persistence and expiry are verified by core and browser jsdom tests and a Next production Playwright landing-source test. Google Search Console and Bing Webmaster clients are verified with injected fetch fixtures only; no live console account, OAuth exchange or GA4 channel report was exercised. Provider-side channel grouping and attribution remain unverified until checked in a real GA4/Ads/Meta account.
 
 ## Meta CAPI website-event requirements — 4 November 2026 (unreleased)
 

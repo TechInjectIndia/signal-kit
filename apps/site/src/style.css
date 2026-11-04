@@ -936,3 +936,7 @@ td:last-child {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
+.article-section p,
+.article-section li {
+  overflow-wrap: anywhere;
+}

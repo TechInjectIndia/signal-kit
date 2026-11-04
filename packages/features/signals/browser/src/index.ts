@@ -1,7 +1,17 @@
 import type { EventDefinition, SignalsOptions } from '@techinject/core';
 import { createSignals, generateId, safeRoute, parseTraceparent } from '@techinject/core';
 import type { Consent, Observer, RequestRecord } from '@techinject/contracts';
+import { createAttributionStore, type AttributionOptions } from './attribution.js';
 export { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
+export type { AttributionOptions, AttributionStorage, Attribution } from './attribution.js';
+export type { AttributionTouch, AttributionChannel, ClickIdName } from '@techinject/core';
+export {
+  parseAttribution,
+  safePageLocation,
+  safeReferrer,
+  metaClickCookie,
+  TRACKING_PARAMETERS,
+} from '@techinject/core';
 export type BrowserConfig<Events extends readonly EventDefinition[] = readonly []> =
   SignalsOptions<Events> & {
     observer?: Observer;
@@ -9,12 +19,17 @@ export type BrowserConfig<Events extends readonly EventDefinition[] = readonly [
     excludeUrls?: string[];
     autoTrack?: boolean;
     trackHash?: boolean;
+    /** Capture the landing visit source (UTM, ad click IDs, search/social referrers). Off by default. */
+    attribution?: boolean | AttributionOptions;
   };
 let activeOwner: object | undefined;
 export function createBrowserSignals<const Events extends readonly EventDefinition[] = readonly []>(
   config: BrowserConfig<Events> = {},
 ) {
   const core = createSignals(config);
+  const attribution = config.attribution
+    ? createAttributionStore(config.attribution === true ? {} : config.attribution)
+    : undefined;
   let running = false;
   const owner = {};
   const pendingRecords = new Set<Promise<void>>();
@@ -94,6 +109,8 @@ export function createBrowserSignals<const Events extends readonly EventDefiniti
     if (running || typeof window === 'undefined' || activeOwner) return;
     activeOwner = owner;
     running = true;
+    // The landing URL is read before any router strips its parameters.
+    attribution?.capture(location.href, document.referrer);
     navigation();
     for (const name of ['pushState', 'replaceState'] as const) {
       const original = history[name];
@@ -273,10 +290,12 @@ export function createBrowserSignals<const Events extends readonly EventDefiniti
   };
   const setConsent = (consent: Consent) => {
     core.setConsent(consent);
+    attribution?.setConsent(core.getConsent());
     try {
       config.observer?.setConsent?.(core.getConsent());
     } catch {}
   };
+  attribution?.setConsent(core.getConsent());
   try {
     config.observer?.setConsent?.(core.getConsent());
   } catch {}
@@ -292,6 +311,9 @@ export function createBrowserSignals<const Events extends readonly EventDefiniti
     start,
     stop,
     dispose,
+    /** First/last visit source for the host to store with its own order; empty when not enabled. */
+    getAttribution: () => attribution?.get() ?? {},
+    clearAttribution: () => attribution?.clear(),
   };
   if (config.autoTrack !== false) start();
   return api;

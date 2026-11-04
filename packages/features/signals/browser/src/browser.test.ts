@@ -396,7 +396,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     expect((await result).outcomes[0]?.status).toBe('failed');
   });
-  it('excludes query parameters from GA4 page_location', async () => {
+  it('keeps only allowlisted campaign parameters on GA4 page_location', async () => {
     history.replaceState(
       null,
       '',
@@ -422,8 +422,10 @@ describe('browser providers', () => {
     );
     expect(eventCall).toBeDefined();
     const eventParams = eventCall![2] as Record<string, string>;
-    expect(new URL(eventParams.page_location).pathname).toBe('/products/shoes');
-    expect(new URL(eventParams.page_location).search).toBe('');
+    const sent = new URL(eventParams.page_location);
+    expect(sent.pathname).toBe('/products/shoes');
+    expect([...sent.searchParams.keys()].sort()).toEqual(['gclid', 'utm_source']);
+    expect(sent.searchParams.get('gclid')).toBe('gclid123');
   });
   it('ignores in-page anchors without hash route tracking', async () => {
     history.replaceState(null, '', '/product/x');

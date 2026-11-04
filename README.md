@@ -39,6 +39,7 @@ Open `/connections` in the Next.js lab to see configured event providers, consen
 - Next React root provider and separate Node OpenTelemetry registration for automatic framework requests.
 - GA4, Meta Pixel/CAPI stable event IDs, optional Clarity and OTLP HTTP JSON.
 - Denied consent defaults, withdrawal hooks, safe fields/routes, bounded dispatch and per-provider diagnostics.
+- GA4 channel attribution (UTMs, gclid/wbraid, msclkid, fbclid, referrer host), opt-in first/last-touch visit source, and Search Console/Bing Webmaster query clients; see the [attribution guide](docs/growth/articles/ads-utm-search-attribution.md).
 - Signed Razorpay reference webhook, trusted order checks and durable replay-tested outbox.
 
 Marketing providers receive page/business events; technical requests go to configured observability. Purchases must come from verified host state. Runtime tracking is best effort; the host owns consent, durable retry and business correctness. Third-party scripts require their own privacy/masking settings. No credentials belong browser configuration.

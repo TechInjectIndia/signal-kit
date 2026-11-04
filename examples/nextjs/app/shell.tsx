@@ -58,6 +58,8 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
     return {
       events: exampleEvents,
       traceOrigins: typeof location === 'undefined' ? [] : [location.origin],
+      // Landing UTM/click-ID/referrer capture; persisted in localStorage only under marketing consent.
+      attribution: { category: 'marketing' },
       providers,
       observer: {
         record(record) {
@@ -101,6 +103,12 @@ function Lab({
 }) {
   const signals = useSignals<typeof exampleEvents>();
   const track = (input: AppEventInput) => signals.track(input);
+  const [attribution, setAttribution] = useState(() => signals.getAttribution());
+  useEffect(() => {
+    setAttribution(signals.getAttribution());
+  }, [signals, consent, lines]);
+  const describe = (touch: NonNullable<typeof attribution.first>) =>
+    `${touch.channel} · ${touch.source} / ${touch.medium}${touch.campaign ? ` · ${touch.campaign}` : ''}${touch.term ? ` · “${touch.term}”` : ''}`;
   return (
     <Context.Provider value={{ track }}>
       <header className="top">
@@ -140,6 +148,16 @@ function Lab({
           </div>
           <p className="status" role="status">
             {'SDK ready · fake public provider IDs'}
+          </p>
+          <dl className="source" aria-label="Visit source">
+            <dt>First touch</dt>
+            <dd>{attribution.first ? describe(attribution.first) : 'direct or not captured'}</dd>
+            <dt>Last touch</dt>
+            <dd>{attribution.last ? describe(attribution.last) : 'direct or not captured'}</dd>
+          </dl>
+          <p className="note">
+            Open this lab with ?gclid=test or ?utm_source=bing&utm_medium=cpc&utm_term=notebook to
+            see the source. It persists only while marketing consent is granted.
           </p>
           {lines.length ? (
             <ol className="feed" aria-label="Recorded activity">
