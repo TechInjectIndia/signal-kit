@@ -50,7 +50,7 @@ Fetch the reviewed GitHub release commit or `vVERSION` tag when it exists, insta
 
 Restore the previous exact package versions and lockfile (or CDN URL), rebuild and redeploy. Preserve host business state and idempotency records. Release artifacts are immutable: fixes receive a new version; broken npm versions are deprecated rather than rewritten.
 
-Stable releases use patch for compatible fixes, minor for compatible additions and major for breaking changes. Use exact prerelease versions and the `alpha` channel. npm assigned `latest` during the first publication; removing that initial tag requires maintainer 2FA, and `latest` is reserved for stable releases. See [RELEASING.md](RELEASING.md).
+Stable releases use patch for compatible fixes, minor for compatible additions and major for breaking changes. Use exact prerelease versions and the `alpha` channel. npm requires a `latest` tag, so until the first stable release it follows the newest alpha; pin exact versions rather than relying on it. See [RELEASING.md](RELEASING.md).
 
 ## Unreleased B5 event registry migration
 
