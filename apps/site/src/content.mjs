@@ -143,7 +143,7 @@ export const guides = [
       {
         title: 'Run the existing complete example',
         paragraphs: [
-          'Use Node 22, pnpm 10.24.0 and Bun 1.3.4. Start both hosts in separate terminals. The Next lab and Bun fixture let you inspect denied consent, permitted events and verified synthetic payment replay without real provider credentials.',
+          'Use Bun 1.4.4 or newer. Start both hosts in separate terminals. The Next lab and Bun fixture let you inspect denied consent, permitted events and verified synthetic payment replay without real provider credentials.',
         ],
         setup: true,
       },
@@ -307,7 +307,7 @@ server.dispose();`,
       {
         title: 'Wrap incoming requests explicitly',
         paragraphs: [
-          'This code is a complete local server that prints safe records through an injected observer. Save it as examples/bun/trace-demo.ts inside the built workspace, then run pnpm --filter @signalkit/example-bun exec bun trace-demo.ts. Technical consent here is for the synthetic fixture; your real host supplies its own policy.',
+          'This code is a complete local server that prints safe records through an injected observer. Save it as examples/bun/trace-demo.ts inside the built workspace, then run bun trace-demo.ts from examples/bun. Technical consent here is for the synthetic fixture; your real host supplies its own policy.',
         ],
         code: `import { createServerSignals } from '@techinject/server';
 import { instrumentBunFetch } from '@techinject/bun';

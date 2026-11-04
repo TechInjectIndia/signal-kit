@@ -13,18 +13,18 @@ The clip uses local recorders: grant consent, navigate, add to cart, call an API
 ## Try the local labs
 
 ```sh
-# Node 22, pnpm 10.24.0, Bun 1.3.4 for Bun fixture
+# Contributors: Bun 1.4.4 or newer. Client apps can use any package manager.
 git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
-pnpm install --frozen-lockfile
-pnpm build
-pnpm dev
+bun install --frozen-lockfile
+bun run build
+bun run dev
 # http://localhost:3100 — consent controls and local inspector
-pnpm dev:bun
+bun run dev:bun
 # http://localhost:3200 — API and signed payment fixture
 ```
 
-Use `pnpm dev:sveltekit` or `pnpm dev:site` for those hosts; `pnpm dev:all` runs every example and the site through Turbo. The examples use local recorders and synthetic data. The Next lab starts with all consent denied and configures GA4, Meta Pixel and Clarity with fake public IDs to show adapter outcomes after consent; those outcomes do not verify a real account. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
+Use `bun run dev:sveltekit` or `bun run dev:site` for those hosts; `bun run dev:all` runs every example and the site through Turbo. The examples use local recorders and synthetic data. The Next lab starts with all consent denied and configures GA4, Meta Pixel and Clarity with fake public IDs to show adapter outcomes after consent; those outcomes do not verify a real account. The Bun fixture uses synthetic host consent and SQLite order/outbox persistence; real hosts supply their own order state and consent.
 
 ## Connections dashboard
 
@@ -92,7 +92,7 @@ The portable browser/server building blocks already exist, but that does not est
 
 [Choose your platform](https://techinjectindia.github.io/signal-kit/docs/) · [Next.js guide](https://techinjectindia.github.io/signal-kit/docs/nextjs/) · [Bun guide](https://techinjectindia.github.io/signal-kit/docs/bun/) · [Complete integration guide](packages/features/signals/INTEGRATION.md) · [Next.js lab](examples/nextjs) · [Bun lab](examples/bun)
 
-Build the workspace first using the commands above. For a fresh external test project, run `pnpm release:prepare`, then `node artifacts/<version>/install-local.mjs /path/to/fresh-consumer`, where `<version>` is the workspace package version. That installer refuses to overwrite an existing package.json; existing applications need the nine local tarballs and matching local package overrides described in the [alpha install plan](docs/releases/0.1.0-alpha.1.md). To install from the registry instead, pin the exact published version.
+Build the workspace first using the commands above. For a fresh external test project, run `bun run release:prepare`, then `node artifacts/<version>/install-local.mjs /path/to/fresh-consumer`, where `<version>` is the workspace package version. That installer refuses to overwrite an existing package.json; existing applications need the nine local tarballs and matching local package overrides described in the [alpha install plan](docs/releases/0.1.0-alpha.1.md). To install from the registry instead, pin the exact published version.
 
 ### Configure the Next.js client provider
 
@@ -208,7 +208,7 @@ export async function register() {
 
 ### Run Bun API tracking without a collector
 
-Save this file inside the built workspace and run pnpm --filter @signalkit/example-bun exec bun trace-demo.ts. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.
+Save this file inside the built workspace and run bun trace-demo.ts from examples/bun. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.
 
 **examples/bun/trace-demo.ts**
 
@@ -253,17 +253,17 @@ For verified purchases and server-only Meta CAPI, follow the [purchase guide](ht
 ## Verify and contribute
 
 ```sh
-pnpm check
-pnpm format:check
-pnpm build
-pnpm typecheck
-pnpm test
-pnpm test:boundaries
-pnpm test:packages
-pnpm test:bundle
-pnpm exec playwright install chromium
-pnpm test:e2e
-pnpm test:next-otel
+bun run check
+bun run format:check
+bun run build
+bun run typecheck
+bun run test
+bun run test:boundaries
+bun run test:packages
+bun run test:bundle
+bunx playwright install chromium
+bun run test:e2e
+bun run test:next-otel
 ```
 
 Local socket tests require permission to listen on localhost. Each leaf owns build, types and tests. Root Turbo delegates and caches builds; runtime tests are uncached. Prettier enforces consistent source and documentation formatting; the text-format script remains available for basic text hygiene. Read [contributing](CONTRIBUTING.md), [maintenance](docs/MAINTAINING.md) and [governance](GOVERNANCE.md).
@@ -276,7 +276,7 @@ MIT licensed. GA4/Meta/Clarity and collector accounts remain governed by their p
 
 ## Public website
 
-[SignalKit website](https://techinjectindia.github.io/signal-kit/) explains the SDK, quickstart, integrations and FAQs. Static HTML/CSS source lives in apps/site, separate from the local noindex lab. Build/preview with pnpm --filter @signalkit/site build/dev. See [site operations](docs/PUBLIC-SITE.md) for canonical URL, deployment and discovery details.
+[SignalKit website](https://techinjectindia.github.io/signal-kit/) explains the SDK, quickstart, integrations and FAQs. Static HTML/CSS source lives in apps/site, separate from the local noindex lab. Build/preview with bun run --filter @signalkit/site build/dev. See [site operations](docs/PUBLIC-SITE.md) for canonical URL, deployment and discovery details.
 
 ## Alpha and pilot participation
 

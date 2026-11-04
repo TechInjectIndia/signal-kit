@@ -1,8 +1,14 @@
 import { access, readFile } from 'node:fs/promises';
 import { resolve, dirname, relative, isAbsolute, basename } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { files, root, label } from './files.mjs';
 
+if (typeof Bun === 'undefined') throw new Error('Run repository checks with Bun: bun run check');
+const transpiler = new Bun.Transpiler({ loader: 'js' });
+const toolingFile =
+  /^(?:scripts\/(?!.*\.test\.)[^/]+\.mjs|\.github\/workflows\/[^/]+\.ya?ml|playwright[^/]*\.config\.ts|(?:[^/]+\/)*package\.json)$/;
+// Catches pnpm invocations, not prose that lists the package managers client apps may use.
+const pnpmCommand =
+  /['"]pnpm['"]|\bpnpm(?:@[\d.]+)?\s+(?:install|add|exec|run|pack|dlx|publish|test|build|check|format|release|-r\b|--)/;
 let failures = 0;
 const fail = (message) => {
   console.error(message);
@@ -19,7 +25,9 @@ const required = [
   'CHANGELOG.md',
   'AGENTS.md',
   'package.json',
-  'pnpm-lock.yaml',
+  'bun.lock',
+  'bunfig.toml',
+  '.bun-version',
   'docs/PRD.md',
   'docs/ARCHITECTURE.md',
   'docs/ROADMAP.md',
@@ -51,10 +59,19 @@ for (const path of await files()) {
     }
   }
   if (path.endsWith('.mjs')) {
-    const check = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' });
-    if (check.status !== 0)
-      fail(`${name}: ${check.stderr || check.error?.message || 'Syntax check failed'}`);
+    // Parse only; never execute repository scripts during the check.
+    try {
+      transpiler.scan(await readFile(path, 'utf8'));
+    } catch (error) {
+      fail(`${name}: ${error.message || 'Syntax check failed'}`);
+    }
   }
+  if (
+    toolingFile.test(name) &&
+    !['scripts/repository-check.mjs', 'scripts/consumer-smoke.mjs'].includes(name) &&
+    pnpmCommand.test(await readFile(path, 'utf8'))
+  )
+    fail(`${name}: contributor tooling is Bun + Turborepo; do not call pnpm`);
   if (!path.endsWith('.md')) continue;
   const markdown = (await readFile(path, 'utf8')).replace(/```[\s\S]*?```/g, '');
   for (const match of markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {

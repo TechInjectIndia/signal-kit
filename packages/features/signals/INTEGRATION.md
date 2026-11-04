@@ -1,6 +1,6 @@
 # SignalKit integration
 
-These packages are local workspace packages, not yet available on npm. Build the cloned repo first. ESM exports/declarations live in each dist directory. Pack them with pnpm pack to test outside this workspace; do not publish before the release checklist.
+These packages are local workspace packages, not yet available on npm. Build the cloned repo first. ESM exports/declarations live in each dist directory. Pack them with bun pm pack, which rewrites workspace:\* dependency ranges (npm pack does not), to test outside this workspace; do not publish before the release checklist.
 
 ## Platform availability
 
@@ -262,7 +262,7 @@ export async function register() {
 
 ### Run Bun API tracking without a collector
 
-Save this file inside the built workspace and run pnpm --filter @signalkit/example-bun exec bun trace-demo.ts. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.
+Save this file inside the built workspace and run bun trace-demo.ts from examples/bun. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.
 
 **examples/bun/trace-demo.ts**
 
@@ -421,7 +421,7 @@ await signals.track({
 
 ## Development
 
-Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfile; pnpm build; pnpm test; pnpm typecheck; pnpm test:boundaries. Use `pnpm dev` for Next, `pnpm dev:bun` for Bun, or `pnpm dev:all` for all local hosts through Turbo. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
+Bun 1.4.4 or newer. bun install --frozen-lockfile; bun run build; bun run test; bun run typecheck; bun run test:boundaries. Use `bun run dev` for Next, `bun run dev:bun` for Bun, or `bun run dev:all` for all local hosts through Turbo. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
 
 ## Technical references
 
