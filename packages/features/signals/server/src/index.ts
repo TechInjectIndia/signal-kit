@@ -1,5 +1,6 @@
 import type { EventDefinition, SignalsOptions } from '@techinject/core';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { isIP } from 'node:net';
 import { createSignals, safeRoute, safeProviderUrl, parseTraceparent } from '@techinject/core';
 import { getProviderEvent } from '@techinject/contracts';
 import type {
@@ -215,13 +216,34 @@ export interface MetaCapiOptions {
   endpoint?: string;
   fetch?: typeof globalThis.fetch;
   testEventCode?: string;
-  /** Prehashed SHA-256 em/ph/external_id or validated fbp/fbc only. */
+  /**
+   * Per-request matching data. Hashed fields must already be SHA-256 hex; the SDK never hashes
+   * plaintext. Website events require `client_user_agent` (sent unhashed, as Meta requires).
+   */
   userData?: () => Record<string, string | string[]>;
-  eventSourceUrl?: string;
+  /** Page where the event happened. Required by Meta for website events; query strings are dropped. */
+  eventSourceUrl: string | (() => string);
 }
+// Meta requires SHA-256 for these; external_id hashing is recommended and enforced here.
+const HASHED_MATCHING_KEYS = [
+  'em',
+  'ph',
+  'fn',
+  'ln',
+  'ge',
+  'db',
+  'ct',
+  'st',
+  'zp',
+  'country',
+  'external_id',
+] as const;
+// Meta requires these unhashed.
+const PLAIN_MATCHING_KEYS = ['fbp', 'fbc', 'client_ip_address', 'client_user_agent'] as const;
+const MATCHING_KEYS: readonly string[] = [...HASHED_MATCHING_KEYS, ...PLAIN_MATCHING_KEYS];
 function safeUserData(input: Record<string, string | string[]>): Record<string, string | string[]> {
   const result: Record<string, string | string[]> = {};
-  for (const key of ['em', 'ph', 'external_id']) {
+  for (const key of HASHED_MATCHING_KEYS) {
     const raw = input[key];
     if (raw === undefined) continue;
     const values = Array.isArray(raw) ? raw : [raw];
@@ -244,10 +266,29 @@ function safeUserData(input: Record<string, string | string[]>): Record<string, 
       result[key] = value;
     }
   }
-  if (Object.keys(input).some((key) => !['em', 'ph', 'external_id', 'fbp', 'fbc'].includes(key)))
+  const ip = input.client_ip_address;
+  if (ip !== undefined) {
+    if (typeof ip !== 'string' || isIP(ip) === 0) throw new Error('Invalid client IP address');
+    result.client_ip_address = ip;
+  }
+  const agent = input.client_user_agent;
+  if (agent !== undefined) {
+    if (typeof agent !== 'string' || agent.length > 512 || !/^[\x20-\x7e]+$/.test(agent))
+      throw new Error('Invalid client user agent');
+    result.client_user_agent = agent;
+  }
+  if (Object.keys(input).some((key) => !MATCHING_KEYS.includes(key)))
     throw new Error('Unsupported matching data');
-  if (Object.keys(result).length === 0) throw new Error('Matching data required');
+  if (!result.client_user_agent) throw new Error('Website events require client_user_agent');
+  if (Object.keys(result).length < 2) throw new Error('Matching data required');
   return result;
+}
+function isWebUrl(value: unknown): value is string {
+  try {
+    return typeof value === 'string' && /^https?:$/.test(new URL(value).protocol);
+  } catch {
+    return false;
+  }
 }
 export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
   if (!/^\d+$/.test(options.pixelId) || !options.accessToken)
@@ -258,9 +299,16 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
     options.endpoint ??
     `https://graph.facebook.com/${options.apiVersion}/${options.pixelId}/events`;
   const transport = options.fetch ?? globalThis.fetch;
-  const source = options.eventSourceUrl
-    ? safeProviderUrl(new URL(options.eventSourceUrl))
-    : undefined;
+  if (typeof options.eventSourceUrl !== 'function' && !isWebUrl(options.eventSourceUrl))
+    throw new Error('Invalid Meta configuration');
+  const sourceUrl = () => {
+    const value =
+      typeof options.eventSourceUrl === 'function'
+        ? options.eventSourceUrl()
+        : options.eventSourceUrl;
+    if (!isWebUrl(value)) throw new Error('Invalid event source URL');
+    return safeProviderUrl(new URL(value));
+  };
   return {
     name: 'meta-capi',
     eventFamily: 'meta',
@@ -268,6 +316,7 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
     async send(event, signal) {
       const mapped = getProviderEvent(event, 'meta');
       const data = safeUserData(options.userData?.() ?? {});
+      const source = sourceUrl();
       const response = await transport(endpoint, {
         method: 'POST',
         signal: signal ?? null,

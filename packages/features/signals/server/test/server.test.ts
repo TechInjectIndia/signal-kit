@@ -149,7 +149,8 @@ describe('Meta CAPI', () => {
           pixelId: '123',
           accessToken: 'synthetic',
           endpoint: 'https://collector.test/',
-          userData: () => ({ em: 'a'.repeat(64) }),
+          eventSourceUrl: 'https://shop.test/checkout',
+          userData: () => ({ em: 'a'.repeat(64), client_user_agent: 'Mozilla/5.0 (synthetic)' }),
           fetch: async (_url, init) => {
             payload = JSON.parse(init!.body as string);
             return Response.json({ events_received: 1 });
@@ -190,7 +191,8 @@ describe('Meta CAPI', () => {
       pixelId: '123',
       accessToken: 'synthetic-token',
       endpoint: 'https://collector.test/',
-      userData: () => ({ em: 'a'.repeat(64) }),
+      eventSourceUrl: 'https://shop.test/checkout',
+      userData: () => ({ em: 'a'.repeat(64), client_user_agent: 'Mozilla/5.0 (synthetic)' }),
       fetch: async (_url, init) => {
         payload = JSON.parse(init!.body as string);
         return Response.json({ events_received: 1 });
@@ -201,7 +203,7 @@ describe('Meta CAPI', () => {
       event_name: 'Purchase',
       event_id: 'stable-order-id',
       event_time: 1700000000,
-      user_data: { em: ['a'.repeat(64)] },
+      user_data: { em: ['a'.repeat(64)], client_user_agent: 'Mozilla/5.0 (synthetic)' },
       custom_data: {
         order_id: 'order-1',
         currency: 'INR',
@@ -237,10 +239,21 @@ describe('Meta CAPI', () => {
       pixelId: '123',
       accessToken: 'synthetic',
       endpoint: 'https://collector.test/',
+      eventSourceUrl: 'https://shop.test/checkout',
       userData: () => ({
         em: hash('sample@example.test'),
         ph: hash('12025550199'),
         external_id: hash('CustomerAbC'),
+        fn: hash('alex'),
+        ln: hash('rivera'),
+        ct: hash('mumbai'),
+        st: hash('mh'),
+        zp: hash('400001'),
+        country: hash('in'),
+        db: hash('19900101'),
+        ge: hash('f'),
+        client_ip_address: '203.0.113.7',
+        client_user_agent: 'Mozilla/5.0 (synthetic)',
       }),
       fetch: async (_url, init) => {
         payload = JSON.parse(init!.body as string);
@@ -252,6 +265,10 @@ describe('Meta CAPI', () => {
       em: [hash('sample@example.test')],
       ph: [hash('12025550199')],
       external_id: [hash('CustomerAbC')],
+      fn: [hash('alex')],
+      country: [hash('in')],
+      client_ip_address: '203.0.113.7',
+      client_user_agent: 'Mozilla/5.0 (synthetic)',
     });
     expect(payload.data[0].user_data.external_id[0]).not.toBe(hash('customerabc'));
 
@@ -259,7 +276,11 @@ describe('Meta CAPI', () => {
       pixelId: '123',
       accessToken: 'synthetic',
       endpoint: 'https://collector.test/',
-      userData: () => ({ em: Array(11).fill('a'.repeat(64)) }),
+      eventSourceUrl: 'https://shop.test/checkout',
+      userData: () => ({
+        em: Array(11).fill('a'.repeat(64)),
+        client_user_agent: 'Mozilla/5.0 (synthetic)',
+      }),
     });
     await expect(invalidMatching.send(event)).rejects.toThrow('Invalid hashed');
   });
@@ -268,41 +289,81 @@ describe('Meta CAPI', () => {
       { em: 'raw@example.test' },
       { external_id: 'CustomerAbC' },
       { ph: '+12025550199' },
+      { fn: 'Alex' },
+      { country: 'IN' },
     ]) {
       const invalid = createMetaCapiProvider({
         pixelId: '123',
         accessToken: 'synthetic',
         endpoint: 'https://collector.test/',
-        userData: () => userData,
+        eventSourceUrl: 'https://shop.test/checkout',
+        userData: () => ({ ...userData, client_user_agent: 'Mozilla/5.0 (synthetic)' }),
       });
       await expect(invalid.send(event)).rejects.toThrow('Invalid hashed matching data');
     }
-    for (const key of [
-      'fn',
-      'ln',
-      'ct',
-      'zp',
-      'country',
-      'db',
-      'ge',
-      'client_ip_address',
-      'client_user_agent',
-    ]) {
+    for (const userData of [{ em: 'a'.repeat(64) }, { phone: 'a'.repeat(64) }]) {
       const invalid = createMetaCapiProvider({
         pixelId: '123',
         accessToken: 'synthetic',
         endpoint: 'https://collector.test/',
-        userData: () => ({ [key]: 'a'.repeat(64) }),
+        eventSourceUrl: 'https://shop.test/checkout',
+        userData: () => userData,
       });
-      await expect(invalid.send(event)).rejects.toThrow('Unsupported matching data');
+      await expect(invalid.send(event)).rejects.toThrow(
+        'phone' in userData
+          ? 'Unsupported matching data'
+          : 'Website events require client_user_agent',
+      );
     }
+    for (const [userData, message] of [
+      [{ client_user_agent: 'Mozilla/5.0' }, 'Matching data required'],
+      [{ client_ip_address: 'not-an-ip', client_user_agent: 'Mozilla/5.0' }, 'Invalid client IP'],
+      [{ em: 'a'.repeat(64), client_user_agent: 'bad\nagent' }, 'Invalid client user agent'],
+    ] as const) {
+      const invalid = createMetaCapiProvider({
+        pixelId: '123',
+        accessToken: 'synthetic',
+        endpoint: 'https://collector.test/',
+        eventSourceUrl: 'https://shop.test/checkout',
+        userData: () => userData,
+      });
+      await expect(invalid.send(event)).rejects.toThrow(message);
+    }
+  });
+  it('requires a web event source URL for website events', async () => {
+    const options = {
+      pixelId: '123',
+      accessToken: 'synthetic',
+      endpoint: 'https://collector.test/',
+      userData: () => ({ em: 'a'.repeat(64), client_user_agent: 'Mozilla/5.0' }),
+    };
+    expect(() => createMetaCapiProvider({ ...options, eventSourceUrl: '' })).toThrow(
+      'Invalid Meta configuration',
+    );
+    expect(() =>
+      createMetaCapiProvider({ ...options, eventSourceUrl: 'javascript:alert(1)' }),
+    ).toThrow('Invalid Meta configuration');
+    let payload: any;
+    const perRequest = createMetaCapiProvider({
+      ...options,
+      eventSourceUrl: () => 'https://shop.test/orders/thanks?token=secret',
+      fetch: async (_url, init) => {
+        payload = JSON.parse(init!.body as string);
+        return Response.json({ events_received: 1 });
+      },
+    });
+    await perRequest.send(event);
+    expect(payload.data[0].event_source_url).toBe('https://shop.test/orders/thanks');
+    const broken = createMetaCapiProvider({ ...options, eventSourceUrl: () => 'not a url' });
+    await expect(broken.send(event)).rejects.toThrow('Invalid event source URL');
   });
   it('rejects unsuccessful acknowledgment', async () => {
     const provider = createMetaCapiProvider({
       pixelId: '123',
       accessToken: 'synthetic',
       endpoint: 'https://collector.test/',
-      userData: () => ({ em: 'a'.repeat(64) }),
+      eventSourceUrl: 'https://shop.test/checkout',
+      userData: () => ({ em: 'a'.repeat(64), client_user_agent: 'Mozilla/5.0 (synthetic)' }),
       fetch: async () => Response.json({ events_received: 0 }),
     });
     await expect(provider.send(event)).rejects.toThrow('did not accept');
@@ -315,7 +376,7 @@ describe('Meta CAPI', () => {
       endpoint: 'https://collector.test/',
       eventSourceUrl:
         'https://app.test/products/item-123?fbclid=test_fbclid_123&utm_extra=%2B919876543210&token=secret_to_strip',
-      userData: () => ({ em: 'a'.repeat(64) }),
+      userData: () => ({ em: 'a'.repeat(64), client_user_agent: 'Mozilla/5.0 (synthetic)' }),
       fetch: async (_url, init) => {
         payload = JSON.parse(init!.body as string);
         return Response.json({ events_received: 1 });
@@ -361,6 +422,7 @@ describe('OTLP', () => {
     let calls = 0;
     const observer = createOTLPObserver({
       endpoint: 'https://collector.test/',
+      eventSourceUrl: 'https://shop.test/checkout',
       serviceName: 'demo',
       fetch: async (_url, init) => {
         calls++;

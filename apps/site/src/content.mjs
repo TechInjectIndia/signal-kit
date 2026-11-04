@@ -233,7 +233,7 @@ const browser = createBrowserSignals({
       {
         title: 'Keep CAPI credentials and matching data on the server',
         paragraphs: [
-          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version and supported matching data. The adapter accepts only SHA-256 hashed em, ph and external_id or validated fbp/fbc. Normalize ph to E.164 before removing its leading plus and hashing the digits. Hash the exact case-sensitive external_id preimage shared with Pixel; do not lowercase it. Hashes still represent personal data and require an appropriate host consent and retention policy.',
+          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version, the page URL where the event happened (eventSourceUrl) and per-request matching data. Meta requires client_user_agent for website events, so every call must include the shopper’s user agent plus at least one other identifier. The adapter accepts SHA-256 hashed em, ph, fn, ln, ge, db, ct, st, zp, country and external_id, plus unhashed client_ip_address, client_user_agent, fbp and fbc. It never hashes plaintext: normalize under Meta’s rules and hash on your server first. Normalize ph to E.164 before removing its leading plus and hashing the digits. Hash the exact case-sensitive external_id preimage shared with Pixel; do not lowercase it. Hashes, IP addresses and user agents are personal data and require an appropriate host consent and retention policy.',
           'This configuration is illustrative: replace environment values with your server’s validated configuration. Avoid a long-lived userData callback tied to one customer on a shared server instance; create the provider for the correct order context. Never put the access token in a NEXT_PUBLIC variable.',
         ],
         code: `import { createServerSignals, createMetaCapiProvider } from '@techinject/server';
@@ -245,8 +245,12 @@ const server = createServerSignals({
     pixelId: hostConfig.pixelId,
     accessToken: hostConfig.accessToken,
     apiVersion: hostConfig.graphApiVersion,
-    eventSourceUrl: 'https://your-shop.example/checkout',
-    userData: () => ({ external_id: hashedCustomerId }),
+    eventSourceUrl: 'https://your-shop.example/checkout/complete',
+    userData: () => ({
+        external_id: hashedCustomerId,
+        client_ip_address: request.ip,
+        client_user_agent: request.headers.get('user-agent'),
+      }),
   })],
 });
 await server.track(verifiedPurchase);
