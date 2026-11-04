@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./search-console": {
+      "types": "./dist/search-console.d.ts",
+      "import": "./dist/search-console.js"
     }
   },
   "files": [

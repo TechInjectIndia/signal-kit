@@ -36,6 +36,7 @@ test('public content is crawlable, navigable and responsive without JavaScript',
     'guides/nextjs-purchase-tracking/',
     'guides/meta-pixel-capi-event-ids/',
     'guides/bun-api-tracing/',
+    'guides/ads-utm-search-attribution/',
   ]) {
     await page.goto(route);
     await expect(page.locator('h1')).toHaveCount(1);

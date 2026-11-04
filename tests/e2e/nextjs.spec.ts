@@ -27,3 +27,24 @@ test('consent, navigation, commerce and automatic API capture', async ({ page })
   await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
   await page.screenshot({ path: 'test-results/next-demo-mobile.png', fullPage: true });
 });
+test('landing source survives the router and persists only under marketing consent', async ({
+  page,
+}) => {
+  await page.goto('/?utm_source=bing&utm_medium=cpc&utm_term=field%20notebook&msclkid=m1');
+  const source = page.getByRole('region', { name: 'Visit source' }).or(page.locator('.source'));
+  await expect(source).toContainText('paid_search · bing / cpc · “field notebook”');
+  expect(await page.evaluate(() => localStorage.getItem('signalkit.attribution'))).toBeNull();
+  await page.getByLabel('marketing', { exact: true }).check();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('signalkit.attribution')))
+    .toContain('paid_search');
+  await page.getByRole('link', { name: 'Open the sample store' }).click();
+  await expect(page).toHaveURL(/\/catalog$/);
+  await expect(source).toContainText('bing / cpc');
+  await page.getByLabel('marketing', { exact: true }).uncheck();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('signalkit.attribution')))
+    .toBeNull();
+  const terms = await page.request.get('/api/search-terms');
+  expect(await terms.json()).toEqual({ configured: false, rows: [] });
+});

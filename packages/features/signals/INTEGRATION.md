@@ -269,6 +269,12 @@ export const handleFetch = hooks.handleFetch;
 
 Create fresh observer/provider instances per request. The adapter uses route.id templates, preserves SvelteKit fetch semantics, flushes bounded work and disposes after resolve. Compose authentication before handle using sequence if policy depends on locals. Prerendering may invoke handle; static assets, Edge and background work after resolve are outside this Node request scope. timeoutMs controls bounded telemetry wait; the host owns durable purchases/retries. SvelteKit 3 is verified; Kit 2 is not certified by this build.
 
+## Attribution: UTMs, ad click IDs and search sources
+
+The GA4 adapter sends page_location with the origin, redacted path and only utm_source/medium/campaign/term/content/id, gclid, gbraid, wbraid, msclkid and fbclid, plus page_referrer as the referrer origin, so GA4 channel grouping, Google Ads auto-tagging and the Search Console link work. All other query, path and referrer data stays redacted.
+
+Opt in to first-party visit-source capture with `attribution: true` or `attribution: { category: 'marketing', maxAgeDays: 90 }` in the browser/Next/SvelteKit config. The SDK reads the landing URL and referrer once at start, before your router rewrites them, classifies the visit (paid_search, paid_social, paid_other, organic_search, ai_search, organic_social, email, referral, direct, other) and keeps first/last touch in localStorage only while that consent category is granted. `signals.getAttribution()` returns `{ first, last }` with channel, source, medium, campaign, campaignId, term (utm_term={keyword} from Google/Microsoft Ads), content, clickIds, landingPath, referrerHost and timestamp; store it with your own order. `metaClickCookie(fbclid)` builds the `fbc` value for createMetaCapiProvider userData. Organic search keywords are never in the URL: read them from `/server/search-console` (createGoogleSearchConsoleClient with a host-owned OAuth token, createBingWebmasterClient with an API key, mergeSearchRows). Full tutorial, routing/rendering rules and no-code platform settings: [ads, UTM and search attribution guide](../../../docs/growth/articles/ads-utm-search-attribution.md).
+
 ## Development
 
 Bun 1.4.4 or newer. bun install --frozen-lockfile; bun run build; bun run test; bun run typecheck; bun run test:boundaries. bun run --filter @signalkit/example-nextjs dev or bun run --filter @signalkit/example-bun dev. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
