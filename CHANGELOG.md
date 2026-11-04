@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- GA4 adapter keeps allowlisted UTM/click-ID parameters and the referrer host so channel attribution works; opt-in first/last-touch visit source capture; Search Console and Bing Webmaster query clients under @techinject/server/search-console; ads/UTM/search attribution tutorial.
 - SvelteKit 3/Svelte 5 browser lifecycle and Node request-hook adapters with a real consumer lab.
 - Server wrapFetch preserves host transport while instrumenting outgoing calls.
 

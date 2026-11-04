@@ -1,4 +1,4 @@
-import { safeRoute } from '@techinject/core';
+import { safePageLocation, safeReferrer } from '@techinject/core';
 import type { Consent, Provider, SignalEvent } from '@techinject/contracts';
 type ConsentProvider = Provider & { setConsent(consent: Consent): void };
 type ScriptConfig = { nonce?: string; timeoutMs?: number };
@@ -88,10 +88,12 @@ export function createGA4Provider(
         ad_personalization: 'denied',
       });
       w.gtag('js', new Date());
+      // Campaign/click parameters stay on page_location and the referrer keeps its host so GA4
+      // can attribute paid, organic and referral sessions; everything else is redacted.
       w.gtag('config', config.measurementId, {
         send_page_view: false,
-        page_location: location.origin + safeRoute(location.href),
-        page_referrer: document.referrer ? safeRoute(document.referrer) : '',
+        page_location: safePageLocation(location.href),
+        page_referrer: safeReferrer(document.referrer),
       });
       initialized = true;
     }
@@ -106,8 +108,8 @@ export function createGA4Provider(
       win().gtag?.('consent', 'update', { analytics_storage: 'granted' });
       win().gtag?.('event', event.name === 'product_view' ? 'view_item' : event.name, {
         ...event.properties,
-        page_location: location.origin + safeRoute(location.href),
-        page_referrer: document.referrer ? safeRoute(document.referrer) : '',
+        page_location: safePageLocation(location.href),
+        page_referrer: safeReferrer(document.referrer),
         event_id: event.eventId,
         send_to: config.measurementId,
       });

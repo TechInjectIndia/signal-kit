@@ -93,8 +93,8 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
       assert.equal(sourceRef, 'main', 'source links follow merged SDK main');
       assert.equal(
         pages.length,
-        12,
-        'overview, platform hub, three platform guides, dashboard setup, integrations, FAQ and four guide pages',
+        13,
+        'overview, platform hub, three platform guides, dashboard setup, integrations, FAQ and five guide pages',
       );
       for (const guide of guides) {
         const html = await readFile(join(output, guide.path, 'index.html'), 'utf8');
@@ -102,7 +102,7 @@ for (const siteUrl of ['https://techinjectindia.github.io/signal-kit/', 'https:/
         const article = schema.find((item) => item['@type'] === 'Article');
         assert.equal(article.headline, guide.title);
         assert.equal(article.author.name, 'SignalKit maintainers');
-        assert.equal(article.datePublished, guideDate);
+        assert.equal(article.datePublished, guide.datePublished ?? guideDate);
         assert.equal(article.mainEntityOfPage, new URL(guide.path, siteUrl).href);
         assert.equal(
           schema.find((item) => item['@type'] === 'BreadcrumbList').itemListElement.length,
