@@ -1,11 +1,15 @@
 import { test, expect } from '@playwright/test';
 test('consent, navigation, commerce and automatic API capture', async ({ page }) => {
+  await page.route(/googletagmanager\.com\/gtag\/js|fbevents\.js|clarity\.ms\/tag\//, (route) =>
+    route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }),
+  );
   await page.goto('/');
-  await expect(page.getByRole('status')).toHaveText('SDK ready · local transports');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
   await expect(page.getByRole('list', { name: 'Recorded activity' })).toContainText(
     'local-analytics: denied',
   );
   await page.getByLabel('analytics', { exact: true }).check();
+  await page.getByLabel('marketing', { exact: true }).check();
   await page.getByLabel('observability', { exact: true }).check();
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await page.getByRole('link', { name: 'Open the sample store' }).click();
@@ -13,8 +17,24 @@ test('consent, navigation, commerce and automatic API capture', async ({ page })
   const feed = page.getByRole('list', { name: 'Recorded activity' });
   await expect(feed).toContainText('page_view');
   await expect(feed.locator('li').filter({ hasText: /^page_view/ })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
   await page.getByRole('button', { name: 'Add to cart' }).click();
   await expect(feed).toContainText('add_to_cart');
+  for (const provider of ['ga4', 'meta-pixel', 'clarity']) {
+    await expect(feed).toContainText(`${provider}: sent`);
+  }
+  for (const [button, event] of [
+    ['Track phone contact', 'phone_click'],
+    ['Track WhatsApp contact', 'whatsapp_click'],
+    ['Track help opened', 'custom_event'],
+  ]) {
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await page.getByRole('button', { name: button, exact: true }).click();
+    await expect(feed).toContainText(event);
+    for (const provider of ['ga4', 'meta-pixel', 'clarity']) {
+      await expect(feed).toContainText(`${provider}: sent`);
+    }
+  }
   await page.getByRole('button', { name: 'Test API' }).click();
   await expect(feed).toContainText('GET /api/ping · 200');
   await page.getByLabel('analytics', { exact: true }).uncheck();
@@ -52,7 +72,7 @@ test('attribution self-check reports a clean landing and a tainted canonical lin
   page,
 }) => {
   await page.goto('/?gclid=test');
-  await expect(page.getByRole('status')).toHaveText('SDK ready · local transports');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
   await page.getByRole('button', { name: 'Audit attribution' }).click();
   const audit = page.getByRole('region', { name: 'Attribution audit' });
   await expect(audit).toBeVisible();
@@ -70,7 +90,7 @@ test('attribution self-check reports a clean landing and a tainted canonical lin
     });
   });
   await page.goto('/?gclid=test');
-  await expect(page.getByRole('status')).toHaveText('SDK ready · local transports');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
   await page.getByRole('button', { name: 'Audit attribution' }).click();
   await expect(audit.locator('li[data-severity="error"]')).toContainText(
     'canonical-has-tracking-params',

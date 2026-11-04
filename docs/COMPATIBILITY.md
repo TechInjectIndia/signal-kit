@@ -16,15 +16,41 @@ SDK v1 local implementation, 2026-10-05. All nine packages are published on npm 
 | Hono/Astro/HTML integration hosts | future                                            | generic browser/server contracts only; no compatibility claim                |
 | Django/Laravel                    | future native adapters                            | no implementation                                                            |
 
-Requirements: modern browser crypto.randomUUID, structuredClone, fetch/Headers, URL and performance. SSR import/start guards supported. Outbound server instrumentation is signals.fetch, not global Node/Bun fetch. No browser JS error/rejection auto-capture; request failures plus optional Next request-error hook only. Bun routes require individual wrappers.
+Requirements: modern browser crypto.randomUUID, structuredClone, fetch/Headers, URL and performance. SSR import/start guards supported. Outbound server instrumentation is signals.fetch, not global Node/Bun fetch. Browser JS error/rejection capture is outside the v1 request telemetry contract; the optional Next request-error hook is separate. Declarative Bun routes are supported via `instrumentBunRoutes`. The declared peer ranges are SvelteKit >=3 <4 and Next.js >=15 <17; only the recorded versions above have consumer runtime evidence.
+
+The workspace uses Node 22 via `.nvmrc` and CI. The `server`, `nextjs-server` and `sveltekit-server` packages declare `engines.node: ">=22"` because Bun 1.3.11 reports `process.version` as `v24.3.0`; a `<23` bound rejects Bun consumers. This engine range is an installation constraint, not runtime verification for Node 23 or later. The recorded Node runtime evidence remains Node 22.
 
 Counts, commands, graph and local runtime outcomes are recorded in the build report. Setup-time usability, independent developer onboarding and live provider dedup/attribution remain release gates. No synthetic test should be described as live tracking verification.
 
-All exported browser adapters bundled with esbuild: 44,299 bytes minified / 15,440 bytes gzip (4 November 2026, including attribution capture and the attribution self-check). Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
+Turbo dry-run graphs verify that each root `dev` script selects its intended host and `dev:all` selects the four runnable hosts. The direct Turbo JSON boundary check verifies the build graphs without parsing package-manager output. These are local tooling checks, not additional platform runtime evidence.
+
+Contracts unit tests verify that `add_to_cart`, `begin_checkout`, and `purchase` reject an empty `items` array while `product_view` accepts it. This is schema evidence, not live GA4 or Meta delivery evidence.
+
+On Node 22.23.4, the repository, formatting, build, typecheck, unit/runtime test, boundary and two Chromium end-to-end checks passed locally. Browser unit tests verify that query-only navigation does not add a page view, even if a caller passes the removed `trackQuery` property at runtime. These checks do not verify provider-side delivery.
+
+Contracts tests verify that synthetic email- and phone-like values in review-extension free-text fields are rejected before dispatch, while ordinary search text remains valid. This pattern check does not prove detection of every kind of personal data.
+
+Core route tests verify that an encoded slash stays within its original path segment after sanitation.
+
+Core route tests verify that numeric product and blog slugs remain distinct, while hosts can pass a route template for an order reference. This is unit-level sanitation evidence, not a claim that arbitrary sensitive slugs can be detected.
+
+Standalone browser tests verify that missing or invalid declarative click attributes are dropped with value-free diagnostics, explicit values reach the provider, and absent product-view quantity is omitted.
+
+Standalone browser tests verify that all categories remain denied with and without the former `data-auto-consent="true"` attribute; provider events begin only after the host calls `setConsent`. These are simulated provider calls, not live vendor delivery evidence.
+
+Browser observer capacity tests verify that a 33rd pending record is dropped without a synthetic `onDiagnostic` event/provider result.
+
+The Next.js lab smoke test checks that its browser shell reads fake public IDs from the root config without a GA4 environment lookup or server credentials. Its browser demo configures all three external adapters; the SvelteKit lab keeps them disabled by default. Browser tests verify three-provider dispatch, shared SDK event ID and mapped calls with simulated script loads. These checks are not live GA4, Meta or Clarity verification.
+
+Meta CAPI injected-transport tests verify that only prehashed SHA-256 `em`, `ph` and `external_id` (or validated cookies) reach the payload. Plaintext and extra matching fields are rejected, and the case-sensitive external ID hash is passed through. Live match quality remains unverified.
+
+Server tests verify that relative fetch trace propagation requires `traceRelative: true`; magic `traceOrigins` entries do not enable it, and absolute third-party origins remain denied.
+
+All exported browser adapters bundled with esbuild: 53,478 bytes minified / 18,397 bytes gzip (4 November 2026, including the event registry, attribution capture and the attribution self-check). Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
 
 ## SvelteKit runtime evidence
 
-Local production build/runtime verified on Node 22.21.1: SvelteKit 3.0.1, Svelte 5.57.2, adapter-node 6.0.0, Vite 8.3.4, plugin 7.3.1 and fixture TypeScript 6.0.3. SSR/hydration, SPA navigation, consent withdrawal, cart/API capture and internal-fetch trace correlation pass. Kit 2, Edge and live providers are not verified. Browser and Node server packages are separate. No npm publication performed.
+Local production build/runtime verified on Node 22.21.1: SvelteKit 3.0.1, Svelte 5.57.2, adapter-node 6.0.0, Vite 8.3.4, plugin 7.3.1 and fixture TypeScript 6.0.3. SSR/hydration, SPA navigation, consent withdrawal, cart/API capture and internal-fetch trace correlation pass. Kit 2 remains unverified; a mocked route-event test does not establish runtime compatibility. Edge and live providers are not verified. Browser and Node server packages are separate. No npm publication performed.
 
 ## In-app connections dashboard — 12 October 2026
 
@@ -40,6 +66,12 @@ Workspace build, typecheck, tests (including the local Bun runtime), repository 
 
 Next.js and SvelteKit production-browser tests pass with Sentry, Grafana and SigNoz shown as not configured. Existing consent/outcome updates and cleanup remain verified; Next mobile checks confirm no horizontal overflow at 390px. Browser unit tests cover fixed labels, safe metadata and configured-but-unverified states. Workspace build, typecheck, tests, formatting, repository and boundary checks pass on Node 22.21.1. These cards are configuration summaries, not live backend verification.
 
+## B5 event registry (unreleased)
+
+The SDK retains nine predefined contracts. Contact and generic custom events are registered consumer definitions in the Next.js, SvelteKit and Bun examples. Contracts tests cover all nine provider mappings and reject unregistered consumer names. Core registry tests cover nested stripping/privacy, mapping failures, identity, snapshots, consent withdrawal and no replay; compiler assertions check inferred properties and registration. Browser simulated-script tests verify consumer names, projected properties and shared GA4/Meta identity; CAPI uses injected transport. These checks do not establish live vendor delivery.
+
+Final local verification on Node 22.23.4 passed: frozen-lockfile install, repository and formatting checks, workspace build/typecheck/tests (including the Bun socket/webhook fixture), dependency boundaries, both Next.js Chromium tests, the SvelteKit Chromium test and browser bundle guards. The Next runtime test exercises all three consumer examples through the root registry and all three simulated vendor adapters.
+
 ## Bun contributor toolchain — 30 October 2026 (unreleased)
 
 The repository's own tooling moved from pnpm to Bun 1.4.4 with Turborepo 2.11.7 (`bun.lock`, `.bun-version`, `bunfig.toml` with `[run] bun = true`). This is internal: published packages keep `engines.node >=22`, declare no Bun engine or package manager, and client apps may use Node with npm, pnpm or yarn, or Bun.
@@ -52,4 +84,8 @@ Bun 1.3.10 cannot build or serve Next.js 16.4.1 (`Expected CommonJS module to ha
 
 GA4 page_location/page_referrer parameters, visit-source classification, consent-gated localStorage persistence and expiry are verified by core and browser jsdom tests and a Next production Playwright landing-source test. Google Search Console and Bing Webmaster clients are verified with injected fetch fixtures only; no live console account, OAuth exchange or GA4 channel report was exercised. Provider-side channel grouping and attribution remain unverified until checked in a real GA4/Ads/Meta account.
 
-Attribution self-check (`auditAttribution`): every finding and a hostile-input never-throws case are verified by browser jsdom tests with injected document/location/performance stubs; the Next production Playwright suite verifies that a `?gclid=test` landing produces no error findings and that an injected canonical link with `utm_source` yields `canonical-has-tracking-params`. Redirect detection, meta CSP parsing and storage probing are exercised with stubs only; no real multi-hop redirect, header-delivered CSP or blocked-storage browser profile was run. Bundle growth from the check is 2.1 kB gzip.
+Attribution self-check (`auditAttribution`): every finding and a hostile-input never-throws case are verified by browser jsdom tests with injected document/location/performance stubs; the Next production Playwright suite verifies that a `?gclid=test` landing produces no error findings and that an injected canonical link with `utm_source` yields `canonical-has-tracking-params`. Redirect detection, meta CSP parsing and storage probing are exercised with stubs only; no real multi-hop redirect, header-delivered CSP or blocked-storage browser profile was run. Bundle growth from the check is about 2.1 kB gzip.
+
+## Meta CAPI website-event requirements — 4 November 2026 (unreleased)
+
+Following Meta's customer information and server event parameter documentation, the CAPI adapter now requires `event_source_url` and `client_user_agent` for website events, accepts unhashed `client_ip_address`, and accepts prehashed `fn`, `ln`, `ge`, `db`, `ct`, `st`, `zp` and `country` alongside `em`, `ph` and `external_id`. The SDK still never hashes plaintext. Injected-transport tests cover the payload, rejection of plaintext, unknown keys, invalid IP/user agent, a missing user agent and invalid source URLs. Live Meta acceptance, Event Match Quality and deduplication remain unverified.

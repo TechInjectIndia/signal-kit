@@ -8,7 +8,7 @@ Source: apps/site. Static HTML/CSS, complete dist output, one small local progre
 
 ```sh
 bun run --filter @signalkit/site build
-bun run --filter @signalkit/site dev
+bun run dev:site
 # http://localhost:3300/signal-kit/
 ```
 

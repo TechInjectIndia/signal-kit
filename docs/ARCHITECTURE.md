@@ -6,15 +6,15 @@ Implementation baseline, 2026-10-05, under the founder's explicit end-to-end bui
 
 SignalKit ships embeddable libraries, no hosted service. Two independently runnable local consumer hosts: Next.js lab and Bun API/payment fixture. This is an explicit scope exception to a full application bootstrap: no empty standalone API/dashboard/database deployment. Hosts own identity, payment verification, storage, consent, retries, configuration and deployment.
 
-| Package                   | Consumer           | Responsibility                                  |
-| ------------------------- | ------------------ | ----------------------------------------------- |
-| @techinject/contracts     | all                | independent Zod schemas and DTOs                |
-| @techinject/core          | adapters           | consent, validation, dispatch, IDs, safe routes |
-| @techinject/browser       | browser/HTML hosts | pages, fetch/XHR and public providers           |
-| @techinject/server        | Node/Bun hosts     | request wrapper, outbound fetch, CAPI, OTLP     |
-| @techinject/nextjs        | Next browser       | root React provider/useSignals                  |
-| @techinject/nextjs-server | Next Node          | host OTel registration and safe error hook      |
-| @techinject/bun           | Bun                | Bun.serve fetch wrapper                         |
+| Package                   | Consumer           | Responsibility                                        |
+| ------------------------- | ------------------ | ----------------------------------------------------- |
+| @techinject/contracts     | all                | independent Zod schemas and DTOs                      |
+| @techinject/core          | adapters           | consent, validation, dispatch, IDs, safe routes       |
+| @techinject/browser       | browser/HTML hosts | pages, fetch/XHR, public providers, standalone bundle |
+| @techinject/server        | Node/Bun hosts     | request wrapper, outbound fetch, CAPI, OTLP           |
+| @techinject/nextjs        | Next browser       | root React provider/useSignals                        |
+| @techinject/nextjs-server | Next Node          | host OTel registration and safe error hook            |
+| @techinject/bun           | Bun                | Bun.serve fallback and route-table wrappers           |
 
 Packages are one portable signals feature family, with framework dependencies confined to adapters. Core imports contracts only; contracts imports Zod only. Client and server Next packages are separate dependency graphs. Consumers import public exports; ESM builds and declarations belong each leaf. No process.env reads in SDK core/adapters: hosts inject config. Bun demo alone owns SQLite fixture persistence; production persistence is not an SDK feature.
 
@@ -36,6 +36,8 @@ flowchart LR
 ## Trust and data boundaries
 
 Browser receives public IDs only. CAPI access token, OTLP headers, webhook secret and order database remain server-only. Raw bodies/headers/error messages never become telemetry. Routes sanitized; configure explicit templates for sensitive arbitrary slugs. Third-party scripts need host privacy/masking settings. No identity API or automatic matching data extraction.
+
+Contracts include the original ecommerce events and review-extension lead, contact, account, search and custom events. Unknown event properties are stripped; contact events accept a non-identifying channel, not a phone number or destination. Shared core URL sanitation removes query strings, fragments and credentials from provider URL metadata. The standalone browser bundle is experimental and starts denied by default; hosts connect their consent banner through `window.signals.setConsent(...)`. Bun route-table handlers are instrumented only when the host passes its table through `instrumentBunRoutes`.
 
 Marketing uses event IDs for business duplication; traces link technical requests only. Host verified order plus durable outbox decide purchase. Demo unique order outbox prevents repeated business-event creation, while retries remain at least once with stable IDs; distributed exactly-once delivery is not promised.
 
@@ -73,4 +75,8 @@ Owner requested visibility of the new integrations on the local /connections pag
 
 ## Attribution and search sources — 4 November 2026
 
-Core owns pure, platform-independent URL/referrer classification (parseAttribution, safePageLocation, safeReferrer, metaClickCookie) with fixed engine, AI-assistant and social host tables and an allowlist of campaign/click parameters. The browser package reads the landing URL once at start, before host routers rewrite it, and keeps first/last touch in first-party localStorage only while the configured consent category is granted. GA4 receives the allowlisted parameters and referrer origin; all other query parameters and the referrer path and query are removed, while the path goes through the safeRoute heuristic (numeric/UUID segments become :id, segments with @ or over 64 characters become :redacted, other segments are kept), so hosts keep sensitive values out of path segments or pass a route template. Search Console and Bing Webmaster reporting clients live under @techinject/server/search-console with injected tokens/keys and bounded, credential-free errors; the host owns OAuth, refresh tokens and API keys. No new package, hosted service or background worker.
+Core owns pure, platform-independent URL/referrer classification (parseAttribution, safePageLocation, safeReferrer, metaClickCookie) with fixed engine, AI-assistant and social host tables and an allowlist of campaign/click parameters. The browser package reads the landing URL once at start, before host routers rewrite it, and keeps first/last touch in first-party localStorage only while the configured consent category is granted. GA4 receives the allowlisted parameters and referrer origin; all other query parameters and the referrer path and query are removed, while the path goes through the safeRoute heuristic (numeric, UUID, ObjectId, Stripe-style and CUID segments become :id, segments with @ or over 64 characters become :redacted, other segments are kept), so hosts keep sensitive values out of path segments or pass a route template. Search Console and Bing Webmaster reporting clients live under @techinject/server/search-console with injected tokens/keys and bounded, credential-free errors; the host owns OAuth, refresh tokens and API keys. No new package, hosted service or background worker.
+
+## Instance event registry — B5
+
+Contracts own the nine predefined schemas/mappings, `defineEvent` types and the shared bounded privacy/validation guard. Core snapshots app-supplied definitions from `events` at construction and resolves mappings after provider consent. Transport adapters declare their GA4, Meta or Clarity mapping family; Pixel and CAPI use the same Meta mapping while keeping browser/server transports separate. Each provider gets an independent payload clone and the same event identity. Consumer event definitions belong to the host examples and have no global registration or SDK-to-example import.
