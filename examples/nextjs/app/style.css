@@ -241,3 +241,29 @@ h2 {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+.audit {
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.audit ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.audit li {
+  padding: 6px 0;
+  border-top: 1px dashed var(--line);
+  overflow-wrap: anywhere;
+}
+.audit li small {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.audit li[data-severity='error'] small {
+  color: #c43d2b;
+}

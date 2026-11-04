@@ -20,7 +20,7 @@ Requirements: modern browser crypto.randomUUID, structuredClone, fetch/Headers, 
 
 Counts, commands, graph and local runtime outcomes are recorded in the build report. Setup-time usability, independent developer onboarding and live provider dedup/attribution remain release gates. No synthetic test should be described as live tracking verification.
 
-All exported browser adapters bundled with esbuild: 38,926 bytes minified / 13,304 bytes gzip (4 November 2026, including attribution capture). Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
+All exported browser adapters bundled with esbuild: 44,299 bytes minified / 15,440 bytes gzip (4 November 2026, including attribution capture and the attribution self-check). Engineering guard: <=30,000 bytes gzip (measurement excludes downloaded vendor scripts and React).
 
 ## SvelteKit runtime evidence
 
@@ -51,3 +51,5 @@ Bun 1.3.10 cannot build or serve Next.js 16.4.1 (`Expected CommonJS module to ha
 ## Attribution and search sources — 4 November 2026 (unreleased)
 
 GA4 page_location/page_referrer parameters, visit-source classification, consent-gated localStorage persistence and expiry are verified by core and browser jsdom tests and a Next production Playwright landing-source test. Google Search Console and Bing Webmaster clients are verified with injected fetch fixtures only; no live console account, OAuth exchange or GA4 channel report was exercised. Provider-side channel grouping and attribution remain unverified until checked in a real GA4/Ads/Meta account.
+
+Attribution self-check (`auditAttribution`): every finding and a hostile-input never-throws case are verified by browser jsdom tests with injected document/location/performance stubs; the Next production Playwright suite verifies that a `?gclid=test` landing produces no error findings and that an injected canonical link with `utm_source` yields `canonical-has-tracking-params`. Redirect detection, meta CSP parsing and storage probing are exercised with stubs only; no real multi-hop redirect, header-delivered CSP or blocked-storage browser profile was run. Bundle growth from the check is 2.1 kB gzip.

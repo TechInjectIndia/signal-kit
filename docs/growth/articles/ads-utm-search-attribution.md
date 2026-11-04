@@ -332,6 +332,31 @@ bun run --filter @signalkit/example-nextjs dev
 # http://localhost:3000/?gclid=test
 ```
 
+## Run the self-check
+
+Most attribution loss comes from the routing and rendering rules above, and they are platform configuration rather than SDK code, so the SDK ships a runtime self-check instead of a per-framework linter. `auditAttribution` runs in the page, in any framework and any version, and reports the mistakes it can observe from the live document, URL and navigation timing. It is synchronous, never throws, makes no network request and returns an array of findings with a stable `id`, a `severity` (`error`, `warning` or `info`), a `message` and a `hint`.
+
+```ts
+import { auditAttribution } from '@techinject/nextjs'; // or @techinject/browser, @techinject/sveltekit
+
+// After the provider has mounted (a dev-only button, effect or console helper):
+const findings = auditAttribution({ signals });
+for (const f of findings) console[f.severity === 'info' ? 'info' : 'warn'](f.id, f.message, f.hint);
+```
+
+| id                              | severity | what it means                                                                                                                                            |
+| ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `attribution-disabled`          | warning  | `signals` was passed but `attribution` is not enabled in its config.                                                                                     |
+| `params-dropped-by-redirect`    | warning  | The navigation passed through one or more redirects, landed without any tracking parameter, and the referrer is a known search, AI or social host.       |
+| `params-removed-before-capture` | error    | The landing URL (from navigation timing) or the current URL carried tracking parameters, but `getAttribution()` is empty: a router removed them first.   |
+| `canonical-has-tracking-params` | error    | A `<link rel="canonical">` href contains a `utm_*` or click-ID parameter.                                                                                |
+| `csp-blocks-vendor`             | error    | A `<meta http-equiv="Content-Security-Policy">` script-src omits `googletagmanager.com` or `connect.facebook.net` while GA4 or Meta Pixel is configured. |
+| `storage-unavailable`           | warning  | `localStorage` is missing or throws, so the touch cannot persist across pages.                                                                           |
+| `consent-never-granted`         | info     | The attribution consent category is still denied; the touch is held in memory only.                                                                      |
+| `multiple-sdk-instances`        | warning  | Another SDK instance tried to start while one was active.                                                                                                |
+
+Pass `expectedHosts` to require extra script hosts in the policy (for example a server-side tagging domain). Inject `document`, `location` or `performance` to audit from tests. The check only sees a meta-tag CSP, not a header, and it reports what the running page shows, so run it on the real landing URL with its real referrer, for example by clicking your own ad preview. The Next.js lab has an "Audit attribution" button in the inspector that renders the findings.
+
 With a real GA4 stream configured, open GA4 DebugView and confirm the `page_view` has a `page_location` that still contains `gclid`, and a `page_referrer` with the referrer origin only. Then check Reports → Acquisition the next day.
 
 Local tests exercise fixtures: the classification table, storage under consent, the redacted `page_location` and the Search Console and Bing response shapes. They do not establish that GA4, Google Ads or Meta attributed a real purchase. The lab's `/api/search-terms` route returns `{ configured: false, rows: [] }` until you set `SEARCH_CONSOLE_SITE_URL`, `SEARCH_CONSOLE_ACCESS_TOKEN`, `BING_WEBMASTER_SITE_URL` and `BING_WEBMASTER_API_KEY` in its environment; it does not fabricate rows.

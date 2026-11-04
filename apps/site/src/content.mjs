@@ -533,6 +533,17 @@ export async function GET() {
         ],
       },
       {
+        title: 'Run the self-check',
+        paragraphs: [
+          'The routing and rendering rules are platform configuration, not SDK code, so the SDK ships a runtime self-check instead of a per-framework linter. auditAttribution runs in the page in any framework and version and reports what it can observe from the live document, URL and navigation timing: attribution-disabled, params-dropped-by-redirect, params-removed-before-capture, canonical-has-tracking-params, csp-blocks-vendor (meta-tag policies only), storage-unavailable, consent-never-granted and multiple-sdk-instances. Each finding has a stable id, a severity of error, warning or info, a message and a hint. It is synchronous, never throws and makes no network request. Call it after the provider has mounted; the Next.js lab has an “Audit attribution” button in the inspector.',
+        ],
+        code: `import { auditAttribution } from '@techinject/nextjs'; // or @techinject/browser, @techinject/sveltekit
+
+const findings = auditAttribution({ signals });
+for (const f of findings) console.warn(f.id, f.message, f.hint);`,
+        label: 'dev-only helper',
+      },
+      {
         title: 'Verify before you trust it, and what stays private',
         paragraphs: [
           'Run the Next.js lab and open it with ?gclid=test or ?utm_source=bing&utm_medium=cpc&utm_term=notebook; the “Visit source” card shows the first and last touch, and granting marketing consent persists it across a reload. With a real GA4 stream, DebugView should show page_location still carrying gclid and page_referrer as the referrer origin. Local tests are fixture evidence; they do not establish that GA4, Google Ads or Meta attributed a real purchase. The lab’s /api/search-terms returns configured:false until the Search Console and Bing environment variables are set.',

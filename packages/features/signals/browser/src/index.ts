@@ -1,6 +1,9 @@
 import { createSignals, generateId, safeRoute, parseTraceparent } from '@techinject/core';
 import type { Consent, Observer, RequestRecord } from '@techinject/contracts';
 import { createAttributionStore, type AttributionOptions } from './attribution.js';
+import { claimOwner, releaseOwner } from './owner.js';
+export { auditAttribution } from './audit.js';
+export type { AttributionFinding, AttributionAuditOptions } from './audit.js';
 export { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
 export type { AttributionOptions, AttributionStorage, Attribution } from './attribution.js';
 export type { AttributionTouch, AttributionChannel, ClickIdName } from '@techinject/core';
@@ -9,8 +12,10 @@ export {
   safePageLocation,
   safeReferrer,
   metaClickCookie,
+  classifyReferrerHost,
   TRACKING_PARAMETERS,
 } from '@techinject/core';
+export type { ReferrerClass } from '@techinject/core';
 export type BrowserConfig = Parameters<typeof createSignals>[0] & {
   observer?: Observer;
   traceOrigins?: string[];
@@ -19,11 +24,12 @@ export type BrowserConfig = Parameters<typeof createSignals>[0] & {
   /** Capture the landing visit source (UTM, ad click IDs, search/social referrers). Off by default. */
   attribution?: boolean | AttributionOptions;
 };
-let activeOwner: object | undefined;
 export function createBrowserSignals(config: BrowserConfig = {}) {
   const core = createSignals(config);
-  const attribution = config.attribution
-    ? createAttributionStore(config.attribution === true ? {} : config.attribution)
+  const attributionOptions = config.attribution === true ? {} : config.attribution || undefined;
+  const attribution = attributionOptions ? createAttributionStore(attributionOptions) : undefined;
+  const attributionCategory = attributionOptions
+    ? (attributionOptions.category ?? 'marketing')
     : undefined;
   let running = false;
   const owner = {};
@@ -83,8 +89,7 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     void page();
   };
   function start() {
-    if (running || typeof window === 'undefined' || activeOwner) return;
-    activeOwner = owner;
+    if (running || typeof window === 'undefined' || !claimOwner(owner)) return;
     running = true;
     // The landing URL is read before any router strips its parameters.
     attribution?.capture(location.href, document.referrer);
@@ -244,7 +249,7 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     }
   }
   function stop() {
-    if (activeOwner === owner) activeOwner = undefined;
+    releaseOwner(owner);
     running = false;
     restores
       .splice(0)
@@ -287,6 +292,10 @@ export function createBrowserSignals(config: BrowserConfig = {}) {
     /** First/last visit source for the host to store with its own order; empty when not enabled. */
     getAttribution: () => attribution?.get() ?? {},
     clearAttribution: () => attribution?.clear(),
+    /** True when `attribution` was configured; used by auditAttribution. */
+    isAttributionEnabled: () => attribution !== undefined,
+    /** Consent category that permits persisting the touch; undefined when capture is off. */
+    getAttributionCategory: () => attributionCategory,
   };
   if (config.autoTrack !== false) start();
   return api;

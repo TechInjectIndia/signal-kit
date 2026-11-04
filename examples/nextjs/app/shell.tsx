@@ -1,7 +1,13 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { SignalKitProvider, useSignals, type BrowserConfig } from '@techinject/nextjs';
+import {
+  SignalKitProvider,
+  useSignals,
+  auditAttribution,
+  type BrowserConfig,
+  type AttributionFinding,
+} from '@techinject/nextjs';
 import type { Consent, EventInput, DispatchResult } from '@techinject/contracts';
 
 type Demo = { track(input: EventInput): Promise<DispatchResult> };
@@ -70,6 +76,7 @@ function Lab({
   const signals = useSignals();
   const track = (input: EventInput) => signals.track(input);
   const [attribution, setAttribution] = useState(() => signals.getAttribution());
+  const [findings, setFindings] = useState<AttributionFinding[] | null>(null);
   useEffect(() => {
     setAttribution(signals.getAttribution());
   }, [signals, consent, lines]);
@@ -110,6 +117,9 @@ function Lab({
             <button onClick={() => void fetch('/api/ping')}>Test API</button>
             <button onClick={() => void signals?.page()}>Track this page</button>
             <button onClick={() => setLines([])}>Clear</button>
+            <button onClick={() => setFindings(auditAttribution({ signals }))}>
+              Audit attribution
+            </button>
           </div>
           <p className="status" role="status">
             {'SDK ready · local transports'}
@@ -120,6 +130,29 @@ function Lab({
             <dt>Last touch</dt>
             <dd>{attribution.last ? describe(attribution.last) : 'direct or not captured'}</dd>
           </dl>
+          {findings ? (
+            <section className="audit" aria-label="Attribution audit">
+              <p className="eyebrow">
+                AUDIT ·{' '}
+                {findings.length
+                  ? `${findings.length} finding${findings.length === 1 ? '' : 's'}`
+                  : 'no findings'}
+              </p>
+              {findings.length ? (
+                <ul>
+                  {findings.map((finding) => (
+                    <li key={finding.id} data-severity={finding.severity}>
+                      <code>{finding.id}</code> <small>{finding.severity}</small>
+                      <br />
+                      {finding.message} {finding.hint}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="note">Capture enabled, parameters intact, canonical and CSP clean.</p>
+              )}
+            </section>
+          ) : null}
           <p className="note">
             Open this lab with ?gclid=test or ?utm_source=bing&utm_medium=cpc&utm_term=notebook to
             see the source. It persists only while marketing consent is granted.

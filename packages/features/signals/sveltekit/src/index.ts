@@ -25,5 +25,11 @@ export {
   createGA4Provider,
   createMetaPixelProvider,
   createClarityProvider,
+  auditAttribution,
 } from '@techinject/browser';
-export type { BrowserConfig, BrowserSignals } from '@techinject/browser';
+export type {
+  BrowserConfig,
+  BrowserSignals,
+  AttributionFinding,
+  AttributionAuditOptions,
+} from '@techinject/browser';
