@@ -45,7 +45,8 @@ assert.ok(selected.length, `Unknown client; choose from ${clients.map((c) => c.n
 const path = process.env.PATH.split(delimiter).filter((folder) => {
   const node = join(folder, 'node');
   if (!existsSync(node)) return true;
-  return spawnSync(node, ['-p', 'typeof Bun'], { encoding: 'utf8' }).stdout.trim() === 'undefined';
+  const probe = spawnSync(node, ['-p', 'typeof Bun'], { encoding: 'utf8' });
+  return !probe.error && probe.stdout?.trim() === 'undefined';
 });
 function run(command, args, cwd) {
   const result = spawnSync(command, args, {

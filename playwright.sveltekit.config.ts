@@ -9,9 +9,8 @@ const realNodePath = (process.env.PATH ?? '')
   .filter((folder) => {
     const node = join(folder, 'node');
     if (!existsSync(node)) return true;
-    return (
-      spawnSync(node, ['-p', 'typeof Bun'], { encoding: 'utf8' }).stdout.trim() === 'undefined'
-    );
+    const probe = spawnSync(node, ['-p', 'typeof Bun'], { encoding: 'utf8' });
+    return !probe.error && probe.stdout?.trim() === 'undefined';
   })
   .join(delimiter);
 export default defineConfig({
@@ -23,7 +22,8 @@ export default defineConfig({
     command: 'node build/index.js',
     cwd: 'examples/sveltekit',
     url: 'http://127.0.0.1:3400',
-    reuseExistingServer: !process.env.CI,
+    // Never reuse a dev server on 3400: this suite must exercise the Node production build.
+    reuseExistingServer: false,
     timeout: 30000,
     env: { HOST: '127.0.0.1', PORT: '3400', ORIGIN: 'http://127.0.0.1:3400', PATH: realNodePath },
   },
