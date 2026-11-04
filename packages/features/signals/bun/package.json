@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "bun --bun vitest run",
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

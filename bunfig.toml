@@ -1,0 +1,8 @@
+# Contributor tooling only. Published @techinject packages stay runtime- and
+# package-manager-neutral; client apps may use Node with npm, pnpm or yarn, or Bun.
+[install]
+exact = true
+
+[run]
+# Run `node` shebang binaries (tsc, next, svelte-check, vite) on Bun inside `bun run`.
+bun = true
