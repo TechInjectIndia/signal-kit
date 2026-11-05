@@ -24,7 +24,7 @@ try {
   ];
   for (const name of names) {
     const leaf = join(root, 'packages/features/signals', name);
-    run('pnpm', ['pack', '--pack-destination', directory], leaf);
+    run('bun', ['pm', 'pack', '--destination', directory, '--quiet'], leaf);
   }
   const tarballs = (await readdir(directory)).filter((name) => name.endsWith('.tgz'));
   for (const tarball of tarballs) {
@@ -53,11 +53,10 @@ try {
       private: true,
       type: 'module',
       dependencies,
-      pnpm: { overrides },
+      overrides,
     }),
   );
-  await writeFile(join(directory, '.npmrc'), 'auto-install-peers=false\n');
-  run('pnpm', ['install', '--prefer-offline'], directory);
+  run('bun', ['install', '--omit=peer'], directory);
   await writeFile(
     join(directory, 'proof.mjs'),
     `import {createSignals} from '@techinject/core';

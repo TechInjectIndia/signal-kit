@@ -47,3 +47,52 @@ test('consent, navigation, commerce and automatic API capture', async ({ page })
   await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
   await page.screenshot({ path: 'test-results/next-demo-mobile.png', fullPage: true });
 });
+test('landing source survives the router and persists only under marketing consent', async ({
+  page,
+}) => {
+  await page.goto('/?utm_source=bing&utm_medium=cpc&utm_term=field%20notebook&msclkid=m1');
+  const source = page.getByRole('region', { name: 'Visit source' }).or(page.locator('.source'));
+  await expect(source).toContainText('paid_search · bing / cpc · “field notebook”');
+  expect(await page.evaluate(() => localStorage.getItem('signalkit.attribution'))).toBeNull();
+  await page.getByLabel('marketing', { exact: true }).check();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('signalkit.attribution')))
+    .toContain('paid_search');
+  await page.getByRole('link', { name: 'Open the sample store' }).click();
+  await expect(page).toHaveURL(/\/catalog$/);
+  await expect(source).toContainText('bing / cpc');
+  await page.getByLabel('marketing', { exact: true }).uncheck();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('signalkit.attribution')))
+    .toBeNull();
+  const terms = await page.request.get('/api/search-terms');
+  expect(await terms.json()).toEqual({ configured: false, rows: [] });
+});
+test('attribution self-check reports a clean landing and a tainted canonical link', async ({
+  page,
+}) => {
+  await page.goto('/?gclid=test');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
+  await page.getByRole('button', { name: 'Audit attribution' }).click();
+  const audit = page.getByRole('region', { name: 'Attribution audit' });
+  await expect(audit).toBeVisible();
+  await expect(audit.locator('li[data-severity="error"]')).toHaveCount(0);
+  await expect(audit).toContainText('consent-never-granted');
+  await page.getByLabel('marketing', { exact: true }).check();
+  await page.getByRole('button', { name: 'Audit attribution' }).click();
+  await expect(audit).toContainText('no findings');
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const link = document.createElement('link');
+      link.rel = 'canonical';
+      link.href = '/?utm_source=x';
+      document.head.append(link);
+    });
+  });
+  await page.goto('/?gclid=test');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
+  await page.getByRole('button', { name: 'Audit attribution' }).click();
+  await expect(audit.locator('li[data-severity="error"]')).toContainText(
+    'canonical-has-tracking-params',
+  );
+});

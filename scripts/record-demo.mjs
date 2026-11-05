@@ -12,20 +12,10 @@ const site = join(root, 'apps/site/public');
 await mkdir(assets, { recursive: true });
 await mkdir(site, { recursive: true });
 const child = spawn(
-  'pnpm',
-  [
-    '--filter',
-    '@signalkit/example-nextjs',
-    'exec',
-    'next',
-    'start',
-    '--port',
-    '3112',
-    '--hostname',
-    '127.0.0.1',
-  ],
+  'bun',
+  ['--bun', 'next', 'start', '--port', '3112', '--hostname', '127.0.0.1'],
   {
-    cwd: root,
+    cwd: join(root, 'examples/nextjs'),
     env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   },

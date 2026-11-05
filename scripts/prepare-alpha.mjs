@@ -34,7 +34,7 @@ for (const name of names) {
   const manifest = JSON.parse(await readFile(join(leaf, 'package.json'), 'utf8'));
   assert.equal(manifest.version, version);
   assert.equal(manifest.name, `@techinject/${name}`);
-  run('pnpm', ['pack', '--pack-destination', output], leaf);
+  run('bun', ['pm', 'pack', '--destination', output, '--quiet'], leaf);
   const filename = `techinject-${name}-${version}.tgz`;
   const contents = run('tar', ['-tzf', join(output, filename)]);
   assert.match(contents, /package\/dist\/index\.d\.ts/);
@@ -92,15 +92,14 @@ await mkdir(target,{recursive:true});
 const manifest=JSON.parse(await readFile(join(release,'manifest.json'),'utf8'));
 const dependencies={react:'19.3.0'};const overrides={};
 for(const pkg of manifest.packages){dependencies[pkg.name]='file:'+join(release,pkg.filename);overrides[pkg.name]=dependencies[pkg.name];}
-await writeFile(join(target,'package.json'),JSON.stringify({name:'signalkit-alpha-consumer',private:true,type:'module',dependencies,pnpm:{overrides}},null,2)+String.fromCharCode(10));
-await writeFile(join(target,'.npmrc'),'auto-install-peers=false'+String.fromCharCode(10));
-const result=spawnSync('pnpm',['install'],{cwd:target,stdio:'inherit'});if(result.status!==0)process.exit(result.status??1);
+await writeFile(join(target,'package.json'),JSON.stringify({name:'signalkit-alpha-consumer',private:true,type:'module',dependencies,overrides},null,2)+String.fromCharCode(10));
+const result=spawnSync('npm',['install','--legacy-peer-deps','--no-audit','--no-fund'],{cwd:target,stdio:'inherit'});if(result.status!==0)process.exit(result.status??1);
 console.log('Installed local alpha in '+target+'; registry publication is not implied');
 `,
 );
 await writeFile(
   join(output, 'README.txt'),
-  `SignalKit ${version} release candidate. NOT PUBLISHED.\n\nUse Node22 + pnpm10.24.0. In a fresh directory:\nnode install-local.mjs /path/to/fresh-consumer\n\nAll nine SDK tarballs use local overrides so no unpublished @techinject package is fetched from npm. External dependencies still use the normal registry. Browser-only JavaScript can import the bundled signalkit-browser.mjs with modern browser APIs. No framework or global JavaScript exception support beyond documented targets is implied.\n\nHuman review: inspect docs/releases/0.1.0-alpha.1.md and ALPHA-REVIEW.md. npm account/scope ownership, login, release authorization and provider account validation remain separate. Never store tokens in this folder.\n`,
+  `SignalKit ${version} release candidate. NOT PUBLISHED.\n\nUse Node 22 with npm. In a fresh directory:\nnode install-local.mjs /path/to/fresh-consumer\n\nAll nine SDK tarballs use local overrides so no unpublished @techinject package is fetched from npm. External dependencies still use the normal registry. Browser-only JavaScript can import the bundled signalkit-browser.mjs with modern browser APIs. No framework or global JavaScript exception support beyond documented targets is implied.\n\nHuman review: inspect docs/releases/0.1.0-alpha.1.md and ALPHA-REVIEW.md. npm account/scope ownership, login, release authorization and provider account validation remain separate. Never store tokens in this folder.\n`,
 );
 const files = (await readdir(output)).filter((name) => name !== 'SHA256SUMS.txt').sort();
 const sums = await Promise.all(

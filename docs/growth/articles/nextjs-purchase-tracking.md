@@ -14,16 +14,16 @@ SignalKit accepts typed telemetry; it does not verify your payment or persist yo
 
 ## Run the existing complete example
 
-Use Node 22, pnpm 10.24.0 and Bun 1.3.4. Start both hosts in separate terminals. The Next lab and Bun fixture let you inspect denied consent, permitted events and verified synthetic payment replay without real provider credentials.
+Use Bun 1.4.4 or newer. Start both hosts in separate terminals. The Next lab and Bun fixture let you inspect denied consent, permitted events and verified synthetic payment replay without real provider credentials.
 
 ```sh
 git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
-pnpm install --frozen-lockfile
-pnpm build
-pnpm --filter @signalkit/example-nextjs dev
+bun install --frozen-lockfile
+bun run build
+bun run --filter @signalkit/example-nextjs dev
 # In another terminal from repository root:
-pnpm --filter @signalkit/example-bun dev
+bun run --filter @signalkit/example-bun dev
 ```
 
 ## Send a trusted event after order verification

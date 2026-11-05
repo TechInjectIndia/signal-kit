@@ -7,7 +7,7 @@ export const faq = [
   ],
   [
     'Is SignalKit available on npm?',
-    'Yes. Alpha 0.1.0-alpha.2 is available on npm. Pin the @techinject packages to this exact version, or use the workspace.',
+    'Yes. Alpha 0.1.0-alpha.4 is available on npm. Pin the @techinject packages to this exact version, or use the workspace.',
   ],
   [
     'Which frameworks does SignalKit support?',
@@ -39,7 +39,7 @@ export const faq = [
   ],
   [
     'What has been tested?',
-    'The v1 build recorded 33 tests, local browser and Bun runtime checks, a Next production build and a local OpenTelemetry recorder. Provider scripts and payloads were checked with fixtures, not live attribution. The browser adapter bundle measured 10.6 kB gzip, excluding vendor scripts and React.',
+    'The v1 build recorded 33 tests, local browser and Bun runtime checks, a Next production build and a local OpenTelemetry recorder. Provider scripts and payloads were checked with fixtures, not live attribution. The browser adapter bundle measured 13.3 kB gzip with attribution capture, excluding vendor scripts and React.',
   ],
   [
     'Is SignalKit free to use?',
@@ -143,7 +143,7 @@ export const guides = [
       {
         title: 'Run the existing complete example',
         paragraphs: [
-          'Use Node 22, pnpm 10.24.0 and Bun 1.3.4. Start both hosts in separate terminals. The Next lab and Bun fixture let you inspect denied consent, permitted events and verified synthetic payment replay without real provider credentials.',
+          'Use Bun 1.4.4 or newer. Start both hosts in separate terminals. The Next lab and Bun fixture let you inspect denied consent, permitted events and verified synthetic payment replay without real provider credentials.',
         ],
         setup: true,
       },
@@ -180,7 +180,7 @@ export const guides = [
         title: 'What should you test before production?',
         paragraphs: [
           'Replay a signed captured-payment fixture twice and verify the same persisted purchase ID. Reject altered signatures, mismatched amount/currency and unpaid state. Simulate a timeout between provider acceptance and acknowledgement. Confirm denied consent does not dispatch, and inspect accepted events in your own provider account before claiming live attribution.',
-          'The repository’s local tests establish fixture behavior. They do not establish that GA4 or Meta attributed a real customer purchase. The npm alpha is available with explicit 0.1.0-alpha.2 version pins.',
+          'The repository’s local tests establish fixture behavior. They do not establish that GA4 or Meta attributed a real customer purchase. The npm alpha is available with explicit 0.1.0-alpha.4 version pins.',
         ],
         links: [
           [
@@ -233,7 +233,7 @@ const browser = createBrowserSignals({
       {
         title: 'Keep CAPI credentials and matching data on the server',
         paragraphs: [
-          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version and supported matching data. The adapter accepts only SHA-256 hashed em, ph and external_id or validated fbp/fbc. Normalize ph to E.164 before removing its leading plus and hashing the digits. Hash the exact case-sensitive external_id preimage shared with Pixel; do not lowercase it. Hashes still represent personal data and require an appropriate host consent and retention policy.',
+          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version, the page URL where the event happened (eventSourceUrl) and per-request matching data. Meta requires client_user_agent for website events, so every call must include the shopper’s user agent plus at least one other identifier. The adapter accepts SHA-256 hashed em, ph, fn, ln, ge, db, ct, st, zp, country and external_id, plus unhashed client_ip_address, client_user_agent, fbp and fbc. It never hashes plaintext: normalize under Meta’s rules and hash on your server first. Normalize ph to E.164 before removing its leading plus and hashing the digits. Hash the exact case-sensitive external_id preimage shared with Pixel; do not lowercase it. Hashes, IP addresses and user agents are personal data and require an appropriate host consent and retention policy.',
           'This configuration is illustrative: replace environment values with your server’s validated configuration. Avoid a long-lived userData callback tied to one customer on a shared server instance; create the provider for the correct order context. Never put the access token in a NEXT_PUBLIC variable.',
         ],
         code: `import { createServerSignals, createMetaCapiProvider } from '@techinject/server';
@@ -245,8 +245,12 @@ const server = createServerSignals({
     pixelId: hostConfig.pixelId,
     accessToken: hostConfig.accessToken,
     apiVersion: hostConfig.graphApiVersion,
-    eventSourceUrl: 'https://your-shop.example/checkout',
-    userData: () => ({ external_id: hashedCustomerId }),
+    eventSourceUrl: 'https://your-shop.example/checkout/complete',
+    userData: () => ({
+        external_id: hashedCustomerId,
+        client_ip_address: request.ip,
+        client_user_agent: request.headers.get('user-agent'),
+      }),
   })],
 });
 await server.track(verifiedPurchase);
@@ -307,7 +311,7 @@ server.dispose();`,
       {
         title: 'Wrap incoming requests explicitly',
         paragraphs: [
-          'This code is a complete local server that prints safe records through an injected observer. Save it as examples/bun/trace-demo.ts inside the built workspace, then run pnpm --filter @signalkit/example-bun exec bun trace-demo.ts. Technical consent here is for the synthetic fixture; your real host supplies its own policy.',
+          'This code is a complete local server that prints safe records through an injected observer. Save it as examples/bun/trace-demo.ts inside the built workspace, then run bun trace-demo.ts from examples/bun. Technical consent here is for the synthetic fixture; your real host supplies its own policy.',
         ],
         code: `import { createServerSignals } from '@techinject/server';
 import { instrumentBunFetch } from '@techinject/bun';
@@ -370,13 +374,209 @@ process.on('SIGINT', async () => {
       },
     ],
   },
+  {
+    path: 'guides/ads-utm-search-attribution/',
+    title: 'Ads, UTM and search attribution for consumer apps — SignalKit guide',
+    label: 'Ads, UTM and search attribution',
+    description:
+      'Keep campaign parameters and referrers intact through routing, capture first and last touch under consent in Next.js, and configure GA4, Google Ads, Microsoft Ads, Meta, Search Console and Bing Webmaster Tools.',
+    datePublished: '2026-11-04',
+    sections: [
+      {
+        title: 'What attribution needs from your app',
+        paragraphs: [
+          'Attribution is built from three ingredients that exist only when a visitor lands: the query string (utm_source, utm_medium, utm_campaign, utm_term, utm_content, utm_id and the click IDs gclid, gbraid, wbraid, msclkid and fbclid), the referrer host, and a stable first-party place to keep the first and last touch until an order is created.',
+          'The GA4 adapter previously stripped the whole query string and the referrer path to keep personal data out of the stream, which made every session Direct. It now keeps the origin, the redacted path and only the parameters in TRACKING_PARAMETERS on page_location, and sends the referrer origin alone. Every other parameter and the referrer path and query still never leave the page.',
+        ],
+        code: `import { TRACKING_PARAMETERS, safePageLocation, safeReferrer } from '@techinject/browser';
+
+safePageLocation('https://shop.example/p/42?gclid=abc&session=secret&email=a@b.c');
+// 'https://shop.example/p/:id?gclid=abc'
+safeReferrer('https://www.google.com/search?q=notebook');
+// 'https://www.google.com/'`,
+        label: 'Allowlisted page_location and referrer origin',
+      },
+      {
+        title: 'Routing best practices for consumer apps',
+        paragraphs: [
+          'Every redirect between the ad click and the page that runs your JavaScript can lose the query string. Next.js redirects() in next.config forwards it by default; middleware does not unless you build the destination from request.nextUrl so its search is kept.',
+          'createBrowserSignals reads location.href and document.referrer in start(), which SignalKitProvider calls in its mount effect. Clean the URL only after SignalKitProvider has called start(): a child effect in the same commit runs before the provider’s mount effect, so clean it from a later event such as the first route change, never from a layout above the provider or in middleware. Keep the ad landing page a real route: an interstitial or login wall that navigates produces a same-origin referrer and a clean URL, which the SDK treats as internal navigation rather than a new touch.',
+        ],
+        code: `import { NextResponse, type NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  if (request.nextUrl.hostname === 'shop.example') {
+    const url = request.nextUrl.clone();
+    url.hostname = 'www.shop.example';
+    // url.search survives clone(); do not rebuild from pathname alone.
+    return NextResponse.redirect(url, 308);
+  }
+  return NextResponse.next();
+}`,
+        label: 'middleware.ts',
+        bullets: [
+          'Carry UTMs through app links, deep links and QR codes; a bare universal link is a direct visit.',
+          'Reserve the utm_* and click-ID names; do not reuse utm_term for your own search box.',
+          'Render the consent banner in place. A banner that redirects away and back behaves like an interstitial.',
+          'Storage is cookie-less: the touch lives in localStorage on your origin under signalkit.attribution; inject storage for a cookie-backed store.',
+        ],
+      },
+      {
+        title: 'Rendering best practices',
+        paragraphs: [
+          'Server Components cannot read window.location or document.referrer, so capture only on the client, which is what the SDK does. Emit the canonical link without tracking parameters, and make CDN and ISR cache keys ignore utm_* and click IDs so each unique gclid does not miss the cache.',
+          'Do not key a layout by pathname plus search; the remount re-runs effects and can double-fire the landing page view. Keep hydration stable so the landing view fires once, never put an email or phone number in a URL, and allow googletagmanager.com, google-analytics.com and connect.facebook.net in your Content Security Policy for the providers you enable.',
+        ],
+      },
+      {
+        title: 'Enable capture in Next.js',
+        paragraphs: [
+          'Attribution is off by default. Enable it in the browser configuration passed to SignalKitProvider; category names the consent category that permits persisting the touch and defaults to marketing. Read the touch anywhere with useSignals().getAttribution(), then post first and last to your own order endpoint so the order record stores channel, source, medium, campaign, term and click IDs. Validate the posted object on the server; the browser is not a trusted source.',
+        ],
+        code: `'use client';
+import { SignalKitProvider, useSignals, createGA4Provider } from '@techinject/nextjs';
+
+export function Providers({ consent, children }) {
+  return (
+    <SignalKitProvider
+      config={{
+        consent,
+        attribution: { category: 'marketing', maxAgeDays: 90 },
+        providers: [createGA4Provider({ measurementId: 'G-XXXXXXX' })],
+      }}
+    >
+      {children}
+    </SignalKitProvider>
+  );
+}
+
+export function PlaceOrderButton({ cartId }: { cartId: string }) {
+  const signals = useSignals();
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        // Gate the stored copy on the category that permits persisting the touch.
+        const attribution = signals.getConsent().marketing ? signals.getAttribution() : {};
+        await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ cartId, attribution }),
+        });
+      }}
+    >
+      Place order
+    </button>
+  );
+}`,
+        label: 'app/providers.tsx and a checkout button',
+        bullets: [
+          'A direct visit or same-origin navigation never overwrites a stored touch.',
+          'The landing touch is held in memory from start() and written to storage only once the chosen consent category is granted; withdrawal removes it.',
+          'first expires after maxAgeDays (default 90, clamped to 1–365).',
+          'Call signals.clearAttribution() on logout or account deletion.',
+        ],
+      },
+      {
+        title: 'Paid search keywords and Meta ads',
+        paragraphs: [
+          'Organic engines never put the query in the referrer or landing URL. A keyword reaches your app only through a paid click whose tracking template writes it into utm_term. Keep auto-tagging on in Google Ads (gclid, gbraid, wbraid) and Microsoft Ads (msclkid); Yahoo and DuckDuckGo paid placements are syndicated Microsoft Ads inventory and use the same template. The SDK stores term from utm_term and classifies any gclid, gbraid, wbraid or msclkid click as paid_search even when UTMs are missing.',
+          'Facebook appends fbclid to every outbound click, paid or not, so the SDK reports fbclid alone as organic_social and paid_social only when utm_medium says so. On the server, metaClickCookie(fbclid) from @techinject/core builds the fbc value the Conversions API provider accepts in userData. The Pixel loads only after marketing consent, but the SDK captured the fbclid in memory at start() regardless.',
+        ],
+        code: `# Google Ads final URL suffix (account level, auto-tagging on)
+utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={creative}&utm_term={keyword}
+
+# Microsoft Ads final URL suffix (auto-tagging on)
+utm_source=bing&utm_medium=cpc&utm_campaign={CampaignId}&utm_content={AdId}&utm_term={keyword}
+
+# Meta Ads Manager URL parameters
+utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&utm_term={{adset.name}}`,
+        label: 'Tracking templates',
+      },
+      {
+        title: 'GA4, Google Ads, Microsoft Ads and Meta settings (no code)',
+        paragraphs: [
+          'GA4: Admin → Data streams → Enhanced measurement → turn off “Page changes based on browser history events” because SignalKit sends explicit page views. Admin → Product links → link Google Ads with auto-tagging and link the verified Search Console property. Google signals under Data collection is optional and consent-gated. Verify under Reports → Acquisition → Traffic acquisition that test clicks appear as Paid Search, Organic Search or Paid Social rather than Direct, and create a custom channel group only for mediums outside GA4 defaults.',
+          'Google Ads: Admin → Account settings → enable auto-tagging and paste the final URL suffix under Tracking. Microsoft Ads: Settings → Account settings → enable auto-tagging of the Microsoft Click ID and set the suffix; Microsoft conversion tracking needs the UET tag, which SignalKit does not load. Meta: in the ad setup use Tracking → URL parameters → “Build a URL parameter”, and create the Conversions API system-user token under Events Manager → Settings; it never belongs in a NEXT_PUBLIC variable.',
+        ],
+      },
+      {
+        title: 'Organic search terms from Search Console and Bing Webmaster Tools',
+        paragraphs: [
+          'Organic terms are only available after the fact from the engines’ reporting APIs, with a delay of roughly two to three days and aggregated by query and page, not by visitor. They are reporting data, not real-time attribution. Verify the property by DNS or HTML file in both tools and submit your sitemap.',
+          'For Google, enable the Google Search Console API in Google Cloud, create an OAuth web client, and request the scope https://www.googleapis.com/auth/webmasters.readonly with access_type=offline. Your host runs the login and callback routes, restricted to an authorized administrator with a signed state bound to that session, exchanges the code at https://oauth2.googleapis.com/token and stores the refresh token server-side under GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET, never in NEXT_PUBLIC. The search-terms route that reads the reports must require the same administrator, because the rows are private account data and each call consumes provider quota. For Bing, open Webmaster Tools → Settings → API access → Generate API key. The SDK never runs the OAuth flow or stores credentials, and its errors never include a token, API key or provider body.',
+        ],
+        code: `import {
+  createGoogleSearchConsoleClient,
+  createBingWebmasterClient,
+  mergeSearchRows,
+} from '@techinject/server/search-console';
+
+export async function GET(request: Request) {
+  if (!(await requireAdmin(request))) return new Response('Forbidden', { status: 403 });
+  const google = createGoogleSearchConsoleClient({
+    siteUrl: 'sc-domain:shop.example',
+    accessToken: refreshAccessToken, // exchanges the stored refresh token server-side
+  });
+  const bing = createBingWebmasterClient({
+    siteUrl: 'https://shop.example/',
+    apiKey: process.env.BING_WEBMASTER_API_KEY!,
+  });
+  const day = (offset: number) =>
+    new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+  const query = { startDate: day(30), endDate: day(3), dimensions: ['query' as const], rowLimit: 50 };
+  const results = await Promise.allSettled([google.queries(query), bing.queries(query)]);
+  const rows = mergeSearchRows(
+    results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
+  );
+  return Response.json({ rows });
+}`,
+        label: 'app/api/search-terms/route.ts',
+      },
+      {
+        title: 'AI search and other sources',
+        paragraphs: [
+          'Visits referred from chatgpt.com, perplexity.ai, gemini.google.com, claude.ai, copilot.microsoft.com, you.com and mistral.ai are classified as ai_search with medium ai. These assistants do not pass the prompt, so no keyword is available and the reporting APIs above do not cover them. Other hosts fall through to organic_search, organic_social or referral. UTM-tag any link you place yourself, in an email, partner page, bio or print campaign, because a referrer can be dropped by the sending platform.',
+        ],
+      },
+      {
+        title: 'Run the self-check',
+        paragraphs: [
+          'The routing and rendering rules are platform configuration, not SDK code, so the SDK ships a runtime self-check instead of a per-framework linter. auditAttribution runs in the page in any framework and version and reports what it can observe from the live document, URL and navigation timing: attribution-disabled, params-dropped-by-redirect, params-removed-before-capture, canonical-has-tracking-params, csp-blocks-vendor (meta-tag policies only), storage-unavailable, consent-never-granted and multiple-sdk-instances. Each finding has a stable id, a severity of error, warning or info, a message and a hint. It is synchronous, never throws and makes no network request. Call it after the provider has mounted; the Next.js lab has an “Audit attribution” button in the inspector.',
+        ],
+        code: `import { auditAttribution } from '@techinject/nextjs'; // or @techinject/browser, @techinject/sveltekit
+
+const findings = auditAttribution({ signals });
+for (const f of findings) console.warn(f.id, f.message, f.hint);`,
+        label: 'dev-only helper',
+      },
+      {
+        title: 'Verify before you trust it, and what stays private',
+        paragraphs: [
+          'Run the Next.js lab and open it with ?gclid=test or ?utm_source=bing&utm_medium=cpc&utm_term=notebook; the “Visit source” card shows the first and last touch, and granting marketing consent persists it across a reload. With a real GA4 stream, DebugView should show page_location still carrying gclid and page_referrer as the referrer origin. Local tests are fixture evidence; they do not establish that GA4, Google Ads or Meta attributed a real purchase. The lab’s /api/search-terms returns configured:false until the Search Console and Bing environment variables are set.',
+          'In the payloads the SDK builds, only the eleven allowlisted parameters can leave the page, and only on page_location; this bounds what SignalKit sends, not what the vendor scripts the GA4 and Meta adapters load can read from the page URL themselves, so configure each provider’s own privacy controls too. safePageLocation passes allowlisted values up to 256 characters to GA4; the first-party touch keeps click IDs up to 256 and UTMs up to 100–200 characters. A value containing @, control characters, angle brackets or quotes, or exceeding its budget, is dropped. The referrer is reduced to scheme and host. Nothing is persisted before consent, withdrawal clears storage, maxAgeDays bounds first-touch retention, and your host owns retention of whatever it copies onto an order.',
+        ],
+        setup: true,
+        links: [
+          [
+            'https://support.google.com/analytics/answer/9756891',
+            'GA4 default channel group definitions',
+          ],
+          [
+            'https://developers.google.com/webmaster-tools/v1/searchanalytics/query',
+            'Search Console Search Analytics query reference',
+          ],
+        ],
+      },
+    ],
+  },
 ];
 pages.push(
   {
     path: 'guides/',
-    title: 'SignalKit guides — ecommerce tracking and Bun API tracing',
+    title: 'SignalKit guides — ecommerce tracking, attribution and Bun API tracing',
     description:
-      'Practical guides to verified Next.js purchases, coordinated Meta Pixel and CAPI IDs, and Bun API tracing with runnable local examples.',
+      'Practical guides to verified Next.js purchases, coordinated Meta Pixel and CAPI IDs, ads, UTM and search attribution, and Bun API tracing with runnable local examples.',
     label: 'Guides',
   },
   ...guides,

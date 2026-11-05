@@ -1,6 +1,6 @@
 {
   "name": "@techinject/sveltekit",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "type": "module",
   "license": "MIT",
   "files": [
@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "bun --bun vitest run",
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

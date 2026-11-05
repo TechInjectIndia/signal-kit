@@ -6,7 +6,6 @@ export const root = fileURLToPath(new URL('../', import.meta.url));
 const ignored = new Set([
   '.git',
   'node_modules',
-  '.pnpm-store',
   'dist',
   'build',
   '.next',

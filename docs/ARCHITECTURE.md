@@ -43,7 +43,7 @@ Marketing uses event IDs for business duplication; traces link technical request
 
 ## Runtime and rollout
 
-Initial verified fixture targets Node22, Next version recorded in compatibility, Bun1.3.4. Browser needs modern fetch, crypto.randomUUID, structuredClone; older browsers need host polyfills. No Edge/native Python/PHP promise. SSR imports safe; browser start is client-only. Structural React config is init-only: remount to change provider/observer config, update consent through config or setConsent.
+Initial verified fixture targets Node22, Next version recorded in compatibility, Bun1.4.4. Contributor tooling is Bun + Turborepo; client apps may use any package manager. Browser needs modern fetch, crypto.randomUUID, structuredClone; older browsers need host polyfills. No Edge/native Python/PHP promise. SSR imports safe; browser start is client-only. Structural React config is init-only: remount to change provider/observer config, update consent through config or setConsent.
 
 Next automatic incoming spans use @vercel/otel through instrumentation.ts. Enable host technical telemetry deliberately under its own lawful processing policy, configure collector redaction, avoid competing global tracer registrations. SignalKit business/browser consent does not control an independently registered global OTel provider. Optional SigNoz collector accepts OTLP; its hosting/auth/residency is host-owned.
 
@@ -72,6 +72,10 @@ Sentry uses a small host-injected SDK client interface in @techinject/server. Si
 ## Local connections observability catalog — 13 October 2026
 
 Owner requested visibility of the new integrations on the local /connections page. The portable dashboard accepts optional host-declared observability metadata and renders Sentry, Grafana and SigNoz separately from event-provider outcomes. Next.js and SvelteKit labs list these as not configured because their observers are synthetic. Backend labels and setup guidance are fixed, while configuration/policy flags are supplied by the host. No credentials, endpoints, provider objects, health probes or invented delivery counters are exposed. Existing two-argument dashboard calls remain supported. Configuration is unverified host information, not evidence of a connection.
+
+## Attribution and search sources — 4 November 2026
+
+Core owns pure, platform-independent URL/referrer classification (parseAttribution, safePageLocation, safeReferrer, metaClickCookie) with fixed engine, AI-assistant and social host tables and an allowlist of campaign/click parameters. The browser package reads the landing URL once at start, before host routers rewrite it, and keeps first/last touch in first-party localStorage only while the configured consent category is granted. GA4 receives the allowlisted parameters and referrer origin; all other query parameters and the referrer path and query are removed, while the path goes through the safeRoute heuristic (numeric, UUID, ObjectId, Stripe-style and CUID segments become :id, segments with @ or over 64 characters become :redacted, other segments are kept), so hosts keep sensitive values out of path segments or pass a route template. Search Console and Bing Webmaster reporting clients live under @techinject/server/search-console with injected tokens/keys and bounded, credential-free errors; the host owns OAuth, refresh tokens and API keys. No new package, hosted service or background worker.
 
 ## Instance event registry — B5
 

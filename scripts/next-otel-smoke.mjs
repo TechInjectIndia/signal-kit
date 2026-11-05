@@ -23,22 +23,18 @@ const collector = createServer((req, res) => {
 collector.listen(0, '127.0.0.1');
 await once(collector, 'listening');
 const port = collector.address().port;
-const child = spawn(
-  'pnpm',
-  ['--filter', '@signalkit/example-nextjs', 'exec', 'next', 'start', '--port', '3111'],
-  {
-    cwd: fileURLToPath(new URL('../', import.meta.url)),
-    env: {
-      ...process.env,
-      SIGNALKIT_OTEL_ENABLED: 'true',
-      OTEL_EXPORTER_OTLP_ENDPOINT: `http://127.0.0.1:${port}`,
-      OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
-      OTEL_BSP_SCHEDULE_DELAY: '100',
-      NEXT_TELEMETRY_DISABLED: '1',
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
+const child = spawn('bun', ['--bun', 'next', 'start', '--port', '3111'], {
+  cwd: fileURLToPath(new URL('../examples/nextjs/', import.meta.url)),
+  env: {
+    ...process.env,
+    SIGNALKIT_OTEL_ENABLED: 'true',
+    OTEL_EXPORTER_OTLP_ENDPOINT: `http://127.0.0.1:${port}`,
+    OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
+    OTEL_BSP_SCHEDULE_DELAY: '100',
+    NEXT_TELEMETRY_DISABLED: '1',
   },
-);
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
 let output = '';
 child.stdout.on('data', (chunk) => (output += chunk));
 child.stderr.on('data', (chunk) => (output += chunk));

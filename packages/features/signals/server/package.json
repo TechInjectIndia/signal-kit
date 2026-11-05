@@ -1,6 +1,6 @@
 {
   "name": "@techinject/server",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./search-console": {
+      "types": "./dist/search-console.d.ts",
+      "import": "./dist/search-console.js"
     }
   },
   "files": [
@@ -20,7 +24,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "bun --bun vitest run",
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

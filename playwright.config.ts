@@ -5,7 +5,9 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://127.0.0.1:3100' },
   webServer: {
-    command: 'pnpm --filter @signalkit/example-nextjs start',
+    // Run Next directly so Playwright stops it (a `bun run` wrapper leaves it orphaned).
+    command: 'bun --bun next start --port 3100',
+    cwd: 'examples/nextjs',
     url: 'http://127.0.0.1:3100',
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

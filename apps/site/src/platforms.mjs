@@ -65,8 +65,8 @@ export const platforms = [
 ];
 const setup = `git clone --branch main https://github.com/TechInjectIndia/signal-kit.git
 cd signal-kit
-pnpm install --frozen-lockfile
-pnpm build`;
+bun install --frozen-lockfile
+bun run build`;
 const snippet = (x) => ({
   title: x.title,
   paragraphs: [x.description],
@@ -86,9 +86,10 @@ export const platformPages = [
       {
         title: 'Build and try the Next.js lab',
         paragraphs: [
-          'Alpha 0.1.0-alpha.2 is published on npm. Pin installed @techinject packages to this exact version. Start the source lab with Node 22 and pnpm 10.24.0. The lab uses synthetic data and local recorders. For a fresh external project, prepare the local alpha tarballs using pnpm release:prepare and follow the repository alpha install plan.',
+          'Alpha 0.1.0-alpha.4 is published on npm. Pin installed @techinject packages to this exact version. Start the source lab with Bun 1.4.4 or newer. The lab uses synthetic data and local recorders. For a fresh external project, prepare the local alpha tarballs using bun run release:prepare and follow the repository alpha install plan.',
         ],
-        code: setup + '\npnpm --filter @signalkit/example-nextjs dev\n# Open http://localhost:3100',
+        code:
+          setup + '\nbun run --filter @signalkit/example-nextjs dev\n# Open http://localhost:3100',
         label: 'Terminal',
       },
       {
@@ -134,11 +135,11 @@ export const platformPages = [
       {
         title: 'Build and try the Bun lab',
         paragraphs: [
-          'Use Node 22, pnpm 10.24.0 and Bun 1.3.4 for the recorded setup. Alpha 0.1.0-alpha.2 is available on npm; pin installed @techinject packages to this exact version. The lab uses synthetic consent and local records.',
+          'Use Bun 1.4.4 or newer for the recorded setup. Alpha 0.1.0-alpha.4 is available on npm; pin installed @techinject packages to this exact version. The lab uses synthetic consent and local records.',
         ],
         code:
           setup +
-          '\npnpm --filter @signalkit/example-bun dev\n# API fixture at http://localhost:3200',
+          '\nbun run --filter @signalkit/example-bun dev\n# API fixture at http://localhost:3200',
         label: 'Terminal',
       },
       snippet(integrationExamples[3]),
@@ -190,7 +191,7 @@ for (const page of platformPages) {
   page.sections.push({
     title: 'Open the connections health dashboard',
     paragraphs: [
-      'Add a /connections page inside your app, using its existing SDK instance. Add @techinject/browser as a direct dependency for the dashboard renderer. Alpha 0.1.0-alpha.2 is published; pin your installed @techinject packages to this exact version. Counts reset with the instance; SDK completion does not prove provider delivery or attribution. Protect production diagnostics with host authentication.',
+      'Add a /connections page inside your app, using its existing SDK instance. Add @techinject/browser as a direct dependency for the dashboard renderer. Alpha 0.1.0-alpha.4 is published; pin your installed @techinject packages to this exact version. Counts reset with the instance; SDK completion does not prove provider delivery or attribution. Protect production diagnostics with host authentication.',
       page.path === 'docs/bun/'
         ? 'Bun is a server integration. Read a safe snapshot on the server; an authenticated host frontend must render it. No automatic dashboard URL or cross-request collector is provided.'
         : 'Open your app’s /connections URL after adding the page. Reuse the root client; do not initialize another SDK instance for the dashboard.',
@@ -216,16 +217,16 @@ for (const page of platformPages) {
   page.sections.push({
     title: 'Upgrade SignalKit safely',
     paragraphs: [
-      'Pin all installed @techinject packages to the same exact released version. Keep the lockfile, read release notes, test consent/navigation/API and dashboard behavior, then rebuild and redeploy. Alpha 0.1.0-alpha.2 is published; the commands below pin this reviewed release. Source installs require fetching the reviewed release and rebuilding first.',
+      'Pin all installed @techinject packages to the same exact released version. Keep the lockfile, read release notes, test consent/navigation/API and dashboard behavior, then rebuild and redeploy. Alpha 0.1.0-alpha.4 is published; the commands below pin this reviewed release. Source installs require fetching the reviewed release and rebuilding first.',
       'Coming-soon framework adapters remain unverified. Browser CDN updates require replacing the explicit version in your import URL; neither packages nor deployed apps silently pull updates.',
     ],
     label: 'Published alpha / exact version pins',
     code:
       page.path === 'docs/nextjs/'
-        ? 'pnpm add --save-exact @techinject/nextjs@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2\n# If using Node tracing, update @techinject/nextjs-server to 0.1.0-alpha.2 too.'
+        ? 'npm install --save-exact @techinject/nextjs@0.1.0-alpha.4 @techinject/browser@0.1.0-alpha.4\n# If using Node tracing, update @techinject/nextjs-server to 0.1.0-alpha.4 too.\n# pnpm add --save-exact, yarn add --exact and bun add --exact work the same way.'
         : page.path === 'docs/sveltekit/'
-          ? 'pnpm add --save-exact @techinject/sveltekit@0.1.0-alpha.2 @techinject/browser@0.1.0-alpha.2\n# If using server hooks, update @techinject/sveltekit-server to 0.1.0-alpha.2 too.'
-          : 'pnpm add --save-exact @techinject/bun@0.1.0-alpha.2\n# Update any directly installed core/server packages to 0.1.0-alpha.2 too.',
+          ? 'npm install --save-exact @techinject/sveltekit@0.1.0-alpha.4 @techinject/browser@0.1.0-alpha.4\n# If using server hooks, update @techinject/sveltekit-server to 0.1.0-alpha.4 too.\n# pnpm add --save-exact, yarn add --exact and bun add --exact work the same way.'
+          : 'npm install --save-exact @techinject/bun@0.1.0-alpha.4\n# Update any directly installed core/server packages to 0.1.0-alpha.4 too.\n# pnpm add --save-exact, yarn add --exact and bun add --exact work the same way.',
     links: [
       [
         'https://github.com/TechInjectIndia/signal-kit/blob/main/docs/UPGRADING.md',

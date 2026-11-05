@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { releaseTag, shouldCleanupLatest } from './release-policy.mjs';
+import { releaseTag, shouldAdvanceLatest } from './release-policy.mjs';
 import { mkdtemp, cp, mkdir, readFile, rm, symlink, writeFile, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,8 +11,8 @@ import { registryField } from './registry-response.mjs';
 test('Changesets produces one numbered alpha and changelogs for all nine packages', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'signalkit-version-'));
   try {
-    for (const file of ['package.json', 'pnpm-workspace.yaml'])
-      await cp(join(root, file), join(folder, file));
+    // Changesets detects the Bun workspace from package.json workspaces plus bun.lock.
+    for (const file of ['package.json', 'bun.lock']) await cp(join(root, file), join(folder, file));
     await mkdir(join(folder, '.changeset'));
     await cp(join(root, '.changeset/config.json'), join(folder, '.changeset/config.json'));
     await writeFile(
@@ -96,23 +96,33 @@ test('standalone CDN module imports and dispatches without external modules or D
   sdk.dispose();
 });
 
-test('alpha tag cleanup preserves stable latest and refuses to remove the sole valid tag', () => {
+test('latest follows prereleases only while it is not stable and the channel tag is intact', () => {
   const version = '0.1.0-alpha.1';
-  assert.equal(shouldCleanupLatest({ latest: version, alpha: version }, version), true);
-  assert.equal(shouldCleanupLatest({ latest: '0.0.1', alpha: version }, version), false);
-  assert.equal(shouldCleanupLatest({ alpha: version }, version), false);
-  assert.equal(shouldCleanupLatest({ latest: '1.0.0' }, '1.0.0'), false);
-  assert.throws(() => shouldCleanupLatest({ latest: version }, version));
-  assert.throws(() => shouldCleanupLatest({ latest: version, alpha: '0.1.0-alpha.0' }, version));
+  assert.equal(shouldAdvanceLatest({ latest: '0.1.0-alpha.0', alpha: version }, version), true);
+  assert.equal(shouldAdvanceLatest({ latest: version, alpha: version }, version), false);
+  assert.equal(shouldAdvanceLatest({ latest: '0.0.1', alpha: version }, version), false);
+  assert.equal(shouldAdvanceLatest({ alpha: version }, version), false);
+  assert.equal(shouldAdvanceLatest({ latest: '1.0.0' }, '1.0.0'), false);
+  assert.throws(() => shouldAdvanceLatest({ latest: '0.1.0-alpha.0' }, version));
+  assert.throws(() =>
+    shouldAdvanceLatest({ latest: '0.1.0-alpha.0', alpha: '0.1.0-alpha.0' }, version),
+  );
 });
 
-test('cleanup removes an older alpha latest only when the current alpha tag is intact', () => {
+test('latest moves from an older alpha only when the current alpha tag is intact', () => {
   const current = '0.1.0-alpha.2';
-  assert.equal(shouldCleanupLatest({ latest: '0.1.0-alpha.1', alpha: current }, current), true);
-  for (const latest of ['0.1.0-alpha.3', '0.0.9-alpha.1', '0.1.0-beta.1', '0.1.0', 'unexpected'])
-    assert.equal(shouldCleanupLatest({ latest, alpha: current }, current), false);
+  assert.equal(shouldAdvanceLatest({ latest: '0.1.0-alpha.1', alpha: current }, current), true);
+  for (const latest of [
+    current,
+    '0.1.0-alpha.3',
+    '0.0.9-alpha.1',
+    '0.1.0-beta.1',
+    '0.1.0',
+    'unexpected',
+  ])
+    assert.equal(shouldAdvanceLatest({ latest, alpha: current }, current), false);
   assert.throws(() =>
-    shouldCleanupLatest({ latest: '0.1.0-alpha.1', alpha: '0.1.0-alpha.1' }, current),
+    shouldAdvanceLatest({ latest: '0.1.0-alpha.1', alpha: '0.1.0-alpha.1' }, current),
   );
 });
 
@@ -135,7 +145,7 @@ async function registryFixture() {
     await cp(join(root, 'scripts', script), join(folder, 'scripts', script));
   return folder;
 }
-test('npm 12 wrapped tag response removes all nine stale alpha tags through the real helper', async () => {
+test('npm 12 wrapped tag response moves all nine stale latest tags through the real helper', async () => {
   const folder = await registryFixture();
   try {
     const log = join(folder, 'removed.txt');
@@ -146,7 +156,7 @@ test('npm 12 wrapped tag response removes all nine stale alpha tags through the 
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 if (args[0] === 'view') console.log(JSON.stringify([{ latest: '0.1.0-alpha.1', alpha: '0.1.0-alpha.2' }]));
-else if (args[0] === 'dist-tag' && args[1] === 'rm' && args[3] === 'latest') fs.appendFileSync(${JSON.stringify(log)}, args[2]+'\\n');
+else if (args[0] === 'dist-tag' && args[1] === 'add' && args[3] === 'latest') fs.appendFileSync(${JSON.stringify(log)}, args[2]+'\\n');
 else process.exit(2);
 `,
     );
@@ -160,8 +170,51 @@ else process.exit(2);
     const removed = (await readFile(log, 'utf8')).trim().split('\n');
     assert.equal(removed.length, 9);
     assert.equal(new Set(removed).size, 9);
-    assert.ok(removed.includes('@techinject/contracts'));
-    assert.ok(removed.includes('@techinject/sveltekit-server'));
+    assert.ok(removed.includes('@techinject/contracts@0.1.0-alpha.2'));
+    assert.ok(removed.includes('@techinject/sveltekit-server@0.1.0-alpha.2'));
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+test('cleanup waits for the registry to serve a just-published version', async () => {
+  const folder = await registryFixture();
+  try {
+    const log = join(folder, 'removed.txt');
+    const views = join(folder, 'views');
+    const mock = join(folder, 'bin/npm');
+    await mkdir(views);
+    await writeFile(
+      mock,
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] === 'view') {
+  const seen = ${JSON.stringify(views)} + '/' + encodeURIComponent(args[1]);
+  const count = fs.existsSync(seen) ? Number(fs.readFileSync(seen, 'utf8')) : 0;
+  fs.writeFileSync(seen, String(count + 1));
+  if (count === 0) process.exit(1);
+  const alpha = count === 1 ? '0.1.0-alpha.1' : '0.1.0-alpha.2';
+  console.log(JSON.stringify([{ latest: '0.1.0-alpha.1', alpha }]));
+} else if (args[0] === 'dist-tag' && args[1] === 'add' && args[3] === 'latest') fs.appendFileSync(${JSON.stringify(log)}, args[2]+'\\n');
+else process.exit(2);
+`,
+    );
+    await chmod(mock, 0o755);
+    const env = { ...process.env, PATH: join(folder, 'bin') + ':' + process.env.PATH };
+    const run = (extra) =>
+      spawnSync(process.execPath, [join(folder, 'scripts/cleanup-alpha-tags.mjs')], {
+        cwd: folder,
+        encoding: 'utf8',
+        env: { ...env, SIGNALKIT_REGISTRY_WAIT_MS: '0', ...extra },
+      });
+    const result = run({});
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal((await readFile(log, 'utf8')).trim().split('\n').length, 9);
+    await rm(views, { recursive: true });
+    await mkdir(views);
+    const exhausted = run({ SIGNALKIT_REGISTRY_ATTEMPTS: '2' });
+    assert.notEqual(exhausted.status, 0);
+    assert.match(exhausted.stderr, /Cannot verify registry tags/);
   } finally {
     await rm(folder, { recursive: true, force: true });
   }

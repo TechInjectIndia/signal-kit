@@ -1,6 +1,6 @@
 # SignalKit integration
 
-These packages are local workspace packages, not yet available on npm. Build the cloned repo first. ESM exports/declarations live in each dist directory. Pack them with pnpm pack to test outside this workspace; do not publish before the release checklist.
+These packages are local workspace packages, not yet available on npm. Build the cloned repo first. ESM exports/declarations live in each dist directory. Pack them with bun pm pack, which rewrites workspace:\* dependency ranges (npm pack does not), to test outside this workspace; do not publish before the release checklist.
 
 ## Platform availability
 
@@ -154,13 +154,15 @@ Host code should still track verified purchases from trusted server state.
 
 Store eventId with the trusted host order. Browser and server copies both emit purchase using same eventId and transaction_id. Verify payment signatures and captured/paid state against trusted order currency/amount; never trust a client success page. The Bun example shows raw HMAC and a durable local SQLite outbox with replay tests. Production applications supply their own persistence, per-user consent, signed webhook rotation, currency exponents and order line items.
 
-createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, eventSourceUrl and a userData callback. Supply only SHA-256 prehashed `em`, `ph` and `external_id`, or validated `fbp`/`fbc` cookies. Plaintext values and other matching fields are rejected. The host normalizes and hashes before calling the adapter:
+createMetaCapiProvider requires pixelId, accessToken, explicit supported apiVersion, `eventSourceUrl` (a web URL, or a function returning the current page URL; query strings are dropped) and a per-request userData callback. Meta requires `client_user_agent` for website events, so each call must supply the shopper's user agent plus at least one other identifier. Hashed fields must be SHA-256 hex: `em`, `ph`, `fn`, `ln`, `ge`, `db`, `ct`, `st`, `zp`, `country` and `external_id`. `client_ip_address` (valid IPv4/IPv6), `client_user_agent` and validated `fbp`/`fbc` cookies are sent unhashed, as Meta requires. Plaintext in hashed fields and any other key is rejected. The SDK never hashes plaintext; the host normalizes and hashes before calling the adapter:
 
 - Normalize `ph` to E.164 with the country calling code (for example, synthetic `+12025550199`), then remove the leading `+` and SHA-256 hash the remaining digits. Supply that hash as `ph`.
 - Use the **exact same case-sensitive `external_id` preimage** as the Pixel before SHA-256 hashing. Do not lowercase it or the Pixel and CAPI hashes may differ.
 - Normalize `em` under Meta's email rules before SHA-256 hashing.
 
-The adapter passes valid 64-character SHA-256 hex values through without rehashing; it validates `fbp`/`fbc` without hashing. Extra plaintext normalization and matching fields (`fn`, `ln`, `ct`, `zp`, `country`, `db`, `ge`, IP address and user agent) need a separate owner-approved PR. Hashes remain personal data; the host supplies consent and retention policy. No access token belongs in browser config. A stable event ID enables Meta dedup, but actual matching and dedup remain unverified until sandbox or live tests.
+- Normalize `fn`, `ln`, `ct`, `st`, `zp`, `country`, `db` and `ge` under Meta's customer information rules (for example lowercase, no spaces or punctuation, two-letter country code, `YYYYMMDD` dates) before SHA-256 hashing.
+
+The adapter passes valid 64-character SHA-256 hex values through without rehashing; it validates IP, user agent and `fbp`/`fbc` without hashing. Missing `client_user_agent` or an invalid event source URL makes that send fail with a safe reason; other providers continue. Hashes, IP addresses and user agents remain personal data; the host supplies consent and retention policy. No access token belongs in browser config. A stable event ID enables Meta dedup, but actual matching and dedup remain unverified until sandbox or live tests.
 
 Default denied consent drops data without replay; resource limits drop overload. Custom providers should honour AbortSignal and implement setConsent/dispose. Telemetry delivery is best effort; persisted outbox/retry belongs host. GA4 page location/referrer and Meta CAPI event source URL omit query strings and fragments. Safe route heuristics cannot remove every sensitive pathname: supply templates/exclusions and avoid PII in named commerce fields. External scripts can inspect host URL/DOM/cookies independently.
 
@@ -262,7 +264,7 @@ export async function register() {
 
 ### Run Bun API tracking without a collector
 
-Save this file inside the built workspace and run pnpm --filter @signalkit/example-bun exec bun trace-demo.ts. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.
+Save this file inside the built workspace and run bun trace-demo.ts from examples/bun. Visit http://localhost:3300/orders/demo to see a local request record with /orders/:id. Observability is enabled for this synthetic fixture; production hosts supply their own policy. Wrap each routes-table handler too, because those bypass fallback fetch.
 
 **examples/bun/trace-demo.ts**
 
@@ -419,9 +421,17 @@ await signals.track({
 });
 ```
 
+## Attribution: UTMs, ad click IDs and search sources
+
+The GA4 adapter sends page_location with the origin, redacted path and only utm_source/medium/campaign/term/content/id, gclid, gbraid, wbraid, msclkid and fbclid, plus page_referrer as the referrer origin, so GA4 channel grouping, Google Ads auto-tagging and the Search Console link work. All other query parameters and the referrer path and query stay out. The path is passed through `safeRoute`, a heuristic rather than a guarantee: numeric, UUID, MongoDB ObjectId, Stripe-style and CUID segments become `:id`, segments containing `@` or longer than 64 characters become `:redacted`, and every other segment (for example `/reset/secret-code`) is kept as is. Keep secrets, tokens and personal data out of path segments, or pass a route template so GA4 only sees the template.
+
+Opt in to first-party visit-source capture with `attribution: true` or `attribution: { category: 'marketing', maxAgeDays: 90 }` in the browser/Next/SvelteKit config. The SDK reads the landing URL and referrer once at start, before your router rewrites them, classifies the visit (paid_search, paid_social, paid_other, organic_search, ai_search, organic_social, email, referral, direct, other) and keeps first/last touch in localStorage only while that consent category is granted. `signals.getAttribution()` returns `{ first, last }` with channel, source, medium, campaign, campaignId, term (utm_term={keyword} from Google/Microsoft Ads), content, clickIds, landingPath, referrerHost and timestamp; store it with your own order. `metaClickCookie(fbclid)` builds the `fbc` value for createMetaCapiProvider userData. Organic search keywords are never in the URL: read them from `/server/search-console` (createGoogleSearchConsoleClient with a host-owned OAuth token, createBingWebmasterClient with an API key, mergeSearchRows). Full tutorial, routing/rendering rules and no-code platform settings: [ads, UTM and search attribution guide](../../../docs/growth/articles/ads-utm-search-attribution.md).
+
+`auditAttribution({ signals })` from `@techinject/browser` (re-exported by `@techinject/nextjs` and `@techinject/sveltekit`) is a development self-check for the integration mistakes the guide describes. It is synchronous, framework-independent, never throws and makes no network request; it returns findings with stable ids (`attribution-disabled`, `params-dropped-by-redirect`, `params-removed-before-capture`, `canonical-has-tracking-params`, `csp-blocks-vendor`, `storage-unavailable`, `consent-never-granted`, `multiple-sdk-instances`), a severity and a hint. Run it after `start()` on the real landing URL; it only sees a meta-tag CSP, and `expectedHosts` adds script hosts the policy must allow. `signals.isAttributionEnabled()` and `signals.getAttributionCategory()` expose the configuration it reads.
+
 ## Development
 
-Node22 + pnpm10.24.0, Bun1.3.4 for runtime fixture. pnpm install --frozen-lockfile; pnpm build; pnpm test; pnpm typecheck; pnpm test:boundaries. Use `pnpm dev` for Next, `pnpm dev:bun` for Bun, or `pnpm dev:all` for all local hosts through Turbo. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
+Bun 1.4.4 or newer. bun install --frozen-lockfile; bun run build; bun run test; bun run typecheck; bun run test:boundaries. Use `bun run dev` for Next, `bun run dev:bun` for Bun, or `bun run dev:all` for all local hosts through Turbo. Modern browser required; exact verified versions in compatibility doc. Upgrade owner is maintainer; verify leaf packages and both consumer hosts.
 
 ## Technical references
 
@@ -437,7 +447,7 @@ The optional browser renderer mounts against an existing SDK instance. See [dash
 
 ## Versioning and upgrades — all frameworks
 
-See [UPGRADING.md](../../../docs/UPGRADING.md) for exact package versions, Next.js/SvelteKit/Bun commands, source updates, CDN imports, rollback and all coming-soon platforms. Existing deployments do not automatically fetch SDK changes. All nine npm packages and the browser CDN module are verified at version `0.1.0-alpha.2`.
+See [UPGRADING.md](../../../docs/UPGRADING.md) for exact package versions, Next.js/SvelteKit/Bun commands, source updates, CDN imports, rollback and all coming-soon platforms. Existing deployments do not automatically fetch SDK changes. All nine npm packages and the browser CDN module are verified at version `0.1.0-alpha.4`.
 
 ## Observability backends (unreleased)
 

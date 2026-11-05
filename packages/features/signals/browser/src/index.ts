@@ -1,7 +1,22 @@
 import type { EventDefinition, SignalsOptions } from '@techinject/core';
 import { createSignals, generateId, safeRoute, parseTraceparent } from '@techinject/core';
 import type { Consent, Observer, RequestRecord } from '@techinject/contracts';
+import { createAttributionStore, type AttributionOptions } from './attribution.js';
+import { claimOwner, releaseOwner } from './owner.js';
+export { auditAttribution } from './audit.js';
+export type { AttributionFinding, AttributionAuditOptions } from './audit.js';
 export { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
+export type { AttributionOptions, AttributionStorage, Attribution } from './attribution.js';
+export type { AttributionTouch, AttributionChannel, ClickIdName } from '@techinject/core';
+export {
+  parseAttribution,
+  safePageLocation,
+  safeReferrer,
+  metaClickCookie,
+  classifyReferrerHost,
+  TRACKING_PARAMETERS,
+} from '@techinject/core';
+export type { ReferrerClass } from '@techinject/core';
 export type BrowserConfig<Events extends readonly EventDefinition[] = readonly []> =
   SignalsOptions<Events> & {
     observer?: Observer;
@@ -9,12 +24,18 @@ export type BrowserConfig<Events extends readonly EventDefinition[] = readonly [
     excludeUrls?: string[];
     autoTrack?: boolean;
     trackHash?: boolean;
+    /** Capture the landing visit source (UTM, ad click IDs, search/social referrers). Off by default. */
+    attribution?: boolean | AttributionOptions;
   };
-let activeOwner: object | undefined;
 export function createBrowserSignals<const Events extends readonly EventDefinition[] = readonly []>(
   config: BrowserConfig<Events> = {},
 ) {
   const core = createSignals(config);
+  const attributionOptions = config.attribution === true ? {} : config.attribution || undefined;
+  const attribution = attributionOptions ? createAttributionStore(attributionOptions) : undefined;
+  const attributionCategory = attributionOptions
+    ? (attributionOptions.category ?? 'marketing')
+    : undefined;
   let running = false;
   const owner = {};
   const pendingRecords = new Set<Promise<void>>();
@@ -91,9 +112,10 @@ export function createBrowserSignals<const Events extends readonly EventDefiniti
     void page(current);
   };
   function start() {
-    if (running || typeof window === 'undefined' || activeOwner) return;
-    activeOwner = owner;
+    if (running || typeof window === 'undefined' || !claimOwner(owner)) return;
     running = true;
+    // The landing URL is read before any router strips its parameters.
+    attribution?.capture(location.href, document.referrer);
     navigation();
     for (const name of ['pushState', 'replaceState'] as const) {
       const original = history[name];
@@ -254,7 +276,7 @@ export function createBrowserSignals<const Events extends readonly EventDefiniti
     }
   }
   function stop() {
-    if (activeOwner === owner) activeOwner = undefined;
+    releaseOwner(owner);
     running = false;
     restores
       .splice(0)
@@ -273,10 +295,12 @@ export function createBrowserSignals<const Events extends readonly EventDefiniti
   };
   const setConsent = (consent: Consent) => {
     core.setConsent(consent);
+    attribution?.setConsent(core.getConsent());
     try {
       config.observer?.setConsent?.(core.getConsent());
     } catch {}
   };
+  attribution?.setConsent(core.getConsent());
   try {
     config.observer?.setConsent?.(core.getConsent());
   } catch {}
@@ -292,6 +316,13 @@ export function createBrowserSignals<const Events extends readonly EventDefiniti
     start,
     stop,
     dispose,
+    /** First/last visit source for the host to store with its own order; empty when not enabled. */
+    getAttribution: () => attribution?.get() ?? {},
+    clearAttribution: () => attribution?.clear(),
+    /** True when `attribution` was configured; used by auditAttribution. */
+    isAttributionEnabled: () => attribution !== undefined,
+    /** Consent category that permits persisting the touch; undefined when capture is off. */
+    getAttributionCategory: () => attributionCategory,
   };
   if (config.autoTrack !== false) start();
   return api;

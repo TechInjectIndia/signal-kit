@@ -89,6 +89,7 @@ h1 {
 }
 .note {
   font: 12px/1.65 monospace;
+  overflow-wrap: anywhere;
   color: var(--muted);
   margin-top: 32px;
   max-width: 480px;
@@ -222,4 +223,47 @@ h2 {
     gap: 22px;
     flex-wrap: wrap;
   }
+}
+.source {
+  margin: 18px 0 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  font: 12px/1.6 monospace;
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr);
+  overflow-wrap: anywhere;
+  gap: 4px 14px;
+}
+.source dt {
+  color: var(--muted);
+}
+.source dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.audit {
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.audit ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.audit li {
+  padding: 6px 0;
+  border-top: 1px dashed var(--line);
+  overflow-wrap: anywhere;
+}
+.audit li small {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.audit li[data-severity='error'] small {
+  color: #c43d2b;
 }
