@@ -304,7 +304,7 @@ describe('browser providers', () => {
       'video_play',
     ]);
   });
-  it('loads GA4 only after consent and sets explicit page dispatch', async () => {
+  it('keeps Google ad fields denied for an existing marketing-consented host', async () => {
     const provider = createGA4Provider({ measurementId: 'G-TEST' });
     const sdk = createBrowserSignals({ autoTrack: false, providers: [provider] });
     disposals.push(sdk.dispose);
@@ -324,23 +324,25 @@ describe('browser providers', () => {
           args[0] === 'config' && (args[2] as { send_page_view: boolean }).send_page_view === false,
       ),
     ).toBe(true);
+    expect(layer[1]).toEqual(['consent', 'update', { analytics_storage: 'granted' }]);
+    const gtag = (window as unknown as { gtag: (...args: unknown[]) => void }).gtag;
+    gtag('consent', 'update', {
+      ad_storage: 'granted',
+      ad_user_data: 'granted',
+      ad_personalization: 'granted',
+    });
+    const consentCommands = layer.filter((args) => args[0] === 'consent').length;
+    sdk.setConsent({ ...consent, marketing: false });
+    sdk.setConsent(consent);
+    expect(layer.filter((args) => args[0] === 'consent')).toHaveLength(consentCommands);
     sdk.setConsent({ ...consent, analytics: false });
-    expect(layer.at(-1)).toEqual([
-      'consent',
-      'update',
-      {
-        analytics_storage: 'denied',
-        ad_storage: 'granted',
-        ad_user_data: 'granted',
-        ad_personalization: 'granted',
-      },
-    ]);
+    expect(layer.at(-1)).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
   });
   it('applies saved GA4 consent after denied defaults and before the first measurement', async () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
       consent,
-      providers: [createGA4Provider({ measurementId: 'G-SAVED' })],
+      providers: [createGA4Provider({ measurementId: 'G-SAVED', googleAdsConsent: 'marketing' })],
     });
     disposals.push(sdk.dispose);
     expect(document.querySelector('script')).toBeNull();
@@ -383,7 +385,9 @@ describe('browser providers', () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
       consent: analyticsOnly,
-      providers: [createGA4Provider({ measurementId: 'G-ANALYTICS' })],
+      providers: [
+        createGA4Provider({ measurementId: 'G-ANALYTICS', googleAdsConsent: 'marketing' }),
+      ],
     });
     disposals.push(sdk.dispose);
     const first = sdk.page('/first');
@@ -420,7 +424,9 @@ describe('browser providers', () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
       consent,
-      providers: [createGA4Provider({ measurementId: 'G-WITHDRAW' })],
+      providers: [
+        createGA4Provider({ measurementId: 'G-WITHDRAW', googleAdsConsent: 'marketing' }),
+      ],
     });
     disposals.push(sdk.dispose);
     const first = sdk.page('/first');
@@ -448,7 +454,9 @@ describe('browser providers', () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
       consent,
-      providers: [createGA4Provider({ measurementId: 'G-WITHDRAWPENDING' })],
+      providers: [
+        createGA4Provider({ measurementId: 'G-WITHDRAWPENDING', googleAdsConsent: 'marketing' }),
+      ],
     });
     disposals.push(sdk.dispose);
     const pending = sdk.page('/pending');
@@ -476,7 +484,7 @@ describe('browser providers', () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
       consent,
-      providers: [createGA4Provider({ measurementId: 'G-DISPOSE' })],
+      providers: [createGA4Provider({ measurementId: 'G-DISPOSE', googleAdsConsent: 'marketing' })],
     });
     const pending = sdk.page('/pending');
     await Promise.resolve();

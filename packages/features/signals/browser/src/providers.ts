@@ -67,7 +67,7 @@ function id(value: string, pattern: RegExp, label: string) {
   if (!pattern.test(value)) throw new Error(`Invalid ${label}`);
 }
 export function createGA4Provider(
-  config: ScriptConfig & { measurementId: string },
+  config: ScriptConfig & { measurementId: string; googleAdsConsent?: 'denied' | 'marketing' },
 ): ConsentProvider {
   id(config.measurementId, /^G-[A-Z0-9]+$/, 'GA4 measurement ID');
   const script = loader(
@@ -77,20 +77,27 @@ export function createGA4Provider(
   let initialized = false;
   let disposed = false;
   let currentConsent = { analytics: false, marketing: false };
-  let appliedConsent = { analytics: false, marketing: false };
+  let appliedConsent = { analytics: false, adFields: false };
   const updateConsent = () => {
+    const adFields = config.googleAdsConsent === 'marketing' && currentConsent.marketing;
     if (
       currentConsent.analytics === appliedConsent.analytics &&
-      currentConsent.marketing === appliedConsent.marketing
+      adFields === appliedConsent.adFields
     )
       return;
-    win().gtag?.('consent', 'update', {
-      analytics_storage: currentConsent.analytics ? 'granted' : 'denied',
-      ad_storage: currentConsent.marketing ? 'granted' : 'denied',
-      ad_user_data: currentConsent.marketing ? 'granted' : 'denied',
-      ad_personalization: currentConsent.marketing ? 'granted' : 'denied',
-    });
-    appliedConsent = { ...currentConsent };
+    win().gtag?.(
+      'consent',
+      'update',
+      config.googleAdsConsent === 'marketing'
+        ? {
+            analytics_storage: currentConsent.analytics ? 'granted' : 'denied',
+            ad_storage: adFields ? 'granted' : 'denied',
+            ad_user_data: adFields ? 'granted' : 'denied',
+            ad_personalization: adFields ? 'granted' : 'denied',
+          }
+        : { analytics_storage: currentConsent.analytics ? 'granted' : 'denied' },
+    );
+    appliedConsent = { analytics: currentConsent.analytics, adFields };
   };
   const setup = () => {
     const w = win();
