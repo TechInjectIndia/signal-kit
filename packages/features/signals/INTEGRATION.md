@@ -57,6 +57,8 @@ Use public IDs from your host config and real persisted consent. Numeric placeho
 
 GA4 provider sends explicit pages; disable automatic history page changes in Enhanced Measurement to avoid vendor-side duplicates. SignalKit does not own scripts previously loaded by other tools. Configure CSP with vendor domains/nonces, third-party privacy/masking and consent policies. Clarity is optional createClarityProvider({projectId}). Browser legacy globals + multiple tools require host integration validation.
 
+The GA4 adapter queues a denied default for `analytics_storage`, `ad_storage`, `ad_user_data` and `ad_personalization` before its measurement commands. The host's saved consent is applied before the first event: `analytics` controls analytics storage, while `marketing` controls all three ad fields. Later `setConsent` calls update Google only when either choice changes; withdrawing consent or disposing the adapter revokes previously granted fields. Persist consent in the host and pass the saved choice when creating SignalKit; the adapter only retains it for its current lifetime.
+
 ## Next Node automatic incoming telemetry
 
 Install/use @techinject/nextjs-server separately from browser package. In instrumentation.ts:
