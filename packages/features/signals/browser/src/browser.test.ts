@@ -419,9 +419,7 @@ describe('browser providers', () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
       consent,
-      providers: [
-        createGA4Provider({ measurementId: 'G-REGRANT', googleAdsConsent: 'marketing' }),
-      ],
+      providers: [createGA4Provider({ measurementId: 'G-REGRANT', googleAdsConsent: 'marketing' })],
     });
     disposals.push(sdk.dispose);
     const first = sdk.page('/first');
