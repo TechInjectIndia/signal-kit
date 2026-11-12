@@ -192,7 +192,7 @@ The Pixel script loads only after marketing consent is granted, which is usually
 1. Admin → Data streams → your web stream → Enhanced measurement → open the settings and turn off "Page changes based on browser history events". SignalKit sends explicit page views; leaving this on double-counts navigations.
 2. Admin → Product links → Google Ads links → link the Ads account and keep "Enable auto-tagging" on. This is what turns a `gclid` into campaign and keyword reporting in GA4.
 3. Admin → Product links → Search Console links → link the verified property to expose the "Google organic search queries" report under Reports → Search Console.
-4. Admin → Data settings → Data collection → Google signals is optional. Leave it off unless your consent flow grants `ad_personalization`; the SDK sets GA4 consent mode to denied by default and updates only `analytics_storage`.
+4. Admin → Data settings → Data collection → Google signals is optional. The SDK defaults `analytics_storage`, `ad_storage`, `ad_user_data` and `ad_personalization` to denied. `analytics: true` grants `analytics_storage`; `marketing: true` grants all three ad fields, including `ad_personalization`. Enable Google signals only if your host's marketing choice authorizes ad personalization, and pass `marketing: true` only when that choice covers all three ad fields.
 5. Reports → Acquisition → Traffic acquisition → set the primary dimension to "Session default channel group" and confirm that test clicks appear as Paid Search, Organic Search, Paid Social, Organic Social or Referral rather than Direct.
 6. Admin → Data display → Channel groups → create a custom group only if you use mediums outside GA4's defaults (for example `paid_social` is recognized, `sponsored` is not).
 
