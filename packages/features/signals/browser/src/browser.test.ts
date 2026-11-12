@@ -3,8 +3,18 @@ import { exampleEvents } from '../../contracts/test/consumer-events.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createBrowserSignals } from './index.js';
 import { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
-import type { SignalEvent } from '@techinject/contracts';
+import type { RequestRecord, SignalEvent } from '@techinject/contracts';
 const consent = { analytics: true, marketing: true, observability: true };
+function ga4Consent(analytics: boolean, marketing: boolean) {
+  const analytics_storage = analytics ? 'granted' : 'denied';
+  const ads = marketing ? 'granted' : 'denied';
+  return {
+    analytics_storage,
+    ad_storage: ads,
+    ad_user_data: ads,
+    ad_personalization: ads,
+  };
+}
 const disposals: (() => void)[] = [];
 afterEach(() => {
   disposals.splice(0).forEach((dispose) => dispose());
@@ -354,26 +364,8 @@ describe('browser providers', () => {
     await first;
     const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
     expect(layer.map((args) => args[0])).toEqual(['consent', 'consent', 'js', 'config', 'event']);
-    expect(layer[0]).toEqual([
-      'consent',
-      'default',
-      {
-        analytics_storage: 'denied',
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
-      },
-    ]);
-    expect(layer[1]).toEqual([
-      'consent',
-      'update',
-      {
-        analytics_storage: 'granted',
-        ad_storage: 'granted',
-        ad_user_data: 'granted',
-        ad_personalization: 'granted',
-      },
-    ]);
+    expect(layer[0]).toEqual(['consent', 'default', ga4Consent(false, false)]);
+    expect(layer[1]).toEqual(['consent', 'update', ga4Consent(true, true)]);
     sdk.setConsent({ ...consent });
     await sdk.page('/second');
     await sdk.page('/third');
@@ -395,27 +387,9 @@ describe('browser providers', () => {
     document.querySelector('script')?.dispatchEvent(new Event('load'));
     await first;
     const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
-    expect(layer[1]).toEqual([
-      'consent',
-      'update',
-      {
-        analytics_storage: 'granted',
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
-      },
-    ]);
+    expect(layer[1]).toEqual(['consent', 'update', ga4Consent(true, false)]);
     sdk.setConsent({ ...analyticsOnly, marketing: true });
-    expect(layer.at(-1)).toEqual([
-      'consent',
-      'update',
-      {
-        analytics_storage: 'granted',
-        ad_storage: 'granted',
-        ad_user_data: 'granted',
-        ad_personalization: 'granted',
-      },
-    ]);
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(true, true)]);
     sdk.setConsent({ ...analyticsOnly, marketing: true });
     await sdk.page('/second');
     expect(layer.filter((args) => args[0] === 'consent')).toHaveLength(3);
@@ -435,20 +409,41 @@ describe('browser providers', () => {
     await first;
     const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
     sdk.setConsent({ analytics: false, marketing: false, observability: false });
-    expect(layer.at(-1)).toEqual([
-      'consent',
-      'update',
-      {
-        analytics_storage: 'denied',
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
-      },
-    ]);
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
     sdk.setConsent({ analytics: false, marketing: false, observability: false });
     expect((await sdk.page('/second')).outcomes[0]?.status).toBe('denied');
     expect(layer.filter((args) => args[0] === 'consent')).toHaveLength(3);
     expect(layer.filter((args) => args[0] === 'event')).toHaveLength(1);
+  });
+  it('re-grants GA4 consent fields before the next event after withdrawal', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [
+        createGA4Provider({ measurementId: 'G-REGRANT', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    const first = sdk.page('/first');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    await first;
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
+    sdk.setConsent(consent);
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(true, true)]);
+    const second = sdk.page('/second');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await second).outcomes[0]?.status).toBe('sent');
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(2);
+    const secondEventIndex = layer.findLastIndex((args) => args[0] === 'event');
+    expect(
+      layer
+        .slice(0, secondEventIndex)
+        .findLast((args) => args[0] === 'consent' && args[1] === 'update')?.[2],
+    ).toEqual(ga4Consent(true, true));
   });
   it('drops an in-flight GA4 event when consent is withdrawn during script load', async () => {
     const sdk = createBrowserSignals({
@@ -470,15 +465,42 @@ describe('browser providers', () => {
     const revokeIndex = layer.findLastIndex(
       (args) => args[0] === 'consent' && args[1] === 'update',
     );
-    expect(layer[revokeIndex]?.[2]).toEqual({
-      analytics_storage: 'denied',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-    });
+    expect(layer[revokeIndex]?.[2]).toEqual(ga4Consent(false, false));
     script?.dispatchEvent(new Event('load'));
     expect((await pending).outcomes[0]?.status).toBe('dropped');
     expect(layer.slice(revokeIndex + 1).some((args) => args[0] === 'event')).toBe(false);
+  });
+  it('re-grants GA4 consent after withdrawal during script load before the next event', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [
+        createGA4Provider({ measurementId: 'G-REGRANTPENDING', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    const pending = sdk.page('/pending');
+    await Promise.resolve();
+    const script = document.querySelector('script');
+    expect(script).not.toBeNull();
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
+    script?.dispatchEvent(new Event('load'));
+    expect((await pending).outcomes[0]?.status).toBe('dropped');
+    sdk.setConsent(consent);
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(true, true)]);
+    const second = sdk.page('/second');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await second).outcomes[0]?.status).toBe('sent');
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(1);
+    const eventIndex = layer.findLastIndex((args) => args[0] === 'event');
+    expect(
+      layer
+        .slice(0, eventIndex)
+        .findLast((args) => args[0] === 'consent' && args[1] === 'update')?.[2],
+    ).toEqual(ga4Consent(true, true));
   });
   it('revokes granted GA4 consent on dispose before an in-flight event can send', async () => {
     const sdk = createBrowserSignals({
@@ -493,16 +515,7 @@ describe('browser providers', () => {
     const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
     expect(layer.some((args) => args[0] === 'event')).toBe(false);
     sdk.dispose();
-    expect(layer.at(-1)).toEqual([
-      'consent',
-      'update',
-      {
-        analytics_storage: 'denied',
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
-      },
-    ]);
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
     const revokeIndex = layer.length - 1;
     script?.dispatchEvent(new Event('load'));
     expect((await pending).outcomes[0]?.status).toBe('dropped');

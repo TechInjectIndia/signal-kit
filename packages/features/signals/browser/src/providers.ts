@@ -66,6 +66,7 @@ function loader(src: string, config: ScriptConfig) {
 function id(value: string, pattern: RegExp, label: string) {
   if (!pattern.test(value)) throw new Error(`Invalid ${label}`);
 }
+const DENIED = { analytics: false, marketing: false } as const;
 export function createGA4Provider(
   config: ScriptConfig & { measurementId: string; googleAdsConsent?: 'denied' | 'marketing' },
 ): ConsentProvider {
@@ -76,7 +77,9 @@ export function createGA4Provider(
   );
   let initialized = false;
   let disposed = false;
-  let currentConsent = { analytics: false, marketing: false };
+  let currentConsent: { analytics: boolean; marketing: boolean } = DENIED;
+  // One active browser SDK owns window.gtag consent per window; dispose may deny
+  // global fields, and a second live adapter would not re-assert its grants.
   let appliedConsent = { analytics: false, adFields: false };
   const updateConsent = () => {
     const adFields = config.googleAdsConsent === 'marketing' && currentConsent.marketing;
@@ -150,7 +153,7 @@ export function createGA4Provider(
     dispose() {
       if (disposed) return;
       disposed = true;
-      currentConsent = { analytics: false, marketing: false };
+      currentConsent = DENIED;
       if (initialized) updateConsent();
       script.dispose();
     },
