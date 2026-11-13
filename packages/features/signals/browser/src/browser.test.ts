@@ -3,8 +3,18 @@ import { exampleEvents } from '../../contracts/test/consumer-events.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createBrowserSignals } from './index.js';
 import { createGA4Provider, createMetaPixelProvider, createClarityProvider } from './providers.js';
-import type { SignalEvent } from '@techinject/contracts';
+import type { RequestRecord, SignalEvent } from '@techinject/contracts';
 const consent = { analytics: true, marketing: true, observability: true };
+function ga4Consent(analytics: boolean, marketing: boolean) {
+  const analytics_storage = analytics ? 'granted' : 'denied';
+  const ads = marketing ? 'granted' : 'denied';
+  return {
+    analytics_storage,
+    ad_storage: ads,
+    ad_user_data: ads,
+    ad_personalization: ads,
+  };
+}
 const disposals: (() => void)[] = [];
 afterEach(() => {
   disposals.splice(0).forEach((dispose) => dispose());
@@ -304,7 +314,7 @@ describe('browser providers', () => {
       'video_play',
     ]);
   });
-  it('loads GA4 only after consent and sets explicit page dispatch', async () => {
+  it('keeps Google ad fields denied for an existing marketing-consented host', async () => {
     const provider = createGA4Provider({ measurementId: 'G-TEST' });
     const sdk = createBrowserSignals({ autoTrack: false, providers: [provider] });
     disposals.push(sdk.dispose);
@@ -324,8 +334,230 @@ describe('browser providers', () => {
           args[0] === 'config' && (args[2] as { send_page_view: boolean }).send_page_view === false,
       ),
     ).toBe(true);
+    expect(layer[1]).toEqual(['consent', 'update', { analytics_storage: 'granted' }]);
+    const gtag = (window as unknown as { gtag: (...args: unknown[]) => void }).gtag;
+    gtag('consent', 'update', {
+      ad_storage: 'granted',
+      ad_user_data: 'granted',
+      ad_personalization: 'granted',
+    });
+    const consentCommands = layer.filter((args) => args[0] === 'consent').length;
+    sdk.setConsent({ ...consent, marketing: false });
+    sdk.setConsent(consent);
+    expect(layer.filter((args) => args[0] === 'consent')).toHaveLength(consentCommands);
     sdk.setConsent({ ...consent, analytics: false });
     expect(layer.at(-1)).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
+  });
+  it('queues no GA4 consent command for marketing-only consent, even with the ad opt-in', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent: { analytics: false, marketing: true, observability: false },
+      providers: [
+        createGA4Provider({ measurementId: 'G-MARKETING', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    expect((await sdk.page('/')).outcomes[0]?.status).toBe('denied');
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    sdk.setConsent({ analytics: false, marketing: true, observability: false });
+    expect(document.querySelector('script')).toBeNull();
+    expect((window as unknown as { dataLayer?: unknown[][] }).dataLayer).toBeUndefined();
+  });
+  it('applies saved GA4 consent after denied defaults and before the first measurement', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [createGA4Provider({ measurementId: 'G-SAVED', googleAdsConsent: 'marketing' })],
+    });
+    disposals.push(sdk.dispose);
+    expect(document.querySelector('script')).toBeNull();
+    sdk.setConsent({ ...consent, analytics: false, marketing: false });
+    sdk.setConsent({ ...consent });
+    const first = sdk.page('/first');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    await first;
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    expect(layer.map((args) => args[0])).toEqual(['consent', 'consent', 'js', 'config', 'event']);
+    expect(layer[0]).toEqual(['consent', 'default', ga4Consent(false, false)]);
+    expect(layer[1]).toEqual(['consent', 'update', ga4Consent(true, true)]);
+    sdk.setConsent({ ...consent });
+    await sdk.page('/second');
+    await sdk.page('/third');
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(3);
+    expect(layer.filter((args) => args[0] === 'consent')).toHaveLength(2);
+  });
+  it('maps analytics-only consent and updates all four fields when marketing changes', async () => {
+    const analyticsOnly = { ...consent, marketing: false };
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent: analyticsOnly,
+      providers: [
+        createGA4Provider({ measurementId: 'G-ANALYTICS', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    const first = sdk.page('/first');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    await first;
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    expect(layer[1]).toEqual(['consent', 'update', ga4Consent(true, false)]);
+    sdk.setConsent({ ...analyticsOnly, marketing: true });
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(true, true)]);
+    sdk.setConsent({ ...analyticsOnly, marketing: true });
+    await sdk.page('/second');
+    expect(layer.filter((args) => args[0] === 'consent')).toHaveLength(3);
+  });
+  it('withdraws GA4 consent once and does not send events after withdrawal', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [
+        createGA4Provider({ measurementId: 'G-WITHDRAW', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    const first = sdk.page('/first');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    await first;
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    expect((await sdk.page('/second')).outcomes[0]?.status).toBe('denied');
+    expect(layer.filter((args) => args[0] === 'consent')).toHaveLength(3);
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(1);
+  });
+  it('re-grants GA4 consent fields before the next event after withdrawal', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [createGA4Provider({ measurementId: 'G-REGRANT', googleAdsConsent: 'marketing' })],
+    });
+    disposals.push(sdk.dispose);
+    const first = sdk.page('/first');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    await first;
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
+    sdk.setConsent(consent);
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(true, true)]);
+    const second = sdk.page('/second');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await second).outcomes[0]?.status).toBe('sent');
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(2);
+    const secondEventIndex = layer.findLastIndex((args) => args[0] === 'event');
+    expect(
+      layer
+        .slice(0, secondEventIndex)
+        .findLast((args) => args[0] === 'consent' && args[1] === 'update')?.[2],
+    ).toEqual(ga4Consent(true, true));
+  });
+  it('drops an in-flight GA4 event when consent is withdrawn during script load', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [
+        createGA4Provider({ measurementId: 'G-WITHDRAWPENDING', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    const pending = sdk.page('/pending');
+    await Promise.resolve();
+    const script = document.querySelector('script');
+    expect(script).not.toBeNull();
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    expect(layer.some((args) => args[0] === 'event')).toBe(false);
+
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    const revokeIndex = layer.findLastIndex(
+      (args) => args[0] === 'consent' && args[1] === 'update',
+    );
+    expect(layer[revokeIndex]?.[2]).toEqual(ga4Consent(false, false));
+    script?.dispatchEvent(new Event('load'));
+    expect((await pending).outcomes[0]?.status).toBe('dropped');
+    expect(layer.slice(revokeIndex + 1).some((args) => args[0] === 'event')).toBe(false);
+  });
+  it('re-grants GA4 consent after withdrawal during script load before the next event', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [
+        createGA4Provider({ measurementId: 'G-REGRANTPENDING', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    const pending = sdk.page('/pending');
+    await Promise.resolve();
+    const script = document.querySelector('script');
+    expect(script).not.toBeNull();
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
+    script?.dispatchEvent(new Event('load'));
+    expect((await pending).outcomes[0]?.status).toBe('dropped');
+    sdk.setConsent(consent);
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(true, true)]);
+    const second = sdk.page('/second');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await second).outcomes[0]?.status).toBe('sent');
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(1);
+    const eventIndex = layer.findLastIndex((args) => args[0] === 'event');
+    expect(
+      layer
+        .slice(0, eventIndex)
+        .findLast((args) => args[0] === 'consent' && args[1] === 'update')?.[2],
+    ).toEqual(ga4Consent(true, true));
+  });
+  it('revokes granted GA4 consent on dispose before an in-flight event can send', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent,
+      providers: [createGA4Provider({ measurementId: 'G-DISPOSE', googleAdsConsent: 'marketing' })],
+    });
+    const pending = sdk.page('/pending');
+    await Promise.resolve();
+    const script = document.querySelector('script');
+    expect(script).not.toBeNull();
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    expect(layer.some((args) => args[0] === 'event')).toBe(false);
+    sdk.dispose();
+    expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
+    const revokeIndex = layer.length - 1;
+    script?.dispatchEvent(new Event('load'));
+    expect((await pending).outcomes[0]?.status).toBe('dropped');
+    expect((await sdk.page('/after')).outcomes[0]?.status).toBe('dropped');
+    expect(layer.slice(revokeIndex + 1).some((args) => args[0] === 'event')).toBe(false);
+  });
+  it('reuses a GA4 provider built once after its SDK is disposed and a new SDK mounts', async () => {
+    const provider = createGA4Provider({ measurementId: 'G-REUSE' });
+    const first = createBrowserSignals({ autoTrack: false, consent, providers: [provider] });
+    const firstPage = first.page('/first');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await firstPage).outcomes[0]?.status).toBe('sent');
+    first.dispose();
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    expect(layer.at(-1)).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
+
+    const second = createBrowserSignals({ autoTrack: false, consent, providers: [provider] });
+    disposals.push(second.dispose);
+    const secondPage = second.page('/second');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await secondPage).outcomes[0]?.status).toBe('sent');
+    const eventIndex = layer.findLastIndex((args) => args[0] === 'event');
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(2);
+    expect(
+      layer.slice(0, eventIndex).findLast((args) => args[0] === 'consent' && args[1] === 'update'),
+    ).toEqual(['consent', 'update', { analytics_storage: 'granted' }]);
+    expect(layer.filter((args) => args[0] === 'consent' && args[1] === 'default')).toHaveLength(1);
   });
   it('initializes optional Clarity after consent and revokes its storage category', async () => {
     const sdk = createBrowserSignals({

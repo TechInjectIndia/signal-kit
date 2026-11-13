@@ -66,8 +66,9 @@ function loader(src: string, config: ScriptConfig) {
 function id(value: string, pattern: RegExp, label: string) {
   if (!pattern.test(value)) throw new Error(`Invalid ${label}`);
 }
+const DENIED = { analytics: false, marketing: false } as const;
 export function createGA4Provider(
-  config: ScriptConfig & { measurementId: string },
+  config: ScriptConfig & { measurementId: string; googleAdsConsent?: 'denied' | 'marketing' },
 ): ConsentProvider {
   id(config.measurementId, /^G-[A-Z0-9]+$/, 'GA4 measurement ID');
   const script = loader(
@@ -75,6 +76,35 @@ export function createGA4Provider(
     config,
   );
   let initialized = false;
+  // Bumped on dispose so an in-flight send is dropped, while the adapter stays reusable by a
+  // later SDK instance (hosts commonly build providers once at module scope).
+  let generation = 0;
+  let currentConsent: { analytics: boolean; marketing: boolean } = DENIED;
+  // shortcut: one active browser SDK owns window.gtag consent per window; dispose may deny
+  // global fields and a second live adapter would not re-assert its grants. Revisit if more
+  // than one live SDK instance per window becomes supported.
+  let appliedConsent = { analytics: false, adFields: false };
+  const updateConsent = () => {
+    const adFields = config.googleAdsConsent === 'marketing' && currentConsent.marketing;
+    if (
+      currentConsent.analytics === appliedConsent.analytics &&
+      adFields === appliedConsent.adFields
+    )
+      return;
+    win().gtag?.(
+      'consent',
+      'update',
+      config.googleAdsConsent === 'marketing'
+        ? {
+            analytics_storage: currentConsent.analytics ? 'granted' : 'denied',
+            ad_storage: adFields ? 'granted' : 'denied',
+            ad_user_data: adFields ? 'granted' : 'denied',
+            ad_personalization: adFields ? 'granted' : 'denied',
+          }
+        : { analytics_storage: currentConsent.analytics ? 'granted' : 'denied' },
+    );
+    appliedConsent = { analytics: currentConsent.analytics, adFields };
+  };
   const setup = () => {
     const w = win();
     w.dataLayer ??= [];
@@ -88,6 +118,7 @@ export function createGA4Provider(
         ad_user_data: 'denied',
         ad_personalization: 'denied',
       });
+      updateConsent();
       w.gtag('js', new Date());
       // Campaign/click parameters stay on page_location and the referrer keeps its host so GA4
       // can attribute paid, organic and referral sessions; everything else is redacted.
@@ -104,11 +135,11 @@ export function createGA4Provider(
     eventFamily: 'ga4',
     category: 'analytics',
     async send(event, signal) {
+      const started = generation;
       const mapped = getProviderEvent(event, 'ga4');
       setup();
       await script.load(signal);
-      if (signal?.aborted) throw new Error('Dispatch aborted');
-      win().gtag?.('consent', 'update', { analytics_storage: 'granted' });
+      if (started !== generation || signal?.aborted) throw new Error('Dispatch aborted');
       win().gtag?.('event', mapped.name, {
         ...mapped.properties,
         page_location: safePageLocation(location.href),
@@ -118,13 +149,13 @@ export function createGA4Provider(
       });
     },
     setConsent(consent) {
-      if (initialized)
-        win().gtag?.('consent', 'update', {
-          analytics_storage: consent.analytics ? 'granted' : 'denied',
-        });
+      currentConsent = { analytics: consent.analytics, marketing: consent.marketing };
+      if (initialized) updateConsent();
     },
     dispose() {
-      if (initialized) win().gtag?.('consent', 'update', { analytics_storage: 'denied' });
+      generation++;
+      currentConsent = DENIED;
+      if (initialized) updateConsent();
       script.dispose();
     },
   };
