@@ -78,8 +78,9 @@ export function createGA4Provider(
   let initialized = false;
   let disposed = false;
   let currentConsent: { analytics: boolean; marketing: boolean } = DENIED;
-  // One active browser SDK owns window.gtag consent per window; dispose may deny
-  // global fields, and a second live adapter would not re-assert its grants.
+  // shortcut: one active browser SDK owns window.gtag consent per window; dispose may deny
+  // global fields and a second live adapter would not re-assert its grants. Revisit if more
+  // than one live SDK instance per window becomes supported.
   let appliedConsent = { analytics: false, adFields: false };
   const updateConsent = () => {
     const adFields = config.googleAdsConsent === 'marketing' && currentConsent.marketing;

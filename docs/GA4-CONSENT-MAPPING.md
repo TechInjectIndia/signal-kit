@@ -16,6 +16,8 @@ Configure the opt-in only when the host's marketing choice covers all three Goog
 createGA4Provider({ measurementId: 'G-YOURID', googleAdsConsent: 'marketing' });
 ```
 
+The GA4 adapter belongs to the `analytics` category, so SignalKit does not load or call it until analytics consent is granted. A visitor who grants marketing but denies analytics therefore gets no Google consent command from this adapter, with or without the opt-in; the ad fields are first updated when analytics consent initializes the adapter.
+
 After initialization, changes to the effective consent fields update Google. Withdrawal or disposal revokes previously granted fields. The host owns the consent banner, its wording and persistence; SignalKit does not collect consent itself.
 
 ## Repeated consent entries while debugging
@@ -38,4 +40,4 @@ The owner confirmed on 12 November 2026 that marketing consent may authorize all
 
 Browser jsdom tests check the denied defaults, safe behavior for existing marketing-consented hosts, explicit opt-in, saved consent before the first measurement command, analytics-only consent, marketing changes, withdrawal and disposal. They verify queued SDK commands, not live Google tag processing or provider-side delivery.
 
-See the [FRD](frd/signals.md), [integration guide](../packages/features/signals/INTEGRATION.md), [GA4 setup step](growth/articles/ads-utm-search-attribution.md) and [changeset](../.changeset/shiny-ties-melt.md) for the implementation contract and release note.
+See the [FRD](frd/signals.md), [integration guide](../packages/features/signals/INTEGRATION.md) and [GA4 setup step](growth/articles/ads-utm-search-attribution.md) for the implementation contract. The release note is in the `@techinject/browser` changelog.

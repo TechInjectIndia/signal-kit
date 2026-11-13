@@ -348,6 +348,21 @@ describe('browser providers', () => {
     sdk.setConsent({ ...consent, analytics: false });
     expect(layer.at(-1)).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
   });
+  it('queues no GA4 consent command for marketing-only consent, even with the ad opt-in', async () => {
+    const sdk = createBrowserSignals({
+      autoTrack: false,
+      consent: { analytics: false, marketing: true, observability: false },
+      providers: [
+        createGA4Provider({ measurementId: 'G-MARKETING', googleAdsConsent: 'marketing' }),
+      ],
+    });
+    disposals.push(sdk.dispose);
+    expect((await sdk.page('/')).outcomes[0]?.status).toBe('denied');
+    sdk.setConsent({ analytics: false, marketing: false, observability: false });
+    sdk.setConsent({ analytics: false, marketing: true, observability: false });
+    expect(document.querySelector('script')).toBeNull();
+    expect((window as unknown as { dataLayer?: unknown[][] }).dataLayer).toBeUndefined();
+  });
   it('applies saved GA4 consent after denied defaults and before the first measurement', async () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
