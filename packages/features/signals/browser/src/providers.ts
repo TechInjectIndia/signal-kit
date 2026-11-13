@@ -76,7 +76,9 @@ export function createGA4Provider(
     config,
   );
   let initialized = false;
-  let disposed = false;
+  // Bumped on dispose so an in-flight send is dropped, while the adapter stays reusable by a
+  // later SDK instance (hosts commonly build providers once at module scope).
+  let generation = 0;
   let currentConsent: { analytics: boolean; marketing: boolean } = DENIED;
   // shortcut: one active browser SDK owns window.gtag consent per window; dispose may deny
   // global fields and a second live adapter would not re-assert its grants. Revisit if more
@@ -133,11 +135,11 @@ export function createGA4Provider(
     eventFamily: 'ga4',
     category: 'analytics',
     async send(event, signal) {
-      if (disposed) throw new Error('Provider disposed');
+      const started = generation;
       const mapped = getProviderEvent(event, 'ga4');
       setup();
       await script.load(signal);
-      if (disposed || signal?.aborted) throw new Error('Dispatch aborted');
+      if (started !== generation || signal?.aborted) throw new Error('Dispatch aborted');
       win().gtag?.('event', mapped.name, {
         ...mapped.properties,
         page_location: safePageLocation(location.href),
@@ -147,13 +149,11 @@ export function createGA4Provider(
       });
     },
     setConsent(consent) {
-      if (disposed) return;
       currentConsent = { analytics: consent.analytics, marketing: consent.marketing };
       if (initialized) updateConsent();
     },
     dispose() {
-      if (disposed) return;
-      disposed = true;
+      generation++;
       currentConsent = DENIED;
       if (initialized) updateConsent();
       script.dispose();

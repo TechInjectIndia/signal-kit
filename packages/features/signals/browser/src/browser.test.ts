@@ -535,6 +535,30 @@ describe('browser providers', () => {
     expect((await sdk.page('/after')).outcomes[0]?.status).toBe('dropped');
     expect(layer.slice(revokeIndex + 1).some((args) => args[0] === 'event')).toBe(false);
   });
+  it('reuses a GA4 provider built once after its SDK is disposed and a new SDK mounts', async () => {
+    const provider = createGA4Provider({ measurementId: 'G-REUSE' });
+    const first = createBrowserSignals({ autoTrack: false, consent, providers: [provider] });
+    const firstPage = first.page('/first');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await firstPage).outcomes[0]?.status).toBe('sent');
+    first.dispose();
+    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    expect(layer.at(-1)).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
+
+    const second = createBrowserSignals({ autoTrack: false, consent, providers: [provider] });
+    disposals.push(second.dispose);
+    const secondPage = second.page('/second');
+    await Promise.resolve();
+    document.querySelector('script')?.dispatchEvent(new Event('load'));
+    expect((await secondPage).outcomes[0]?.status).toBe('sent');
+    const eventIndex = layer.findLastIndex((args) => args[0] === 'event');
+    expect(layer.filter((args) => args[0] === 'event')).toHaveLength(2);
+    expect(
+      layer.slice(0, eventIndex).findLast((args) => args[0] === 'consent' && args[1] === 'update'),
+    ).toEqual(['consent', 'update', { analytics_storage: 'granted' }]);
+    expect(layer.filter((args) => args[0] === 'consent' && args[1] === 'default')).toHaveLength(1);
+  });
   it('initializes optional Clarity after consent and revokes its storage category', async () => {
     const sdk = createBrowserSignals({
       autoTrack: false,
