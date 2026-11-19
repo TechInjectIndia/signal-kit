@@ -46,4 +46,4 @@ Public repository: TechInjectIndia/signal-kit. Private vulnerability reporting, 
 
 Main requires the Repository checks CI context, up-to-date branches, pull requests and resolved conversations. Force pushes and branch deletion are disabled. Administrator bypass is enabled and independent approving reviews are not required because only @TechInjectIndia is assigned as a maintainer. Add a second trusted reviewer before requiring independent approval or enforcing protection for administrators.
 
-The initial GitHub CI run passed. These settings are a dated snapshot; verify them after repository ownership or policy changes.
+Browser runtime checks (Playwright e2e for the Next.js lab, public site and SvelteKit) run in a separate CI job, `Browser runtime (Playwright)`, that is not a required context. A flaky apt mirror or browser download then reports a failure without blocking merges. Its install step retries up to four times and caches browsers. Review that job before merging, and re-run it when it fails for infrastructure reasons. The initial GitHub CI run passed. These settings are a dated snapshot; verify them after repository ownership or policy changes.
