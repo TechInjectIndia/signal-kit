@@ -2,7 +2,7 @@
 
 A consent-aware ecommerce telemetry SDK for Next.js, Bun and SvelteKit. Shared typed events, automatic page/request instrumentation and provider adapters, with a platform-independent core.
 
-**Status: published alpha `0.1.0-alpha.5`** (npm `alpha` and `latest` tags; `latest` follows the newest alpha until the first stable release). Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
+**Status: published alpha `0.1.0-alpha.6`** (npm `alpha` and `latest` tags; `latest` follows the newest alpha until the first stable release). Tested runtime evidence and limits are listed in [compatibility](docs/COMPATIBILITY.md). No hosted dashboard or collector required by the SDK.
 
 [![SignalKit demo: consent, navigation, cart and API outcomes](docs/assets/demo.gif)](https://techinjectindia.github.io/signal-kit/demo.mp4)
 
@@ -39,7 +39,7 @@ Open `/connections` in the Next.js lab to see configured event providers, consen
 - Next React root provider and separate Node OpenTelemetry registration for automatic framework requests.
 - GA4, Meta Pixel/CAPI stable event IDs, optional Clarity and OTLP HTTP JSON.
 - Denied consent defaults, withdrawal hooks, safe fields/routes, bounded dispatch and per-provider diagnostics.
-- Unreleased, fixture-tested only: server-side GA4 Measurement Protocol purchases, per-call server consent and context, an opt-in consent-time page view, an opaque host user key (`setUser`) and browser `getProviderIds()`. See [integration](packages/features/signals/INTEGRATION.md#commerce-lifecycle-events-and-outcomes).
+- Added in 0.1.0-alpha.6, fixture-tested only: server-side GA4 Measurement Protocol purchases, per-call server consent and context, an opt-in consent-time page view, an opaque host user key (`setUser`) and browser `getProviderIds()`. See [integration](packages/features/signals/INTEGRATION.md#commerce-lifecycle-events-and-outcomes).
 - GA4 channel attribution (UTMs, gclid/wbraid, msclkid, fbclid, referrer host), opt-in first/last-touch visit source, and Search Console/Bing Webmaster query clients; see the [attribution guide](docs/growth/articles/ads-utm-search-attribution.md).
 - Signed Razorpay reference webhook, trusted order checks and durable replay-tested outbox.
 
@@ -60,7 +60,7 @@ await signals.track({
 
 Contact/custom event examples require explicit root registration; see [consumer event setup](packages/features/signals/INTEGRATION.md#register-consumer-defined-events-once).
 
-The owner-selected package scope is `@techinject`; all nine packages are published as `0.1.0-alpha.5` on the `alpha` tag. Pin this exact version or use the workspace. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
+The owner-selected package scope is `@techinject`; all nine packages are published as `0.1.0-alpha.6` on the `alpha` tag. Pin this exact version or use the workspace. See the [integration guide](packages/features/signals/INTEGRATION.md) for provider settings and limitations.
 
 ## Platform availability
 

@@ -1,6 +1,6 @@
 # SignalKit integration
 
-The nine `@techinject` packages are published as npm alphas (see [UPGRADING.md](../../../docs/UPGRADING.md) for the current exact version). The commerce lifecycle, identity, consent-time page view and server GA4 behavior described below is unreleased: build the cloned repo to use it. ESM exports/declarations live in each dist directory. Pack them with bun pm pack, which rewrites workspace:\* dependency ranges (npm pack does not), to test outside this workspace; do not publish before the release checklist.
+The nine `@techinject` packages are published as npm alphas (see [UPGRADING.md](../../../docs/UPGRADING.md) for the current exact version). The commerce lifecycle, identity, consent-time page view and server GA4 behavior described below ships in `0.1.0-alpha.6`. ESM exports/declarations live in each dist directory. Pack them with bun pm pack, which rewrites workspace:\* dependency ranges (npm pack does not), to test outside this workspace; do not publish before the release checklist.
 
 ## Platform availability
 

@@ -130,7 +130,7 @@ parseAttribution: parse URL → read allowlisted click IDs and UTMs through one 
 
 ## B6: commerce lifecycle, per-call context and identity — 19 November 2026
 
-Status: implemented in the working tree on branch `feat/analytics-audit`; unreleased. Scope follows the owner decisions recorded in the PRD amendment of the same date. Evidence is fixture, jsdom, injected-transport and local Playwright only; no live GA4 or Meta check has been run.
+Status: released in 0.1.0-alpha.6. Scope follows the owner decisions recorded in the PRD amendment of the same date. Evidence is fixture, jsdom, injected-transport and local Playwright only; no live GA4 or Meta check has been run.
 
 ### Predefined events and mappings
 

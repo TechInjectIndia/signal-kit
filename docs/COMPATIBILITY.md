@@ -1,6 +1,6 @@
 # Compatibility and evidence
 
-SDK v1 local implementation, 2026-10-05. All nine packages are published on npm as `0.1.0-alpha.5` (`alpha` tag; `latest` follows the newest alpha until the first stable release). Peer ranges are integration declarations, not proof of every version in range.
+SDK v1 local implementation, 2026-10-05. All nine packages are published on npm as `0.1.0-alpha.6` (`alpha` tag; `latest` follows the newest alpha until the first stable release). Peer ranges are integration declarations, not proof of every version in range.
 
 | Target                            | Recorded version                                  | Evidence                                                                     |
 | --------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -68,7 +68,7 @@ Workspace build, typecheck, tests (including the local Bun runtime), repository 
 
 Next.js and SvelteKit production-browser tests pass with Sentry, Grafana and SigNoz shown as not configured. Existing consent/outcome updates and cleanup remain verified; Next mobile checks confirm no horizontal overflow at 390px. Browser unit tests cover fixed labels, safe metadata and configured-but-unverified states. Workspace build, typecheck, tests, formatting, repository and boundary checks pass on Node 22.21.1. These cards are configuration summaries, not live backend verification.
 
-## B5 event registry (unreleased)
+## B5 event registry (0.1.0-alpha.4)
 
 The SDK predefines 17 contracts (the original nine plus eight lifecycle events; see the 19 November 2026 section). Contact and generic custom events are registered consumer definitions in the Next.js, SvelteKit and Bun examples. Contracts tests cover every predefined provider mapping and reject unregistered consumer names. Core registry tests cover nested stripping/privacy, mapping failures, identity, snapshots, consent withdrawal and no replay; compiler assertions check inferred properties and registration. Browser simulated-script tests verify consumer names, projected properties and shared GA4/Meta identity; CAPI uses injected transport. These checks do not establish live vendor delivery.
 
@@ -88,11 +88,11 @@ GA4 page_location/page_referrer parameters, visit-source classification, consent
 
 Attribution self-check (`auditAttribution`): every finding and a hostile-input never-throws case are verified by browser jsdom tests with injected document/location/performance stubs; the Next production Playwright suite verifies that a `?gclid=test` landing produces no error findings and that an injected canonical link with `utm_source` yields `canonical-has-tracking-params`. Redirect detection, meta CSP parsing and storage probing are exercised with stubs only; no real multi-hop redirect, header-delivered CSP or blocked-storage browser profile was run. Bundle growth from the check is about 2.1 kB gzip.
 
-## Meta CAPI website-event requirements — 4 November 2026 (unreleased)
+## Meta CAPI website-event requirements — 4 November 2026 (0.1.0-alpha.4)
 
 Following Meta's customer information and server event parameter documentation, the CAPI adapter now requires `event_source_url` and `client_user_agent` for website events, accepts unhashed `client_ip_address`, and accepts prehashed `fn`, `ln`, `ge`, `db`, `ct`, `st`, `zp` and `country` alongside `em`, `ph` and `external_id`. The SDK still never hashes plaintext. Injected-transport tests cover the payload, rejection of plaintext, unknown keys, invalid IP/user agent, a missing user agent and invalid source URLs. Live Meta acceptance, Event Match Quality and deduplication remain unverified.
 
-## Commerce lifecycle, identity and server GA4 — 19 November 2026 (unreleased)
+## Commerce lifecycle, identity and server GA4 — 19 November 2026 (0.1.0-alpha.6)
 
 Every row below is fixture evidence. No GA4 property, Meta account or Clarity project was used, and nothing here shows that a vendor recorded, matched, deduplicated or attributed an event.
 
