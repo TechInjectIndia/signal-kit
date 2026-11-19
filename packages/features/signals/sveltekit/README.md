@@ -8,4 +8,4 @@ Keep this client per layout, never in a shared server module. Use host-owned per
 
 See [integration reference](../INTEGRATION.md), [runtime evidence](../../../../docs/COMPATIBILITY.md) and [SvelteKit lab](../../../../examples/sveltekit/README.md). Verified SvelteKit 3/Svelte 5; other majors and Edge runtimes are not certified.
 
-Unreleased: the client starts before the host applies consent, so `pageOnConsent: true` can send one consent-time page view; remove any manual `page()` call after a grant if you enable it. `getProviderIds`, `setUser`/`resetUser`, `preloadProviders` and the related types are exposed from the browser SDK. Fixture evidence only.
+Added in 0.1.0-alpha.6: the client starts before the host applies consent, so `pageOnConsent: true` can send one consent-time page view; remove any manual `page()` call after a grant if you enable it. `getProviderIds`, `setUser`/`resetUser`, `preloadProviders` and the related types are exposed from the browser SDK. Fixture evidence only.

@@ -1,6 +1,6 @@
 # Upgrade SignalKit in every framework
 
-All nine packages are published as `0.1.0-alpha.5`, and the versioned CDN module is verified. During alpha APIs can change; inspect the release notes before upgrading.
+All nine packages are published as `0.1.0-alpha.6`, and the versioned CDN module is verified. During alpha APIs can change; inspect the release notes before upgrading.
 
 All nine `@techinject` packages share one exact version. Install only the packages your app needs, keep your lockfile committed, and update all directly installed SignalKit packages together. Deployed apps retain their bundled SDK until rebuilt and redeployed.
 
@@ -19,11 +19,11 @@ Current published release:
 ```sh
 # Use any package manager: npm shown; pnpm add --save-exact, yarn add --exact and bun add --exact work the same way.
 # Next.js
-npm install --save-exact @techinject/nextjs@0.1.0-alpha.5 @techinject/browser@0.1.0-alpha.5
+npm install --save-exact @techinject/nextjs@0.1.0-alpha.6 @techinject/browser@0.1.0-alpha.6
 # SvelteKit
-npm install --save-exact @techinject/sveltekit@0.1.0-alpha.5 @techinject/browser@0.1.0-alpha.5
+npm install --save-exact @techinject/sveltekit@0.1.0-alpha.6 @techinject/browser@0.1.0-alpha.6
 # Bun
-npm install --save-exact @techinject/bun@0.1.0-alpha.5
+npm install --save-exact @techinject/bun@0.1.0-alpha.6
 ```
 
 Update optional server adapters and other directly installed SDK packages to the same version. Check the release's framework/runtime compatibility, run your app's tests, check consent withdrawal, page/API instrumentation and the connections dashboard, then rebuild and deploy. Never send fake purchases to verify an upgrade. Dependabot or Renovate can open update PRs in consumer repositories; consumers must configure these separately.
@@ -37,10 +37,10 @@ jsDelivr serves the bundled browser module from:
 import {
   createBrowserSignals,
   mountConnectionsDashboard,
-} from 'https://cdn.jsdelivr.net/npm/@techinject/browser@0.1.0-alpha.5/dist/cdn/signalkit.mjs';
+} from 'https://cdn.jsdelivr.net/npm/@techinject/browser@0.1.0-alpha.6/dist/cdn/signalkit.mjs';
 ```
 
-The CDN module includes the browser SDK and dashboard without external package imports. Its accompanying `dist/cdn/LICENSES.txt` contains MIT notices for SignalKit and bundled Zod. Keep the version in the URL; do not use an unversioned/latest URL in production. Update the URL, test and redeploy to upgrade. npm publication supplies CDN distribution; there is no separate uploaded CDN service. The `0.1.0-alpha.1` URL returned HTTP 200 and matched the local bundle SHA-256 on 13 October 2026; the `0.1.0-alpha.4` URL returned HTTP 200 on 29 October 2026; the `0.1.0-alpha.5` URL returned HTTP 200 on 19 November 2026. Your host controls CSP and authentication.
+The CDN module includes the browser SDK and dashboard without external package imports. Its accompanying `dist/cdn/LICENSES.txt` contains MIT notices for SignalKit and bundled Zod. Keep the version in the URL; do not use an unversioned/latest URL in production. Update the URL, test and redeploy to upgrade. npm publication supplies CDN distribution; there is no separate uploaded CDN service. The `0.1.0-alpha.1` URL returned HTTP 200 and matched the local bundle SHA-256 on 13 October 2026; the `0.1.0-alpha.4` URL returned HTTP 200 on 29 October 2026; the `0.1.0-alpha.5` URL returned HTTP 200 on 19 November 2026. The `0.1.0-alpha.6` URL returned HTTP 200 on 19 November 2026. Your host controls CSP and authentication.
 
 ## Source / local packages
 
@@ -52,21 +52,21 @@ Restore the previous exact package versions and lockfile (or CDN URL), rebuild a
 
 Stable releases use patch for compatible fixes, minor for compatible additions and major for breaking changes. Use exact prerelease versions and the `alpha` channel. npm requires a `latest` tag, so until the first stable release it follows the newest alpha; pin exact versions rather than relying on it. See [RELEASING.md](RELEASING.md).
 
-## Unreleased B5 event registry migration
+## 0.1.0-alpha.4 B5 event registry migration
 
 The SDK keeps its predefined events (nine at that change, 17 after the 19 November 2026 section below). `phone_click`, `whatsapp_click` and generic `custom_event` now require consumer definitions; they are not registered automatically. Import or adapt the app-owned [Next.js definitions](../examples/nextjs/signalkit.events.ts), [Bun definitions](../examples/bun/src/events.ts) or [SvelteKit definitions](../examples/sveltekit/signalkit.events.ts), and pass their readonly tuple as `events` when creating the root SDK instance. Server instances use the same definitions with their existing per-request consent and provider configuration.
 
 Use `RegisteredEventInput<typeof events>` for an app event union; `EventInput` now describes predefined inputs only. Next apps should bind `useSignals<typeof events>()` in their app-owned hook wrapper and pass the same tuple to `SignalKitProvider`. Consumer schemas are synchronous, recursively stripping Zod objects; arbitrary records, passthrough objects and transforms are unsupported. Consumer mappings explicitly project validated keys, and the shared privacy/identity/consent checks cannot be disabled.
 
-A configured consented provider without a mapping reported `invalid` with `event_mapping_missing` at that change and now reports `skipped` (see below); no provider name is guessed. Meta requires an explicit standard/custom mode; Clarity accepts only a mapped name. Existing event IDs still pass through GA4 and Meta, with no new Clarity deduplication claim. See [event setup and mapping tables](../packages/features/signals/INTEGRATION.md#register-consumer-defined-events-once). This migration applies to the unreleased working tree; it does not change an already published package or CDN asset.
+A configured consented provider without a mapping reported `invalid` with `event_mapping_missing` at that change and now reports `skipped` (see below); no provider name is guessed. Meta requires an explicit standard/custom mode; Clarity accepts only a mapped name. Existing event IDs still pass through GA4 and Meta, with no new Clarity deduplication claim. See [event setup and mapping tables](../packages/features/signals/INTEGRATION.md#register-consumer-defined-events-once). This migration shipped in `0.1.0-alpha.4`; hosts upgrading from `0.1.0-alpha.3` or earlier must register these definitions before tracking them.
 
-## Unreleased Meta CAPI website-event requirements
+## 0.1.0-alpha.4 Meta CAPI website-event requirements
 
-`createMetaCapiProvider` now requires an event source URL (the `eventSourceUrl` option, now optional, or `context.meta.eventSourceUrl` on each call) and a `client_user_agent` in each call's matching data (`userData()` or `context.meta.userData`), because Meta requires both for website events. Add the shopper's user agent and, ideally, `client_ip_address` from your trusted request. You can also send prehashed `fn`, `ln`, `ge`, `db`, `ct`, `st`, `zp` and `country`. The SDK still rejects plaintext in hashed fields; hash on your server after normalizing under Meta's rules. A send without a user agent fails for that provider only.
+From `0.1.0-alpha.4`, `createMetaCapiProvider` requires the `eventSourceUrl` option and a `client_user_agent` in the `userData()` matching data, because Meta requires both for website events. In `0.1.0-alpha.6` the `eventSourceUrl` option becomes optional when each call supplies `context.meta.eventSourceUrl`, and `context.meta.userData` can replace `userData()` per call (see item 8 below). Add the shopper's user agent and, ideally, `client_ip_address` from your trusted request. You can also send prehashed `fn`, `ln`, `ge`, `db`, `ct`, `st`, `zp` and `country`. The SDK still rejects plaintext in hashed fields; hash on your server after normalizing under Meta's rules. A send without a user agent fails for that provider only.
 
-## Unreleased analytics audit changes — 19 November 2026
+## 0.1.0-alpha.6 analytics audit changes — 19 November 2026
 
-These changes are on branch `feat/analytics-audit` and are not in any published package or CDN asset. All new options default to off. Review each item before upgrading to the release that contains them.
+These changes are published in `0.1.0-alpha.6`. All new options default to off. Review each item before upgrading.
 
 Breaking or behavior-changing:
 

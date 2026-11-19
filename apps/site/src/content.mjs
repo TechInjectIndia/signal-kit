@@ -7,7 +7,7 @@ export const faq = [
   ],
   [
     'Is SignalKit available on npm?',
-    'Yes. Alpha 0.1.0-alpha.5 is available on npm. Pin the @techinject packages to this exact version, or use the workspace.',
+    'Yes. Alpha 0.1.0-alpha.6 is available on npm. Pin the @techinject packages to this exact version, or use the workspace.',
   ],
   [
     'Which frameworks does SignalKit support?',
@@ -172,7 +172,7 @@ export const guides = [
       {
         title: 'Make retries a host responsibility',
         paragraphs: [
-          'Write a delivery record transactionally with your order transition. A host worker can retry transient provider errors using the same event ID. Decide which diagnostic outcomes allow the outbox to mark a provider copy complete; a timed-out transport is not proof that the destination received nothing. Treat sent, skipped and denied as terminal outcomes for a provider copy: skipped means that provider has no mapping for the event or was not targeted, and is not an error. Retry failed. Park dropped and invalid for a person. Store the paid-at time with the order and pass it as the event timestamp on every attempt so a retry keeps the payment’s business time. Vendors limit event age (Meta documents seven days; GA4 Measurement Protocol backdating is limited to 72 hours). These rules are unreleased and fixture-tested only.',
+          'Write a delivery record transactionally with your order transition. A host worker can retry transient provider errors using the same event ID. Decide which diagnostic outcomes allow the outbox to mark a provider copy complete; a timed-out transport is not proof that the destination received nothing. Treat sent, denied and skipped with reason event_mapping_missing as terminal for a provider copy. A skipped outcome with reason not_targeted only means the call did not target that provider, so keep that copy pending and retry it by name. Retry failed. Park dropped and invalid for a person. Store the paid-at time with the order and pass it as the event timestamp on every attempt so a retry keeps the payment’s business time. Vendors limit event age (Meta documents seven days; GA4 Measurement Protocol backdating is limited to 72 hours). These rules ship in 0.1.0-alpha.6 and are fixture-tested only.',
           'An in-memory telemetry call is best effort. SignalKit’s pending limits and timeouts protect host responses, but they are not a durable queue. Your host supplies crash recovery, replay protection, per-customer consent and a retention policy.',
         ],
       },
@@ -180,7 +180,7 @@ export const guides = [
         title: 'What should you test before production?',
         paragraphs: [
           'Replay a signed captured-payment fixture twice and verify the same persisted purchase ID. Reject altered signatures, mismatched amount/currency and unpaid state. Simulate a timeout between provider acceptance and acknowledgement. Confirm denied consent does not dispatch, and inspect accepted events in your own provider account before claiming live attribution.',
-          'The repository’s local tests establish fixture behavior. They do not establish that GA4 or Meta attributed a real customer purchase. The npm alpha is available with explicit 0.1.0-alpha.5 version pins.',
+          'The repository’s local tests establish fixture behavior. They do not establish that GA4 or Meta attributed a real customer purchase. The npm alpha is available with explicit 0.1.0-alpha.6 version pins.',
         ],
         links: [
           [
@@ -234,7 +234,7 @@ const browser = createBrowserSignals({
         title: 'Keep CAPI credentials and matching data on the server',
         paragraphs: [
           'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version, the page URL where the event happened and per-request matching data, both passed per call in context.meta.eventSourceUrl and context.meta.userData (the eventSourceUrl option and userData callback remain only as fallbacks used when a call supplies none). Meta requires client_user_agent for website events, so every call must include the shopper’s user agent plus at least one other identifier. The adapter accepts SHA-256 hashed em, ph, fn, ln, ge, db, ct, st, zp, country and external_id, plus unhashed client_ip_address, client_user_agent, fbp and fbc. It never hashes plaintext: normalize under Meta’s rules and hash on your server first. Normalize ph to E.164 before removing its leading plus and hashing the digits. The SignalKit Pixel adapter does not send advanced matching, so there is no Pixel-side external_id to match. Hash external_id from a real, stable customer key that you also use elsewhere, preserving its exact case; never derive it from an event ID, URL or random value. If no real identifier exists, omit it and send other permitted matching fields, or skip the CAPI send and record why. Hashes, IP addresses and user agents are personal data and require an appropriate host consent and retention policy.',
-          'This configuration is illustrative: replace environment values with your server’s validated configuration. Pass matching data per call rather than through a long-lived userData callback, so concurrent orders on one shared server instance cannot see each other’s data. This per-call context is unreleased and fixture-tested only. Never put the access token in a NEXT_PUBLIC variable.',
+          'This configuration is illustrative: replace environment values with your server’s validated configuration. Pass matching data per call rather than through a long-lived userData callback, so concurrent orders on one shared server instance cannot see each other’s data. This per-call context ships in 0.1.0-alpha.6 and is fixture-tested only. Never put the access token in a NEXT_PUBLIC variable.',
         ],
         code: `import { createServerSignals, createMetaCapiProvider } from '@techinject/server';
 

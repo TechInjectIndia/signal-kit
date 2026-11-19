@@ -80,7 +80,7 @@ Owner asked whether a CLI should verify the guide's routing and rendering rules 
 
 ## Commerce lifecycle, per-call context and identity — 19 November 2026
 
-Unreleased. All evidence below is fixture, jsdom, injected-transport or local Playwright; nothing is live-verified.
+Released in 0.1.0-alpha.6. All evidence below is fixture, jsdom, injected-transport or local Playwright; nothing is live-verified.
 
 Events. The 17 predefined events and their GA4, Meta and Clarity mappings are in the [integration guide](../../packages/features/signals/INTEGRATION.md#predefined-event-contracts). A provider with no mapping reports `skipped`; a mapping that fails validation reports `invalid`. Event definitions registered by a consumer cannot use the eight new names or their provider names.
 
