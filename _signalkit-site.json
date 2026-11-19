@@ -1,6 +1,6 @@
 {
   "managedBy": "SignalKit static publisher",
-  "sourceCommit": "2df3ce1e7a20645cba302a7105907d51395c9d5a",
-  "sourceBranch": "main",
+  "sourceCommit": "ba9cad411c8eab6158ea160596d9f7129d7565bc",
+  "sourceBranch": "site-publish",
   "siteUrl": "https://techinjectindia.github.io/signal-kit/"
 }
