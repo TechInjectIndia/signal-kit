@@ -96,7 +96,7 @@
       "name": "@techinject/contracts",
       "version": "0.1.0-alpha.5",
       "dependencies": {
-        "zod": "4.6.6",
+        "zod": "^4.6.6",
       },
     },
     "packages/features/signals/core": {

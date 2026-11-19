@@ -32,13 +32,14 @@ Open `/connections` in the Next.js lab to see configured event providers, consen
 
 ## What is included
 
-- Nine predefined ecommerce, lead, search and account events with runtime schemas and provider mappings.
+- 17 predefined ecommerce (including cart, checkout, refund, list and wishlist events), lead, search and account events with runtime schemas and provider mappings. Providers with no mapping for an event report `skipped`, not an error.
 - Consumer-defined events registered once through `defineEvent` and the root `events` option, sharing consent, privacy and delivery handling.
 - Browser initial/navigation pages and fetch/XHR failures, status and duration.
 - Bun incoming handler and server outbound fetch instrumentation with trace correlation.
 - Next React root provider and separate Node OpenTelemetry registration for automatic framework requests.
 - GA4, Meta Pixel/CAPI stable event IDs, optional Clarity and OTLP HTTP JSON.
 - Denied consent defaults, withdrawal hooks, safe fields/routes, bounded dispatch and per-provider diagnostics.
+- Unreleased, fixture-tested only: server-side GA4 Measurement Protocol purchases, per-call server consent and context, an opt-in consent-time page view, an opaque host user key (`setUser`) and browser `getProviderIds()`. See [integration](packages/features/signals/INTEGRATION.md#commerce-lifecycle-events-and-outcomes).
 - GA4 channel attribution (UTMs, gclid/wbraid, msclkid, fbclid, referrer host), opt-in first/last-touch visit source, and Search Console/Bing Webmaster query clients; see the [attribution guide](docs/growth/articles/ads-utm-search-attribution.md).
 - Signed Razorpay reference webhook, trusted order checks and durable replay-tested outbox.
 
@@ -247,7 +248,7 @@ process.on('SIGINT', async () => {
 });
 ```
 
-For GA4, disable Enhanced Measurement automatic history page changes when SignalKit emits pages. Denied pages are dropped without replay. For a current-page event after consent, explicitly call `signals.track({ name: 'page_view', properties: { page_path: window.location.pathname } })` after updating consent. Browser fetch/XHR observations also need observability consent and a configured observer.
+For GA4, disable Enhanced Measurement automatic history page changes when SignalKit emits pages. Denied pages are dropped without replay. For a current-page event after consent, set `pageOnConsent: true` in the browser config (one new page view for the newly granted category, unreleased) or explicitly call `signals.page()` after updating consent, not both. Browser fetch/XHR observations also need observability consent and a configured observer.
 
 For verified purchases and server-only Meta CAPI, follow the [purchase guide](https://techinjectindia.github.io/signal-kit/guides/nextjs-purchase-tracking/) and [shared Meta event ID guide](https://techinjectindia.github.io/signal-kit/guides/meta-pixel-capi-event-ids/).
 

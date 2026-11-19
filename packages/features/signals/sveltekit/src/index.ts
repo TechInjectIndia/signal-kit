@@ -11,6 +11,7 @@ export function createSvelteKitClient<
       if (typeof window === 'undefined')
         throw new Error('Mount SignalKit in onMount, not during SSR');
       signals ??= createBrowserSignals({ ...config, autoTrack: false });
+      // Start before the host applies consent so a consent-time page view can fire.
       signals.start();
       return signals;
     },
@@ -35,6 +36,12 @@ export type {
   BrowserSignals,
   AttributionFinding,
   AttributionAuditOptions,
+  BrowserTrackOptions,
+  PageOnConsentOptions,
+  ProviderIds,
+  ProviderIdsOptions,
+  UserIdentity,
+  CustomerType,
 } from '@techinject/browser';
 export { defineEvent } from '@techinject/browser';
 export type { EventDefinition, RegisteredEventInput } from '@techinject/browser';

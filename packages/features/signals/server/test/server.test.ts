@@ -357,6 +357,131 @@ describe('Meta CAPI', () => {
     const broken = createMetaCapiProvider({ ...options, eventSourceUrl: () => 'not a url' });
     await expect(broken.send(event)).rejects.toThrow('Invalid event source URL');
   });
+  it('reads per-call context.meta before the option fallbacks', async () => {
+    const bodies: any[] = [];
+    const provider = createMetaCapiProvider({
+      pixelId: '123',
+      accessToken: 'synthetic',
+      endpoint: 'https://collector.test/',
+      eventSourceUrl: 'https://shop.test/fallback',
+      userData: () => ({ em: 'f'.repeat(64), client_user_agent: 'Fallback/1.0' }),
+      fetch: async (_url, init) => {
+        bodies.push(JSON.parse(init!.body as string));
+        return Response.json({ events_received: 1 });
+      },
+    });
+    await provider.send({
+      ...event,
+      context: {
+        meta: {
+          userData: {
+            external_id: 'c'.repeat(64),
+            client_ip_address: '203.0.113.9',
+            client_user_agent: 'Context/2.0',
+          },
+          eventSourceUrl: 'https://shop.test/orders/thanks?token=secret',
+        },
+      },
+    });
+    expect(bodies[0].data[0]).toMatchObject({
+      event_source_url: 'https://shop.test/orders/thanks',
+      user_data: {
+        external_id: ['c'.repeat(64)],
+        client_ip_address: '203.0.113.9',
+        client_user_agent: 'Context/2.0',
+      },
+    });
+    // Context replaces, never merges with, the fallback matching data.
+    expect(bodies[0].data[0].user_data).not.toHaveProperty('em');
+    await provider.send(event);
+    expect(bodies[1].data[0]).toMatchObject({
+      event_source_url: 'https://shop.test/fallback',
+      user_data: { em: ['f'.repeat(64)], client_user_agent: 'Fallback/1.0' },
+    });
+    await expect(
+      provider.send({
+        ...event,
+        context: { meta: { userData: { em: 'raw@example.test', client_user_agent: 'A/1' } } },
+      }),
+    ).rejects.toThrow('Invalid hashed matching data');
+    await expect(
+      provider.send({
+        ...event,
+        consent: { analytics: true, marketing: false, observability: false },
+      }),
+    ).rejects.toThrow('Meta marketing consent denied');
+    expect(bodies).toHaveLength(2);
+  });
+  it('works without an eventSourceUrl option when context supplies one', async () => {
+    const bodies: any[] = [];
+    const provider = createMetaCapiProvider({
+      pixelId: '123',
+      accessToken: 'synthetic',
+      endpoint: 'https://collector.test/',
+      fetch: async (_url, init) => {
+        bodies.push(JSON.parse(init!.body as string));
+        return Response.json({ events_received: 1 });
+      },
+    });
+    const userData = { em: 'a'.repeat(64), client_user_agent: 'Mozilla/5.0 (synthetic)' };
+    await provider.send({
+      ...event,
+      context: { meta: { userData, eventSourceUrl: 'https://shop.test/checkout' } },
+    });
+    expect(bodies[0].data[0].event_source_url).toBe('https://shop.test/checkout');
+    await expect(provider.send({ ...event, context: { meta: { userData } } })).rejects.toThrow(
+      'Invalid event source URL',
+    );
+    expect(bodies).toHaveLength(1);
+  });
+  it('scopes concurrent server tracks to their own consent and context', async () => {
+    const bodies: any[] = [];
+    const gates: (() => void)[] = [];
+    const signals = createServerSignals({
+      consent: { analytics: false, marketing: false, observability: false },
+      providers: [
+        createMetaCapiProvider({
+          pixelId: '123',
+          accessToken: 'synthetic',
+          endpoint: 'https://collector.test/',
+          fetch: async (_url, init) => {
+            bodies.push(JSON.parse(init!.body as string));
+            if (bodies.length === 1) await new Promise<void>((resolve) => gates.push(resolve));
+            else gates.splice(0).forEach((open) => open());
+            return Response.json({ events_received: 1 });
+          },
+        }),
+      ],
+    });
+    const granted = { analytics: false, marketing: true, observability: false };
+    const shopper = (id: string, path: string) => ({
+      meta: {
+        userData: { external_id: id.repeat(64), client_user_agent: `Shopper-${id}/1.0` },
+        eventSourceUrl: `https://shop.test/${path}`,
+      },
+    });
+    const results = await Promise.all([
+      signals.track(
+        { ...event, eventId: 'order-a' },
+        { consent: granted, context: shopper('a', 'a') },
+      ),
+      signals.track(
+        { ...event, eventId: 'order-b' },
+        { consent: granted, context: shopper('b', 'b') },
+      ),
+      signals.track({ ...event, eventId: 'order-c' }, { context: shopper('c', 'c') }),
+    ]);
+    expect(results.map((result) => result.outcomes[0]?.status)).toEqual(['sent', 'sent', 'denied']);
+    const byId = Object.fromEntries(bodies.map((body) => [body.data[0].event_id, body.data[0]]));
+    expect(Object.keys(byId).sort()).toEqual(['order-a', 'order-b']);
+    for (const id of ['a', 'b']) {
+      expect(byId[`order-${id}`]).toMatchObject({
+        event_source_url: `https://shop.test/${id}`,
+        user_data: { external_id: [id.repeat(64)], client_user_agent: `Shopper-${id}/1.0` },
+      });
+    }
+    signals.dispose();
+  });
   it('rejects unsuccessful acknowledgment', async () => {
     const provider = createMetaCapiProvider({
       pixelId: '123',

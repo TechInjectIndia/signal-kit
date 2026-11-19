@@ -217,12 +217,17 @@ export interface MetaCapiOptions {
   fetch?: typeof globalThis.fetch;
   testEventCode?: string;
   /**
-   * Per-request matching data. Hashed fields must already be SHA-256 hex; the SDK never hashes
-   * plaintext. Website events require `client_user_agent` (sent unhashed, as Meta requires).
+   * Fallback matching data, used only when the call has no `context.meta.userData`. Hashed fields
+   * must already be SHA-256 hex; the SDK never hashes plaintext. Website events require
+   * `client_user_agent` (sent unhashed, as Meta requires). Prefer per-call context on servers that
+   * handle concurrent requests.
    */
   userData?: () => Record<string, string | string[]>;
-  /** Page where the event happened. Required by Meta for website events; query strings are dropped. */
-  eventSourceUrl: string | (() => string);
+  /**
+   * Fallback page where the event happened, used only when the call has no
+   * `context.meta.eventSourceUrl`. Meta requires one for website events; query strings are dropped.
+   */
+  eventSourceUrl?: string | (() => string);
 }
 // Meta requires SHA-256 for these; external_id hashing is recommended and enforced here.
 const HASHED_MATCHING_KEYS = [
@@ -299,13 +304,18 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
     options.endpoint ??
     `https://graph.facebook.com/${options.apiVersion}/${options.pixelId}/events`;
   const transport = options.fetch ?? globalThis.fetch;
-  if (typeof options.eventSourceUrl !== 'function' && !isWebUrl(options.eventSourceUrl))
+  if (
+    options.eventSourceUrl !== undefined &&
+    typeof options.eventSourceUrl !== 'function' &&
+    !isWebUrl(options.eventSourceUrl)
+  )
     throw new Error('Invalid Meta configuration');
-  const sourceUrl = () => {
+  const sourceUrl = (fromContext: string | undefined) => {
     const value =
-      typeof options.eventSourceUrl === 'function'
+      fromContext ??
+      (typeof options.eventSourceUrl === 'function'
         ? options.eventSourceUrl()
-        : options.eventSourceUrl;
+        : options.eventSourceUrl);
     if (!isWebUrl(value)) throw new Error('Invalid event source URL');
     return safeProviderUrl(new URL(value));
   };
@@ -314,9 +324,14 @@ export function createMetaCapiProvider(options: MetaCapiOptions): Provider {
     eventFamily: 'meta',
     category: 'marketing',
     async send(event, signal) {
+      if (event.consent && event.consent.marketing !== true)
+        throw new Error('Meta marketing consent denied');
       const mapped = getProviderEvent(event, 'meta');
-      const data = safeUserData(options.userData?.() ?? {});
-      const source = sourceUrl();
+      // Per-call context replaces (never merges with) the option fallbacks, and is read only from
+      // this event copy, so concurrent sends cannot see each other's shopper data.
+      const meta = event.context?.meta;
+      const data = safeUserData(meta?.userData ?? options.userData?.() ?? {});
+      const source = sourceUrl(meta?.eventSourceUrl);
       const response = await transport(endpoint, {
         method: 'POST',
         signal: signal ?? null,
@@ -477,8 +492,11 @@ export function createOTLPObserver(options: OTLPOptions): Observer {
   };
 }
 
+export { createGA4MeasurementProtocolProvider } from './ga4-mp.js';
+export type { GA4MeasurementProtocolOptions } from './ga4-mp.js';
 export { createSentryObserver, combineObservers } from './observers.js';
 export type { SentryClient, SentryEvent, SentryOptions } from './observers.js';
 
 export { defineEvent } from '@techinject/core';
 export type { EventDefinition, RegisteredEventInput } from '@techinject/core';
+export type { DispatchResult, EventContext, TrackOptions } from '@techinject/contracts';

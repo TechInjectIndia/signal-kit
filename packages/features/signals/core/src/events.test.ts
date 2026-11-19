@@ -70,7 +70,7 @@ describe('instance event registry', () => {
       (await signals.track({ name: 'help_open', properties: { section: 'intro' } })).outcomes,
     ).toEqual([
       { provider: 'analytics', status: 'sent' },
-      { provider: 'marketing', status: 'invalid', reason: 'event_mapping_missing' },
+      { provider: 'marketing', status: 'skipped', reason: 'event_mapping_missing' },
     ]);
     expect(send).toHaveBeenCalledOnce();
     signals.dispose();

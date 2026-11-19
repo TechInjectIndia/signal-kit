@@ -20,3 +20,26 @@ defineEvent({
   // @ts-expect-error Projection sources must be declared schema keys.
   map: { ga4: { name: 'bad_projection', properties: { label: 'unknown' } } },
 });
+void signals.track(
+  { name: 'page_view', properties: { page_path: '/' } },
+  { categories: ['marketing'], context: { page: { location: 'https://example.invalid/' } } },
+);
+void signals.track(
+  { name: 'page_view', properties: { page_path: '/' } },
+  // @ts-expect-error Categories are consent category names.
+  { categories: ['ads'] },
+);
+void signals.track(
+  { name: 'page_view', properties: { page_path: '/' } },
+  { categories: ['analytics'], providers: ['meta-pixel', 'clarity'] },
+);
+void signals.track(
+  { name: 'page_view', properties: { page_path: '/' } },
+  // @ts-expect-error Providers are listed by name.
+  { providers: 'ga4' },
+);
+signals.setUser({ id: 'host-user-1', customerType: 'guest' });
+// @ts-expect-error Identity requires an opaque id.
+signals.setUser({ customerType: 'guest' });
+signals.resetUser();
+createSignals({ debug: true, onWarning: (warning) => void warning.name });

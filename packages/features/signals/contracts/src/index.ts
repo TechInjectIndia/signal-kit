@@ -15,6 +15,7 @@ import {
   regex,
   refine,
   union,
+  literal,
   clone,
   safeParse,
 } from 'zod/mini';
@@ -34,7 +35,16 @@ export type EventName =
   | 'generate_lead'
   | 'sign_up'
   | 'login'
-  | 'search';
+  | 'search'
+  | 'remove_from_cart'
+  | 'view_cart'
+  | 'add_shipping_info'
+  | 'add_payment_info'
+  | 'refund'
+  | 'view_item_list'
+  | 'select_item'
+  | 'add_to_wishlist';
+export type CustomerType = 'guest' | 'registered';
 export type CommerceItem = {
   item_id: string;
   item_name?: string;
@@ -45,6 +55,10 @@ export type CommerceItem = {
   item_variant?: string;
   coupon?: string;
   discount?: number;
+  /** Integer position in a list, 0..10000. */
+  index?: number;
+  item_list_id?: string;
+  item_list_name?: string;
 };
 export type CommerceProperties = {
   currency: string;
@@ -56,6 +70,34 @@ export type CommerceProperties = {
   affiliation?: string;
   payment_type?: string;
 };
+/** Host-supplied checkout correlation. The SDK never generates or defaults these values. */
+export type CheckoutCorrelation = { checkout_id?: string; customer_type?: CustomerType };
+export type BeginCheckoutProperties = CommerceProperties & CheckoutCorrelation;
+export type ShippingInfoProperties = CommerceProperties &
+  CheckoutCorrelation & { shipping_tier?: string };
+export type PaymentInfoProperties = CommerceProperties &
+  CheckoutCorrelation & { payment_attempt_id?: string };
+export type RefundProperties = {
+  transaction_id: string;
+  /** Required whenever `value` is present. */
+  currency?: string;
+  value?: number;
+  /** Omit for a full refund. */
+  items?: CommerceItem[];
+  shipping?: number;
+  tax?: number;
+  coupon?: string;
+  affiliation?: string;
+};
+export type ItemListProperties = {
+  items: CommerceItem[];
+  item_list_id?: string;
+  item_list_name?: string;
+};
+/**
+ * @deprecated Pass the commerce shape with `items: [item]`. Still accepted; normalised to
+ * `{ currency?, value?, items }` before any provider sees it.
+ */
 export type SingleProductViewProperties = {
   item_id: string;
   item_name?: string;
@@ -68,7 +110,8 @@ export type SingleProductViewProperties = {
   items?: CommerceItem[];
 };
 export type ProductViewProperties = CommerceProperties | SingleProductViewProperties;
-export type PurchaseProperties = CommerceProperties & { transaction_id: string };
+export type PurchaseProperties = CommerceProperties &
+  CheckoutCorrelation & { transaction_id: string; payment_attempt_id?: string };
 export type PageViewProperties = { page_path: string };
 export type LeadProperties = { value?: number; currency?: string; lead_type?: string };
 export type AuthProperties = { method?: string };
@@ -91,23 +134,99 @@ export function containsContactPii(value: string): boolean {
   }
   return false;
 }
+/** Whole-value separator-formatted phone numbers such as 202-555-0100 or 91.98765.43210. */
+const FORMATTED_PHONE = /^\p{Nd}{1,4}(?:[.-]\p{Nd}{1,5}){2,4}$/u;
+/**
+ * Identifier fields (SKUs, order and checkout references) may legitimately hold long digit runs,
+ * so they skip the free-text phone heuristic. They still reject email-like values, `+` prefixes,
+ * whitespace, parentheses and whole-value separator-formatted phone numbers, including common
+ * URL-encoded forms.
+ */
+function containsIdentifierPii(value: string): boolean {
+  let candidate = value;
+  for (let pass = 0; pass < 3; pass++) {
+    if (
+      EMAIL_LIKE.test(candidate) ||
+      candidate.startsWith('+') ||
+      /[\s()]/u.test(candidate) ||
+      (FORMATTED_PHONE.test(candidate) && candidate.replace(/\D/g, '').length >= 10)
+    )
+      return true;
+    try {
+      const decoded = decodeURIComponent(candidate);
+      if (decoded === candidate) break;
+      candidate = decoded;
+    } catch {
+      break;
+    }
+  }
+  return false;
+}
+/** Property keys whose string values (or string array entries) follow the identifier rule. */
+const IDENTIFIER_KEYS = new Set([
+  'item_id',
+  'transaction_id',
+  'checkout_id',
+  'payment_attempt_id',
+  'item_list_id',
+  // Predefined Meta projections.
+  'order_id',
+  'content_ids',
+]);
 type EventIdentity = { eventId?: string; timestamp?: number };
 export type EventInput = EventIdentity &
   (
     | { name: 'page_view'; properties: PageViewProperties }
     | { name: 'product_view'; properties: ProductViewProperties }
-    | { name: 'add_to_cart' | 'begin_checkout'; properties: CommerceProperties }
+    | { name: 'add_to_cart'; properties: CommerceProperties }
+    | { name: 'begin_checkout'; properties: BeginCheckoutProperties }
     | { name: 'purchase'; properties: PurchaseProperties }
     | { name: 'generate_lead'; properties: LeadProperties }
     | { name: 'sign_up' | 'login'; properties: AuthProperties }
     | { name: 'search'; properties: SearchProperties }
+    | { name: 'remove_from_cart' | 'view_cart' | 'add_to_wishlist'; properties: CommerceProperties }
+    | { name: 'add_shipping_info'; properties: ShippingInfoProperties }
+    | { name: 'add_payment_info'; properties: PaymentInfoProperties }
+    | { name: 'refund'; properties: RefundProperties }
+    | { name: 'view_item_list' | 'select_item'; properties: ItemListProperties }
   );
+/** Opaque host-owned user key. Never an email address, phone number or name. */
+export type UserIdentity = {
+  /** 1..128 characters, `/^[A-Za-z0-9][A-Za-z0-9._:-]*$/`. */
+  id: string;
+  customerType?: CustomerType;
+};
+/**
+ * Typed transport context, kept apart from event properties and never included in diagnostics.
+ * Core forwards `page` plus only the slice for the receiving provider's event family.
+ */
+export type EventContext = {
+  page?: { location?: string; referrer?: string };
+  ga4?: { clientId?: string; sessionId?: string; userId?: string };
+  meta?: { userData?: Record<string, string | string[]>; eventSourceUrl?: string };
+};
+export type TrackOptions = {
+  /** Server use. Replaces instance consent for this call only. */
+  consent?: Consent;
+  context?: EventContext;
+  /** Deliver only to providers in these consent categories; others report `skipped`. */
+  categories?: readonly (keyof Consent)[];
+  /**
+   * Deliver only to providers whose `name` is listed (at most 20 names, each 1 to 64 characters);
+   * others report `skipped`/`not_targeted`. Combined with `categories`, a provider must match both.
+   */
+  providers?: readonly string[];
+};
 export type SignalEvent = {
   name: string;
   eventId: string;
   timestamp: number;
   properties: Record<string, unknown>;
   providerEvent?: ProviderEvent;
+  /** Set by core: `page` plus the slice for the receiving provider's family. */
+  context?: EventContext;
+  /** Effective consent snapshot for this dispatch. */
+  consent?: Consent;
 };
 export type RequestRecord = {
   kind: 'request';
@@ -127,6 +246,12 @@ export type Provider = {
   send(event: SignalEvent, signal?: AbortSignal): Promise<void> | void;
   dispose?(): void;
   setConsent?(consent: Consent): void;
+  /** Start loading vendor resources. Must not send data. Called only while the category is granted. */
+  prepare?(): void | Promise<void>;
+  /** Called by core with the identity while the provider's category is granted, else `undefined`. */
+  setUser?(user: UserIdentity | undefined): void;
+  /** Vendor-owned anonymous identifiers. Called only while the category is granted. */
+  identifiers?(): Promise<Readonly<Record<string, string>>> | Readonly<Record<string, string>>;
 };
 export type Observer = {
   record(record: RequestRecord): Promise<void> | void;
@@ -134,22 +259,30 @@ export type Observer = {
   dispose?(): void;
   setConsent?(consent: Consent): void;
 };
+/**
+ * `skipped` means the provider was deliberately not called: it has no mapping for the event
+ * (`event_mapping_missing`) or the call targeted other consent categories or provider names
+ * (`not_targeted`).
+ */
+export type DispatchStatus = 'sent' | 'denied' | 'failed' | 'invalid' | 'dropped' | 'skipped';
 export type DispatchResult = {
   eventId: string;
   outcomes: {
     provider: string;
-    status: 'sent' | 'denied' | 'failed' | 'invalid' | 'dropped';
+    status: DispatchStatus;
     reason?: string;
   }[];
 };
 
 const text = string().check(minLength(1), maxLength(128));
+const idText = string().check(minLength(1), maxLength(128));
+const customerType = union([literal('guest'), literal('registered')]);
 const noContactPii = refine<string>((value) => !containsContactPii(value));
 const freeText = string().check(minLength(1), maxLength(128), noContactPii);
 const amount = number().check(nonnegative());
 const currency = string().check(regex(/^[A-Z]{3}$/));
 const item = object({
-  item_id: text,
+  item_id: idText,
   item_name: optional(text),
   price: optional(amount),
   quantity: optional(int().check(positive(), maximum(100000))),
@@ -158,22 +291,30 @@ const item = object({
   item_variant: optional(text),
   coupon: optional(text),
   discount: optional(amount),
+  index: optional(int().check(nonnegative(), maximum(10000))),
+  item_list_id: optional(idText),
+  item_list_name: optional(freeText),
 });
+const items = array(item).check(minLength(1), maxLength(100));
 const commerce = object({
   currency,
   value: amount,
-  items: array(item).check(minLength(1), maxLength(100)),
+  items,
   shipping: optional(amount),
   tax: optional(amount),
   coupon: optional(text),
   affiliation: optional(text),
   payment_type: optional(text),
 });
+const correlation = {
+  checkout_id: optional(idText),
+  customer_type: optional(customerType),
+};
 const productViewCommerce = extend(commerce, {
   items: array(item).check(maxLength(100)),
 });
 const singleProductView = object({
-  item_id: text,
+  item_id: idText,
   item_name: optional(text),
   price: optional(amount),
   currency: optional(currency),
@@ -183,16 +324,33 @@ const singleProductView = object({
   item_variant: optional(text),
   items: optional(array(item).check(maxLength(100))),
 });
-const productViewSchema = union([productViewCommerce, singleProductView]);
+/** The normalised output of the single-item shape. Accepted so direct adapter calls that
+ * re-validate an already-sanitised event (`getProviderEvent`) see a stable contract. */
+const canonicalProductView = object({
+  currency: optional(currency),
+  value: optional(amount),
+  items: array(item).check(maxLength(100)),
+}).check(
+  refine((view) => view.value === undefined || view.currency !== undefined, {
+    message: 'value requires currency',
+  }),
+);
+const productViewSchema = union([productViewCommerce, singleProductView, canonicalProductView]);
+const itemList = object({
+  items,
+  item_list_id: optional(idText),
+  item_list_name: optional(freeText),
+});
 
 const schemas = {
   page_view: object({ page_path: string().check(minLength(1), maxLength(2048)) }),
   product_view: productViewSchema,
   add_to_cart: commerce,
-  begin_checkout: commerce,
+  begin_checkout: extend(commerce, correlation),
   purchase: extend(commerce, {
-    items: array(item).check(minLength(1), maxLength(100)),
-    transaction_id: text,
+    ...correlation,
+    transaction_id: idText,
+    payment_attempt_id: optional(idText),
   }),
   generate_lead: object({
     value: optional(amount),
@@ -208,7 +366,28 @@ const schemas = {
   search: object({
     search_term: string().check(minLength(1), maxLength(256), noContactPii),
   }),
-};
+  remove_from_cart: commerce,
+  view_cart: commerce,
+  add_shipping_info: extend(commerce, { ...correlation, shipping_tier: optional(freeText) }),
+  add_payment_info: extend(commerce, { ...correlation, payment_attempt_id: optional(idText) }),
+  refund: object({
+    transaction_id: idText,
+    currency: optional(currency),
+    value: optional(amount),
+    items: optional(array(item).check(maxLength(100))),
+    shipping: optional(amount),
+    tax: optional(amount),
+    coupon: optional(text),
+    affiliation: optional(text),
+  }).check(
+    refine((refund) => refund.value === undefined || refund.currency !== undefined, {
+      message: 'value requires currency',
+    }),
+  ),
+  view_item_list: itemList,
+  select_item: itemList,
+  add_to_wishlist: commerce,
+} satisfies Record<EventName, $ZodType>;
 
 export type EventFamily = 'ga4' | 'meta' | 'clarity';
 export type EventMapping<Key extends string = string> = Readonly<{
@@ -257,35 +436,56 @@ const META_STANDARD_NAMES = new Set([
   'SubmitApplication',
   'Subscribe',
 ]);
-const META_NAMES: Record<EventName, string> = {
-  page_view: 'PageView',
-  product_view: 'ViewContent',
-  add_to_cart: 'AddToCart',
-  begin_checkout: 'InitiateCheckout',
-  purchase: 'Purchase',
-  generate_lead: 'Lead',
-  search: 'Search',
-  sign_up: 'CompleteRegistration',
-  login: 'Login',
+/**
+ * Explicit predefined mapping table. GA4 and Clarity cover every predefined event; Meta covers only
+ * events with a Meta standard (or the established custom `Login`) equivalent. A family without an
+ * entry makes `resolveProviderEvent` throw `event_mapping_missing`, which core reports as skipped.
+ */
+const PREDEFINED_MAPPINGS: Record<
+  EventName,
+  { ga4: string; meta?: { name: string; mode: 'standard' | 'custom' } }
+> = {
+  page_view: { ga4: 'page_view', meta: { name: 'PageView', mode: 'standard' } },
+  product_view: { ga4: 'view_item', meta: { name: 'ViewContent', mode: 'standard' } },
+  add_to_cart: { ga4: 'add_to_cart', meta: { name: 'AddToCart', mode: 'standard' } },
+  begin_checkout: { ga4: 'begin_checkout', meta: { name: 'InitiateCheckout', mode: 'standard' } },
+  purchase: { ga4: 'purchase', meta: { name: 'Purchase', mode: 'standard' } },
+  generate_lead: { ga4: 'generate_lead', meta: { name: 'Lead', mode: 'standard' } },
+  search: { ga4: 'search', meta: { name: 'Search', mode: 'standard' } },
+  sign_up: { ga4: 'sign_up', meta: { name: 'CompleteRegistration', mode: 'standard' } },
+  login: { ga4: 'login', meta: { name: 'Login', mode: 'custom' } },
+  remove_from_cart: { ga4: 'remove_from_cart' },
+  view_cart: { ga4: 'view_cart' },
+  add_shipping_info: { ga4: 'add_shipping_info' },
+  add_payment_info: { ga4: 'add_payment_info', meta: { name: 'AddPaymentInfo', mode: 'standard' } },
+  refund: { ga4: 'refund' },
+  view_item_list: { ga4: 'view_item_list' },
+  select_item: { ga4: 'select_item' },
+  add_to_wishlist: { ga4: 'add_to_wishlist', meta: { name: 'AddToWishlist', mode: 'standard' } },
 };
 const PREDEFINED_EVENTS: ReadonlyMap<string, EventDefinition> = new Map(
-  (Object.keys(schemas) as EventName[]).map((name) => [
-    name,
-    {
+  (Object.keys(schemas) as EventName[]).map((name) => {
+    const { ga4, meta } = PREDEFINED_MAPPINGS[name];
+    return [
       name,
-      schema: schemas[name],
-      map: {
-        ga4: { name: name === 'product_view' ? 'view_item' : name },
-        meta: { name: META_NAMES[name], mode: name === 'login' ? 'custom' : 'standard' },
-        clarity: { name },
-      },
-    },
-  ]),
+      Object.freeze({
+        name,
+        schema: schemas[name],
+        map: Object.freeze({
+          ga4: Object.freeze({ name: ga4 }),
+          ...(meta ? { meta: Object.freeze({ ...meta }) } : {}),
+          clarity: Object.freeze({ name }),
+        }),
+      }),
+    ];
+  }),
 );
+/** Predefined SDK names and every provider name they map to are unavailable to consumer events. */
 const RESERVED_PROVIDER_NAMES = new Set([
   ...PREDEFINED_EVENTS.keys(),
-  'view_item',
-  ...Object.values(META_NAMES),
+  ...Object.values(PREDEFINED_MAPPINGS).flatMap(({ ga4, meta }) =>
+    meta ? [ga4, meta.name] : [ga4],
+  ),
 ]);
 const FORBIDDEN_KEYS = new Set([
   'em',
@@ -331,19 +531,38 @@ function safeKey(key: string): boolean {
 /** Shared post-parse privacy/resource boundary, including nested consumer properties. */
 export function isSafeEventProperties(value: unknown): value is Record<string, unknown> {
   let nodes = 0;
-  const visit = (entry: unknown, depth: number): boolean => {
+  // `identifier` values follow the identifier rule; `contents` marks Meta's contents[] whose `id`
+  // entries are identifiers too. Everything else keeps the full free-text guard.
+  type Field = 'identifier' | 'contents' | undefined;
+  const visit = (entry: unknown, depth: number, field: Field): boolean => {
     if (++nodes > 5000 || depth > 8) return false;
     if (entry === null || entry === undefined || typeof entry === 'boolean') return true;
     if (typeof entry === 'number') return Number.isFinite(entry);
-    if (typeof entry === 'string') return entry.length <= 2048 && !containsContactPii(entry);
+    if (typeof entry === 'string')
+      return (
+        entry.length <= 2048 &&
+        !(field === 'identifier' ? containsIdentifierPii(entry) : containsContactPii(entry))
+      );
     if (Array.isArray(entry))
-      return entry.length <= 100 && entry.every((item) => visit(item, depth + 1));
+      return entry.length <= 100 && entry.every((item) => visit(item, depth + 1, field));
     if (!entry || typeof entry !== 'object' || Object.getPrototypeOf(entry) !== Object.prototype)
       return false;
     const entries = Object.entries(entry);
     return (
       entries.length <= 100 &&
-      entries.every(([key, item]) => safeKey(key) && visit(item, depth + 1))
+      entries.every(
+        ([key, item]) =>
+          safeKey(key) &&
+          visit(
+            item,
+            depth + 1,
+            IDENTIFIER_KEYS.has(key) || (field === 'contents' && key === 'id')
+              ? 'identifier'
+              : key === 'contents'
+                ? 'contents'
+                : undefined,
+          ),
+      )
     );
   };
   try {
@@ -351,7 +570,7 @@ export function isSafeEventProperties(value: unknown): value is Record<string, u
       !!value &&
       typeof value === 'object' &&
       !Array.isArray(value) &&
-      visit(value, 0) &&
+      visit(value, 0, undefined) &&
       JSON.stringify(value).length <= 65536
     );
   } catch {
@@ -501,7 +720,8 @@ function predefinedMetaProperties(properties: Record<string, unknown>): Record<s
   return {
     ...remaining,
     ...(transaction_id ? { order_id: transaction_id } : {}),
-    ...(entries
+    // An empty item list carries no product, so Meta receives no content fields at all.
+    ...(entries?.length
       ? {
           content_type: 'product',
           content_ids: entries.map((item) => item.item_id),
@@ -596,11 +816,139 @@ export function sanitizeEvent(
       return undefined;
     properties.page_path = properties.page_path.split(/[?#]/)[0] ?? '/';
   }
-  if (!isSafeEventProperties(parsed.data)) return undefined;
+  const properties =
+    input.name === 'product_view'
+      ? normalizeProductView(parsed.data as ProductViewProperties)
+      : (parsed.data as Record<string, unknown>);
+  if (!isSafeEventProperties(properties)) return undefined;
+  return { name: input.name, eventId, timestamp, properties };
+}
+/** The deprecated single-item shape becomes the commerce shape, so providers only see `items[]`. */
+function normalizeProductView(data: ProductViewProperties): Record<string, unknown> {
+  if (!('item_id' in data)) return data;
+  const { item_id, item_name, price, item_category, item_brand, item_variant } = data;
+  const items = data.items?.length
+    ? data.items
+    : [
+        Object.fromEntries(
+          Object.entries({
+            item_id,
+            item_name,
+            price,
+            item_category,
+            item_brand,
+            item_variant,
+          }).filter(([, entry]) => entry !== undefined),
+        ) as CommerceItem,
+      ];
+  const value = data.value ?? price;
   return {
-    name: input.name,
-    eventId,
-    timestamp,
-    properties: parsed.data as Record<string, unknown>,
+    ...(data.currency !== undefined ? { currency: data.currency } : {}),
+    ...(data.currency !== undefined && value !== undefined ? { value } : {}),
+    items,
   };
+}
+const USER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const UNSAFE_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+function plainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+/** Malformed sections make the whole value malformed; absent sections are simply omitted. */
+class MalformedContext extends Error {}
+function section(value: unknown): Record<string, unknown> | undefined {
+  if (value === undefined) return undefined;
+  if (!plainObject(value)) throw new MalformedContext();
+  return value;
+}
+function optionalField(value: unknown, valid: (entry: string) => boolean): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !valid(value)) throw new MalformedContext();
+  return value;
+}
+function compact<T extends Record<string, unknown>>(value: T): T | undefined {
+  const entries = Object.entries(value).filter(([, entry]) => entry !== undefined);
+  return entries.length ? (Object.fromEntries(entries) as T) : undefined;
+}
+function httpUrl(value: string): boolean {
+  if (value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+const validUserId = (value: string) => USER_ID.test(value);
+/** Returns a copy holding only allowlisted identity fields, or `undefined` when malformed. */
+export function sanitizeUserIdentity(value: unknown): UserIdentity | undefined {
+  try {
+    if (!plainObject(value)) return undefined;
+    const id = optionalField(value.id, validUserId);
+    if (id === undefined) return undefined;
+    const customerType = optionalField(
+      value.customerType,
+      (entry) => entry === 'guest' || entry === 'registered',
+    ) as CustomerType | undefined;
+    return { id, ...(customerType ? { customerType } : {}) };
+  } catch {
+    return undefined;
+  }
+}
+/**
+ * Returns a copy holding only allowlisted context fields (unknown keys stripped, empty sections
+ * omitted, `{}` when nothing remains), or `undefined` when the value is absent or malformed. Strict hashing, IP and user-agent checks for Meta user data remain the
+ * server adapter's responsibility; this boundary only bounds shape and size.
+ */
+export function sanitizeEventContext(value: unknown): EventContext | undefined {
+  try {
+    const root = section(value);
+    if (!root) return undefined;
+    const page = section(root.page);
+    const ga4 = section(root.ga4);
+    const meta = section(root.meta);
+    let userData: Record<string, string | string[]> | undefined;
+    const rawUserData = section(meta?.userData);
+    if (rawUserData) {
+      const entries = Object.entries(rawUserData);
+      if (entries.length > 20) throw new MalformedContext();
+      userData = {};
+      for (const [key, entry] of entries) {
+        if (!/^[a-z][a-z0-9_]{0,31}$/.test(key) || UNSAFE_OBJECT_KEYS.has(key))
+          throw new MalformedContext();
+        const bounded = (item: unknown) => typeof item === 'string' && item.length <= 512;
+        if (Array.isArray(entry)) {
+          if (entry.length > 10 || !entry.every(bounded)) throw new MalformedContext();
+          userData[key] = [...(entry as string[])];
+        } else if (bounded(entry)) userData[key] = entry as string;
+        else throw new MalformedContext();
+      }
+      if (!entries.length) userData = undefined;
+    }
+    const context = compact<EventContext>({
+      page:
+        page &&
+        compact({
+          location: optionalField(page.location, httpUrl),
+          referrer: optionalField(page.referrer, httpUrl),
+        }),
+      ga4:
+        ga4 &&
+        compact({
+          clientId: optionalField(ga4.clientId, (entry) => /^[A-Za-z0-9._-]{1,128}$/.test(entry)),
+          sessionId: optionalField(ga4.sessionId, (entry) => /^\d{1,20}$/.test(entry)),
+          userId: optionalField(ga4.userId, validUserId),
+        }),
+      meta:
+        meta &&
+        compact({
+          userData,
+          eventSourceUrl: optionalField(meta.eventSourceUrl, httpUrl),
+        }),
+    });
+    return context ?? {};
+  } catch {
+    return undefined;
+  }
 }

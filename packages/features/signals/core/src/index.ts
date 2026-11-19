@@ -3,24 +3,43 @@ import {
   sanitizeEvent,
   createEventRegistry,
   resolveProviderEvent,
+  sanitizeEventContext,
+  sanitizeUserIdentity,
   type EventDefinition,
+  type EventContext,
   type RegisteredEventInput,
   type Consent,
   type DispatchResult,
+  type DispatchStatus,
   type EventInput,
   type Provider,
+  type SignalEvent,
+  type TrackOptions,
+  type UserIdentity,
 } from '@techinject/contracts';
 export type {
   Consent,
   DispatchResult,
+  DispatchStatus,
   EventInput,
+  EventName,
+  EventContext,
+  TrackOptions,
+  UserIdentity,
+  CustomerType,
   Provider,
   SignalEvent,
   Observer,
   RequestRecord,
   CommerceItem,
   CommerceProperties,
+  CheckoutCorrelation,
+  BeginCheckoutProperties,
+  ShippingInfoProperties,
+  PaymentInfoProperties,
   PurchaseProperties,
+  RefundProperties,
+  ItemListProperties,
   PageViewProperties,
 } from '@techinject/contracts';
 export { DENIED_CONSENT, defineEvent } from '@techinject/contracts';
@@ -39,7 +58,12 @@ export type SignalsOptions<Events extends readonly EventDefinition[] = readonly 
   timeoutMs?: number;
   maxPending?: number;
   onDiagnostic?: (result: DispatchResult) => void;
+  /** Development aid. The host passes its own flag; the SDK reads no environment. */
+  debug?: boolean;
+  /** Called only when `debug` is true. Warnings carry the event name only, never values. */
+  onWarning?: (warning: SignalsWarning) => void;
 };
+export type SignalsWarning = { code: 'duplicate_event'; name: string };
 export type ConnectionStatus = {
   name: string;
   category: keyof Consent;
@@ -51,7 +75,8 @@ export type ConnectionStatus = {
   denied: number;
   dropped: number;
   invalid: number;
-  lastStatus?: DispatchResult['outcomes'][number]['status'];
+  skipped: number;
+  lastStatus?: DispatchStatus;
   lastUpdated?: number;
 };
 export type Signals<Events extends readonly EventDefinition[] = readonly []> = ReturnType<
@@ -149,6 +174,7 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
     denied: 0,
     dropped: 0,
     invalid: 0,
+    skipped: 0,
   }));
   const listeners = new Set<() => void>();
   const notify = () => {
@@ -161,13 +187,37 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
     }
   };
   const pending = new Set<Promise<DispatchResult>>();
-  const active = new Map<AbortController, keyof Consent>();
+  // Per-call consent sends (`instance: false`) are aborted only by dispose, never by setConsent.
+  const active = new Map<AbortController, { category: keyof Consent; instance: boolean }>();
+  let user: UserIdentity | undefined;
   const timeoutMs = Number.isFinite(options.timeoutMs)
     ? Math.max(1, Math.min(options.timeoutMs!, 60000))
     : 5000;
   const maxPending = Number.isFinite(options.maxPending)
     ? Math.max(1, Math.min(Math.floor(options.maxPending!), 1000))
     : 100;
+  const recentEvents = new Map<string, number>();
+  function warnDuplicate(event: SignalEvent) {
+    // Development aid only: never suppresses delivery and never reports values.
+    if (options.debug !== true) return;
+    let key: string;
+    try {
+      key = `${event.name}\u0000${stableJson(event.properties)}`;
+    } catch {
+      return;
+    }
+    const now = Date.now();
+    const previous = recentEvents.get(key);
+    recentEvents.delete(key);
+    recentEvents.set(key, now);
+    while (recentEvents.size > 50) recentEvents.delete(recentEvents.keys().next().value!);
+    if (previous === undefined || now - previous > 1000) return;
+    try {
+      options.onWarning?.({ code: 'duplicate_event', name: event.name });
+    } catch {
+      /* Warnings must not affect hosts. */
+    }
+  }
   function report(result: DispatchResult) {
     // Outcomes retain provider order, including duplicate names. Never retain payloads or IDs.
     result.outcomes.forEach((outcome, index) => {
@@ -186,11 +236,39 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
     }
     return result;
   }
+  type Dispatch = {
+    consent: Consent;
+    /** True when the effective consent is the instance consent (aborted on withdrawal). */
+    instance: boolean;
+    categories?: ReadonlySet<keyof Consent>;
+    providers?: ReadonlySet<string>;
+    context?: EventContext;
+  };
+  /** `page` plus only the receiving family's slice; providers without a family get no context. */
+  function scopeContext(
+    context: EventContext | undefined,
+    family: Provider['eventFamily'],
+  ): EventContext | undefined {
+    if (!context || !family) return undefined;
+    const slice = (context as Record<string, unknown>)[family];
+    const scoped: Record<string, unknown> = {};
+    if (context.page) scoped.page = context.page;
+    if (slice) scoped[family] = slice;
+    return Object.keys(scoped).length ? (scoped as EventContext) : undefined;
+  }
   async function send(
     provider: Provider,
-    event: NonNullable<ReturnType<typeof sanitizeEvent>>,
+    event: SignalEvent,
+    dispatch: Dispatch,
   ): Promise<DispatchResult['outcomes'][number]> {
-    if (!consent[provider.category]) {
+    if (
+      (dispatch.categories && !dispatch.categories.has(provider.category)) ||
+      (dispatch.providers && !dispatch.providers.has(provider.name))
+    ) {
+      return { provider: provider.name, status: 'skipped', reason: 'not_targeted' };
+    }
+    const effective = dispatch.instance ? consent : dispatch.consent;
+    if (!effective[provider.category]) {
       return { provider: provider.name, status: 'denied', reason: 'consent' };
     }
     if (provider.eventFamily) {
@@ -204,18 +282,15 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
           ),
         };
       } catch (error) {
-        return {
-          provider: provider.name,
-          status: 'invalid',
-          reason:
-            error instanceof Error && error.message === 'event_mapping_missing'
-              ? 'event_mapping_missing'
-              : 'event_mapping',
-        };
+        return error instanceof Error && error.message === 'event_mapping_missing'
+          ? { provider: provider.name, status: 'skipped', reason: 'event_mapping_missing' }
+          : { provider: provider.name, status: 'invalid', reason: 'event_mapping' };
       }
     }
+    const context = scopeContext(dispatch.context, provider.eventFamily);
+    event = { ...event, consent: { ...effective }, ...(context ? { context } : {}) };
     const controller = new AbortController();
-    active.set(controller, provider.category);
+    active.set(controller, { category: provider.category, instance: dispatch.instance });
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
@@ -245,7 +320,47 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
       active.delete(controller);
     }
   }
-  function track(input: RegisteredEventInput<Events>): Promise<DispatchResult> {
+  const CATEGORIES: readonly (keyof Consent)[] = ['analytics', 'marketing', 'observability'];
+  /** Reads untrusted options once. Returns a reason string when they are malformed. */
+  function readOptions(value: unknown): Dispatch | 'track_options' | 'event_context' {
+    if (value === undefined) return { consent, instance: true };
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return 'track_options';
+    const raw = value as TrackOptions;
+    const dispatch: Dispatch = { consent, instance: true };
+    if (raw.categories !== undefined) {
+      const categories: unknown = raw.categories;
+      if (
+        !Array.isArray(categories) ||
+        !categories.every((entry) => CATEGORIES.includes(entry as keyof Consent))
+      )
+        return 'track_options';
+      dispatch.categories = new Set(categories as (keyof Consent)[]);
+    }
+    if (raw.providers !== undefined) {
+      const names: unknown = raw.providers;
+      if (
+        !Array.isArray(names) ||
+        names.length > 20 ||
+        !names.every((entry) => typeof entry === 'string' && entry.length > 0 && entry.length <= 64)
+      )
+        return 'track_options';
+      dispatch.providers = new Set(names as string[]);
+    }
+    if (raw.consent !== undefined) {
+      dispatch.consent = normalizeConsent(raw.consent);
+      dispatch.instance = false;
+    }
+    if (raw.context !== undefined) {
+      const context = sanitizeEventContext(raw.context);
+      if (context === undefined) return 'event_context';
+      dispatch.context = context;
+    }
+    return dispatch;
+  }
+  function track(
+    input: RegisteredEventInput<Events>,
+    trackOptions?: TrackOptions,
+  ): Promise<DispatchResult> {
     let suppliedId: string | undefined;
     try {
       suppliedId = input?.eventId;
@@ -265,36 +380,55 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
     } catch {
       event = undefined;
     }
-    const status = !event
-      ? 'invalid'
-      : disposed || pending.size >= maxPending
-        ? 'dropped'
-        : undefined;
-    if (status)
+    let dispatch: ReturnType<typeof readOptions> = 'track_options';
+    try {
+      dispatch = readOptions(trackOptions);
+    } catch {
+      /* Throwing getters are malformed options; values stay private. */
+    }
+    const failure: { status: DispatchStatus; reason: string } | undefined = !event
+      ? { status: 'invalid', reason: 'event_schema' }
+      : typeof dispatch === 'string'
+        ? { status: 'invalid', reason: dispatch }
+        : disposed || pending.size >= maxPending
+          ? { status: 'dropped', reason: 'capacity_or_disposed' }
+          : undefined;
+    if (event && typeof dispatch !== 'string' && suppliedId === undefined && !disposed)
+      warnDuplicate(event);
+    if (failure)
       return Promise.resolve(
         report({
           eventId,
           outcomes: (providers.length ? providers.map((p) => p.name) : ['core']).map(
-            (provider) => ({
-              provider,
-              status,
-              reason: status === 'invalid' ? 'event_schema' : 'capacity_or_disposed',
-            }),
+            (provider) => ({ provider, ...failure }),
           ),
         }),
       );
-    const operation = Promise.all(providers.map((p) => send(p, event!))).then((outcomes) =>
+    const valid = event!;
+    const plan = dispatch as Dispatch;
+    const operation = Promise.all(providers.map((p) => send(p, valid, plan))).then((outcomes) =>
       report({ eventId, outcomes }),
     );
     pending.add(operation);
     void operation.finally(() => pending.delete(operation));
     return operation;
   }
+  /** Fan the identity out to each provider, only while its category is granted. */
+  function shareUser(next: UserIdentity | undefined) {
+    for (const provider of providers) {
+      try {
+        provider.setUser?.(next && consent[provider.category] ? { ...next } : undefined);
+      } catch {
+        /* Host isolation. */
+      }
+    }
+  }
   function setConsent(next: Consent) {
     consent = normalizeConsent(next);
     for (const connection of connections) connection.consent = consent[connection.category];
     notify();
-    for (const [controller, category] of active) if (!consent[category]) controller.abort();
+    for (const [controller, owner] of active)
+      if (owner.instance && !consent[owner.category]) controller.abort();
     for (const provider of providers) {
       try {
         provider.setConsent?.({ ...consent });
@@ -302,12 +436,24 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
         /* Host isolation. */
       }
     }
+    if (!disposed) shareUser(user);
   }
   setConsent(consent);
   return {
     track,
     setConsent,
     getConsent: () => ({ ...consent }),
+    /** Sets the opaque host user key. An invalid identity is ignored and clears any previous one. */
+    setUser(next: UserIdentity) {
+      if (disposed) return;
+      user = sanitizeUserIdentity(next);
+      shareUser(user);
+    },
+    resetUser() {
+      if (disposed) return;
+      user = undefined;
+      shareUser(undefined);
+    },
     getConnections: (): ConnectionStatus[] => connections.map((connection) => ({ ...connection })),
     subscribeConnections(listener: () => void) {
       listeners.add(listener);
@@ -320,12 +466,15 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
     },
     dispose: () => {
       disposed = true;
+      user = undefined;
+      recentEvents.clear();
       for (const connection of connections) connection.disposed = true;
       notify();
       // Keep observers through aborted in-flight outcomes, then release them.
       if (pending.size) void Promise.all([...pending]).then(() => listeners.clear());
       else listeners.clear();
       for (const controller of active.keys()) controller.abort();
+      shareUser(undefined);
       for (const provider of providers) {
         try {
           provider.dispose?.();
@@ -335,5 +484,15 @@ export function createSignals<const Events extends readonly EventDefinition[] = 
       }
     },
   };
+}
+/** Deterministic JSON with sorted object keys, for in-memory duplicate keys only. */
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object')
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson((value as Record<string, unknown>)[key])}`)
+      .join(',')}}`;
+  return JSON.stringify(value) ?? 'null';
 }
 export * from './attribution.js';

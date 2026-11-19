@@ -28,6 +28,7 @@ flowchart LR
   NS[Next Node host] --> S
   S --> C
   S --> M[Meta CAPI]
+  S --> G[GA4 Measurement Protocol]
   S --> O[OTLP collector]
   NS --> V[Host OpenTelemetry]
   V --> O
@@ -35,7 +36,7 @@ flowchart LR
 
 ## Trust and data boundaries
 
-Browser receives public IDs only. CAPI access token, OTLP headers, webhook secret and order database remain server-only. Raw bodies/headers/error messages never become telemetry. Routes sanitized; configure explicit templates for sensitive arbitrary slugs. Third-party scripts need host privacy/masking settings. No identity API or automatic matching data extraction.
+Browser receives public IDs only. CAPI access token, OTLP headers, webhook secret and order database remain server-only. Raw bodies/headers/error messages never become telemetry. Routes sanitized; configure explicit templates for sensitive arbitrary slugs. Third-party scripts need host privacy/masking settings. No SDK-owned identity or automatic matching data extraction; an optional opaque host user key is forwarded only under consent (see the 19 November 2026 section).
 
 Contracts include the original ecommerce events and review-extension lead, contact, account, search and custom events. Unknown event properties are stripped; contact events accept a non-identifying channel, not a phone number or destination. Shared core URL sanitation removes query strings, fragments and credentials from provider URL metadata. The standalone browser bundle is experimental and starts denied by default; hosts connect their consent banner through `window.signals.setConsent(...)`. Bun route-table handlers are instrumented only when the host passes its table through `instrumentBunRoutes`.
 
@@ -79,4 +80,17 @@ Core owns pure, platform-independent URL/referrer classification (parseAttributi
 
 ## Instance event registry — B5
 
-Contracts own the nine predefined schemas/mappings, `defineEvent` types and the shared bounded privacy/validation guard. Core snapshots app-supplied definitions from `events` at construction and resolves mappings after provider consent. Transport adapters declare their GA4, Meta or Clarity mapping family; Pixel and CAPI use the same Meta mapping while keeping browser/server transports separate. Each provider gets an independent payload clone and the same event identity. Consumer event definitions belong to the host examples and have no global registration or SDK-to-example import.
+Contracts own the 17 predefined schemas/mappings, `defineEvent` types and the shared bounded privacy/validation guard. Core snapshots app-supplied definitions from `events` at construction and resolves mappings after provider consent. Transport adapters declare their GA4, Meta or Clarity mapping family; Pixel and CAPI use the same Meta mapping while keeping browser/server transports separate. Each provider gets an independent payload clone and the same event identity. Consumer event definitions belong to the host examples and have no global registration or SDK-to-example import.
+
+## Commerce lifecycle, per-call context and identity — 19 November 2026
+
+Package boundaries and dependency direction are unchanged: contracts import Zod only, core imports contracts only, browser and Next client packages never import server packages, and runtime, configuration and transports are injected. No new package, hosted service or worker was added.
+
+- **Server GA4.** `createGA4MeasurementProtocolProvider` lives in `@techinject/server` (`ga4-mp.ts`) and is re-exported by `@techinject/nextjs-server` and `@techinject/sveltekit-server`. It is a normal provider (family `ga4`, category `analytics`) using an injected `fetch`. The API secret is server-only and appears only in the request query.
+- **Per-call context.** `track(input, { consent?, context?, categories?, providers? })` on server instances carries request-scoped consent and transport context. Contracts define and sanitise `EventContext`; core forwards `page` plus the slice for the receiving provider's event family and attaches the effective consent snapshot to the event copy. Providers read only that copy, so one shared server instance serves concurrent requests without leaking shopper data. The browser forwards only `categories` and `providers` and sets `context.page` itself.
+- **Identity fan-out.** Core holds the opaque host user key in memory and offers it to each provider's optional `setUser` only while that provider's category is granted. It reaches GA4 and Clarity; the Meta Pixel adapter has no identity path.
+- **Outcome model.** Core reports `skipped` (no mapping, or not targeted) alongside `sent`, `denied`, `failed`, `invalid` and `dropped`. The connections dashboard counts it.
+- **Browser lifecycle.** The browser SDK may send one consent-time `page_view` to newly granted categories, preload vendor scripts through `prepare()`, and read vendor-held identifiers through `getProviderIds`. All three are opt-in or on demand. Attribution reads are gated on consent.
+- **Host ownership.** Checkout and payment identifiers, user keys, paid-at times, consent snapshots and retries remain host-owned. The Bun lab shows an outbox that stores them; it is a fixture.
+
+Global host OpenTelemetry remains distinct from SDK category consent; its native spans are not sanitized by the SDK. Behavior: [FRD](frd/signals.md). Algorithms: [feature design](../packages/features/signals/DESIGN.md#b6-commerce-lifecycle-per-call-context-and-identity--19-november-2026).

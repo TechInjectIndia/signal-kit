@@ -172,7 +172,7 @@ export const guides = [
       {
         title: 'Make retries a host responsibility',
         paragraphs: [
-          'Write a delivery record transactionally with your order transition. A host worker can retry transient provider errors using the same event ID. Decide which diagnostic outcomes allow the outbox to mark a provider copy complete; a timed-out transport is not proof that the destination received nothing.',
+          'Write a delivery record transactionally with your order transition. A host worker can retry transient provider errors using the same event ID. Decide which diagnostic outcomes allow the outbox to mark a provider copy complete; a timed-out transport is not proof that the destination received nothing. Treat sent, skipped and denied as terminal outcomes for a provider copy: skipped means that provider has no mapping for the event or was not targeted, and is not an error. Retry failed. Park dropped and invalid for a person. Store the paid-at time with the order and pass it as the event timestamp on every attempt so a retry keeps the payment’s business time. Vendors limit event age (Meta documents seven days; GA4 Measurement Protocol backdating is limited to 72 hours). These rules are unreleased and fixture-tested only.',
           'An in-memory telemetry call is best effort. SignalKit’s pending limits and timeouts protect host responses, but they are not a durable queue. Your host supplies crash recovery, replay protection, per-customer consent and a retention policy.',
         ],
       },
@@ -233,8 +233,8 @@ const browser = createBrowserSignals({
       {
         title: 'Keep CAPI credentials and matching data on the server',
         paragraphs: [
-          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version, the page URL where the event happened (eventSourceUrl) and per-request matching data. Meta requires client_user_agent for website events, so every call must include the shopper’s user agent plus at least one other identifier. The adapter accepts SHA-256 hashed em, ph, fn, ln, ge, db, ct, st, zp, country and external_id, plus unhashed client_ip_address, client_user_agent, fbp and fbc. It never hashes plaintext: normalize under Meta’s rules and hash on your server first. Normalize ph to E.164 before removing its leading plus and hashing the digits. Hash the exact case-sensitive external_id preimage shared with Pixel; do not lowercase it. Hashes, IP addresses and user agents are personal data and require an appropriate host consent and retention policy.',
-          'This configuration is illustrative: replace environment values with your server’s validated configuration. Avoid a long-lived userData callback tied to one customer on a shared server instance; create the provider for the correct order context. Never put the access token in a NEXT_PUBLIC variable.',
+          'createMetaCapiProvider requires a token, a numeric Pixel ID, an explicit Graph API version, the page URL where the event happened and per-request matching data, both passed per call in context.meta.eventSourceUrl and context.meta.userData (the eventSourceUrl option and userData callback remain only as fallbacks used when a call supplies none). Meta requires client_user_agent for website events, so every call must include the shopper’s user agent plus at least one other identifier. The adapter accepts SHA-256 hashed em, ph, fn, ln, ge, db, ct, st, zp, country and external_id, plus unhashed client_ip_address, client_user_agent, fbp and fbc. It never hashes plaintext: normalize under Meta’s rules and hash on your server first. Normalize ph to E.164 before removing its leading plus and hashing the digits. The SignalKit Pixel adapter does not send advanced matching, so there is no Pixel-side external_id to match. Hash external_id from a real, stable customer key that you also use elsewhere, preserving its exact case; never derive it from an event ID, URL or random value. If no real identifier exists, omit it and send other permitted matching fields, or skip the CAPI send and record why. Hashes, IP addresses and user agents are personal data and require an appropriate host consent and retention policy.',
+          'This configuration is illustrative: replace environment values with your server’s validated configuration. Pass matching data per call rather than through a long-lived userData callback, so concurrent orders on one shared server instance cannot see each other’s data. This per-call context is unreleased and fixture-tested only. Never put the access token in a NEXT_PUBLIC variable.',
         ],
         code: `import { createServerSignals, createMetaCapiProvider } from '@techinject/server';
 
@@ -245,15 +245,20 @@ const server = createServerSignals({
     pixelId: hostConfig.pixelId,
     accessToken: hostConfig.accessToken,
     apiVersion: hostConfig.graphApiVersion,
-    eventSourceUrl: 'https://your-shop.example/checkout/complete',
-    userData: () => ({
+  })],
+});
+await server.track(verifiedPurchase, {
+  context: {
+    meta: {
+      eventSourceUrl: 'https://your-shop.example/checkout/complete',
+      userData: {
         external_id: hashedCustomerId,
         client_ip_address: request.ip,
         client_user_agent: request.headers.get('user-agent'),
-      }),
-  })],
+      },
+    },
+  },
 });
-await server.track(verifiedPurchase);
 await server.flush();
 server.dispose();`,
         label: 'Server-only order context',
@@ -431,7 +436,7 @@ export function middleware(request: NextRequest) {
       {
         title: 'Enable capture in Next.js',
         paragraphs: [
-          'Attribution is off by default. Enable it in the browser configuration passed to SignalKitProvider; category names the consent category that permits persisting the touch and defaults to marketing. Read the touch anywhere with useSignals().getAttribution(), then post first and last to your own order endpoint so the order record stores channel, source, medium, campaign, term and click IDs. Validate the posted object on the server; the browser is not a trusted source.',
+          'Attribution is off by default. Enable it in the browser configuration passed to SignalKitProvider; category names the consent category that permits persisting the touch and defaults to marketing. Read the touch anywhere with useSignals().getAttribution(), which returns an empty object while that category is denied, then post first and last to your own order endpoint so the order record stores channel, source, medium, campaign, term and click IDs. Validate the posted object on the server; the browser is not a trusted source.',
         ],
         code: `'use client';
 import { SignalKitProvider, useSignals, createGA4Provider } from '@techinject/nextjs';
@@ -456,8 +461,8 @@ export function PlaceOrderButton({ cartId }: { cartId: string }) {
     <button
       type="button"
       onClick={async () => {
-        // Gate the stored copy on the category that permits persisting the touch.
-        const attribution = signals.getConsent().marketing ? signals.getAttribution() : {};
+        // getAttribution() returns {} while the attribution consent category is denied.
+        const attribution = signals.getAttribution();
         await fetch('/api/orders', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },

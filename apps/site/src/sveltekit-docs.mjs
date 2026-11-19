@@ -57,7 +57,7 @@ bun run --filter @signalkit/example-sveltekit dev
     {
       title: 'Connect consent and business events',
       paragraphs: [
-        'A child component can read the layout context and obtain the mounted browser API. Apply your actual persisted consent via setConsent. Pages denied before that decision are dropped without replay; page() can explicitly record the current page after consent.',
+        'A child component can read the layout context and obtain the mounted browser API. Apply your actual persisted consent via setConsent. Pages denied before that decision are dropped without replay; set pageOnConsent: true to send one new page view for the newly granted category, or call page() yourself after consent, not both.',
         'Initial and pathname pages are automatic; do not add an afterNavigate page call for every route. Query-only changes are not new pages. Disable GA4 Enhanced Measurement history tracking to prevent duplicate vendor pages. Technical browser fetch/XHR needs an observer and observability consent.',
       ],
       code: `<script lang="ts">

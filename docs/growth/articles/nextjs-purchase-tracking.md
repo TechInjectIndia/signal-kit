@@ -68,7 +68,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 ## Make retries a host responsibility
 
-Write a delivery record transactionally with your order transition. A host worker can retry transient provider errors using the same event ID. Decide which diagnostic outcomes allow the outbox to mark a provider copy complete; a timed-out transport is not proof that the destination received nothing.
+Write a delivery record transactionally with your order transition. A host worker can retry transient provider errors using the same event ID. Decide which diagnostic outcomes allow the outbox to mark a provider copy complete; a timed-out transport is not proof that the destination received nothing. Treat sent, skipped and denied as terminal outcomes for a provider copy: skipped means that provider has no mapping for the event or was not targeted, and is not an error. Retry failed. Park dropped and invalid for a person. Store the paid-at time with the order and pass it as the event timestamp on every attempt so a retry keeps the payment's business time. Vendors limit event age (Meta documents seven days; GA4 Measurement Protocol backdating is limited to 72 hours). These rules are unreleased and fixture-tested only.
 
 An in-memory telemetry call is best effort. SignalKit’s pending limits and timeouts protect host responses, but they are not a durable queue. Your host supplies crash recovery, replay protection, per-customer consent and a retention policy.
 

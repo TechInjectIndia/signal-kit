@@ -79,3 +79,21 @@ it('preserves two-argument usage and skips unknown and duplicate backends', () =
   expect(element.textContent).toContain('OpenTelemetry');
   expect(element.textContent).not.toContain('__proto__');
 });
+
+it('runtime evidence: shows skipped outcomes distinctly from invalid, without payloads or ids', async () => {
+  const element = document.createElement('div');
+  const signals = createSignals({
+    providers: [{ name: 'ga4', category: 'analytics', send() {} }],
+  });
+  signals.setConsent({ analytics: true, marketing: true, observability: false });
+  mountConnectionsDashboard(element, signals);
+  await signals.track(
+    { name: 'page_view', properties: { page_path: '/secret-path' } },
+    { categories: ['marketing'] },
+  );
+  expect(element.textContent).toContain('Not routed to this provider');
+  expect(element.textContent).toContain('1 skipped');
+  expect(element.textContent).toContain('0 invalid');
+  expect(element.textContent).not.toContain('Invalid event');
+  expect(element.textContent).not.toContain('/secret-path');
+});

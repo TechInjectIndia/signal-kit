@@ -25,7 +25,8 @@ function isTouch(value: unknown): value is AttributionTouch {
 }
 /**
  * First/last-touch visit source kept in first-party storage once the host's consent allows it.
- * Captured in memory on landing; persisted, merged and expired only under consent.
+ * Captured in memory on landing; read, persisted, merged and expired only under consent, so a
+ * later grant still persists the landing touch captured while consent was pending.
  */
 export function createAttributionStore(options: AttributionOptions = {}) {
   const category = options.category ?? 'marketing';
@@ -78,12 +79,18 @@ export function createAttributionStore(options: AttributionOptions = {}) {
       if (allowed) persist();
       else write({});
     },
+    /** Visit source for the host. Empty while the category is denied; nothing leaves memory. */
     get(): Attribution {
-      const stored = allowed ? read() : {};
+      if (!allowed) return {};
+      const stored = read();
       const current = landing && landing.channel !== 'direct' ? landing : undefined;
       const first = stored.first ?? current;
       const last = current ?? stored.last;
       return { ...(first ? { first } : {}), ...(last ? { last } : {}) };
+    },
+    /** True when a non-direct landing touch is held in memory, regardless of consent. */
+    hasLanding(): boolean {
+      return landing !== undefined && landing.channel !== 'direct';
     },
     clear() {
       landing = undefined;
