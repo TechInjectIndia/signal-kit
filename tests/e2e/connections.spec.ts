@@ -20,7 +20,7 @@ test('connections page follows real consent and SDK outcomes on mobile', async (
   await expect(events.getByRole('article')).toHaveCount(5);
   await expect(events).toContainText('Blocked by consent');
   await page.getByLabel('analytics', { exact: true }).check();
-  await page.getByRole('button', { name: 'Track this page' }).click();
+  // pageOnConsent sends the consent-time page_view; no manual page() call is needed.
   await expect(events).toContainText('SDK send completed');
   await expect(observability.getByText('Not configured', { exact: true })).toHaveCount(3);
   await page.getByLabel('analytics', { exact: true }).uncheck();

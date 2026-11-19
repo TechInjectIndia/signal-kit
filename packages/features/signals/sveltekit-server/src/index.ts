@@ -53,8 +53,14 @@ export function createSvelteKitHooks<const Events extends readonly EventDefiniti
   };
   return { handle, handleFetch };
 }
-export { createOTLPObserver } from '@techinject/server';
-export type { ServerConfig } from '@techinject/server';
+export { createOTLPObserver, createGA4MeasurementProtocolProvider } from '@techinject/server';
+export type {
+  ServerConfig,
+  GA4MeasurementProtocolOptions,
+  DispatchResult,
+  EventContext,
+  TrackOptions,
+} from '@techinject/server';
 
 export { createSentryObserver, combineObservers } from '@techinject/server';
 export type { SentryClient, SentryEvent, SentryOptions } from '@techinject/server';

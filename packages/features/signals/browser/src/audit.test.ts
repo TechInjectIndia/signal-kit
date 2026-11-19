@@ -259,4 +259,34 @@ describe('auditAttribution', () => {
       expect(typeof finding.hint).toBe('string');
     }
   });
+  it('does not flag removed parameters while consent is denied (G6, fixture evidence)', () => {
+    history.replaceState(null, '', '/?gclid=test');
+    const sdk = createBrowserSignals({ attribution: true });
+    disposals.push(sdk.dispose);
+    history.replaceState(null, '', '/');
+    expect(sdk.getAttribution()).toEqual({});
+    const findings = auditAttribution({
+      signals: sdk,
+      document: fakeDocument({}),
+      performance: fakePerformance('http://localhost:3000/?gclid=test'),
+    });
+    // refusedStarts is page-wide, so an earlier test's second instance may also be reported.
+    expect(ids(findings)).toContain('consent-never-granted');
+    expect(ids(findings)).not.toContain('params-removed-before-capture');
+  });
+  it('still reads getAttribution() for instances without the capture probe', () => {
+    const legacy = {
+      getAttribution: () => ({}),
+      getConsent: () => consent,
+      getConnections: () => [],
+      isAttributionEnabled: () => true,
+    };
+    const findings = auditAttribution({
+      signals: legacy,
+      document: fakeDocument({}),
+      location: location('https://shop.example/'),
+      performance: fakePerformance('https://shop.example/?gclid=abc'),
+    });
+    expect(ids(findings)).toContain('params-removed-before-capture');
+  });
 });

@@ -110,9 +110,9 @@ export function PlaceOrderButton({ cartId }: { cartId: string }) {
     <button
       type="button"
       onClick={async () => {
-        // getAttribution() also returns the in-memory landing touch before consent, so gate the
-        // copy you store on the same category that permits persisting it.
-        const attribution = signals.getConsent().marketing ? signals.getAttribution() : {};
+        // getAttribution() returns {} while the attribution consent category is denied, so no
+        // host-side guard is needed. The landing touch persists if consent is granted later.
+        const attribution = signals.getAttribution();
         await fetch('/api/orders', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },

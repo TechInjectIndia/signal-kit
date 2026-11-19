@@ -15,6 +15,21 @@ function ga4Consent(analytics: boolean, marketing: boolean) {
     ad_personalization: ads,
   };
 }
+/**
+ * Live view of window.dataLayer with each gtag `Arguments` entry read as a plain array, so the
+ * command assertions below can deep-compare. Fixture evidence only, not live GA4 verification.
+ */
+function gtagLayer(): unknown[][] {
+  const raw = (window as unknown as { dataLayer: ArrayLike<unknown>[] }).dataLayer;
+  return new Proxy(raw, {
+    get(target, key, receiver) {
+      const value = Reflect.get(target, key, receiver);
+      return typeof key === 'string' && /^\d+$/.test(key) && value && typeof value === 'object'
+        ? Array.from(value as ArrayLike<unknown>)
+        : value;
+    },
+  }) as unknown as unknown[][];
+}
 const disposals: (() => void)[] = [];
 afterEach(() => {
   disposals.splice(0).forEach((dispose) => dispose());
@@ -327,7 +342,7 @@ describe('browser providers', () => {
     expect(script?.src).toContain('googletagmanager.com');
     script?.dispatchEvent(new Event('load'));
     await dispatch;
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     expect(
       layer.some(
         (args) =>
@@ -377,7 +392,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     document.querySelector('script')?.dispatchEvent(new Event('load'));
     await first;
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     expect(layer.map((args) => args[0])).toEqual(['consent', 'consent', 'js', 'config', 'event']);
     expect(layer[0]).toEqual(['consent', 'default', ga4Consent(false, false)]);
     expect(layer[1]).toEqual(['consent', 'update', ga4Consent(true, true)]);
@@ -401,7 +416,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     document.querySelector('script')?.dispatchEvent(new Event('load'));
     await first;
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     expect(layer[1]).toEqual(['consent', 'update', ga4Consent(true, false)]);
     sdk.setConsent({ ...analyticsOnly, marketing: true });
     expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(true, true)]);
@@ -422,7 +437,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     document.querySelector('script')?.dispatchEvent(new Event('load'));
     await first;
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     sdk.setConsent({ analytics: false, marketing: false, observability: false });
     expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
     sdk.setConsent({ analytics: false, marketing: false, observability: false });
@@ -441,7 +456,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     document.querySelector('script')?.dispatchEvent(new Event('load'));
     await first;
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     sdk.setConsent({ analytics: false, marketing: false, observability: false });
     expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
     sdk.setConsent(consent);
@@ -471,7 +486,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     const script = document.querySelector('script');
     expect(script).not.toBeNull();
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     expect(layer.some((args) => args[0] === 'event')).toBe(false);
 
     sdk.setConsent({ analytics: false, marketing: false, observability: false });
@@ -496,7 +511,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     const script = document.querySelector('script');
     expect(script).not.toBeNull();
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     sdk.setConsent({ analytics: false, marketing: false, observability: false });
     expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
     script?.dispatchEvent(new Event('load'));
@@ -525,7 +540,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     const script = document.querySelector('script');
     expect(script).not.toBeNull();
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     expect(layer.some((args) => args[0] === 'event')).toBe(false);
     sdk.dispose();
     expect(layer.at(-1)).toEqual(['consent', 'update', ga4Consent(false, false)]);
@@ -543,7 +558,7 @@ describe('browser providers', () => {
     document.querySelector('script')?.dispatchEvent(new Event('load'));
     expect((await firstPage).outcomes[0]?.status).toBe('sent');
     first.dispose();
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     expect(layer.at(-1)).toEqual(['consent', 'update', { analytics_storage: 'denied' }]);
 
     const second = createBrowserSignals({ autoTrack: false, consent, providers: [provider] });
@@ -648,7 +663,7 @@ describe('browser providers', () => {
     await Promise.resolve();
     document.querySelector('script')?.dispatchEvent(new Event('load'));
     await result;
-    const layer = (window as unknown as { dataLayer: unknown[][] }).dataLayer;
+    const layer = gtagLayer();
     const eventCall = layer.findLast(
       (args) => args[0] === 'event' && (args[2] as Record<string, unknown>)?.event_id === 'pv-utm',
     );

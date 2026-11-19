@@ -72,6 +72,21 @@ export default function Catalog() {
     });
   };
 
+  const item = (quantity: number) => ({
+    item_id: 'notebook',
+    item_name: 'Field notebook',
+    price: 450,
+    quantity,
+    item_category: 'Stationery',
+  });
+  const cart = () => ({
+    currency: 'INR',
+    value: 450 * (cartCount || 1),
+    items: [item(cartCount || 1)],
+  });
+  // Synthetic correlation values. The host owns and generates these; the SDK never invents them.
+  const checkout = { checkout_id: 'chk_demo_0001', customer_type: 'guest' as const };
+
   const handleReset = () => {
     setCartCount(0);
     setStep('browse');
@@ -235,6 +250,61 @@ export default function Catalog() {
         Purchases must originate from verified server state; see the Bun signed-webhook example
         above.
       </p>
+      <h2>Cart and checkout events</h2>
+      <p>
+        Meta has no mapping for <code>remove_from_cart</code>, <code>view_cart</code> and{' '}
+        <code>add_shipping_info</code>, so those report <code>skipped</code> there, not an error.
+      </p>
+      <div className="controls">
+        <button
+          onClick={() =>
+            void track({
+              name: 'remove_from_cart',
+              properties: { currency: 'INR', value: 450, items: [item(1)] },
+            })
+          }
+        >
+          Remove from cart
+        </button>
+        <button onClick={() => void track({ name: 'view_cart', properties: cart() })}>
+          View cart
+        </button>
+        <button
+          onClick={() =>
+            void track({
+              name: 'add_shipping_info',
+              properties: { ...cart(), ...checkout, shipping_tier: 'standard' },
+            })
+          }
+        >
+          Add shipping info
+        </button>
+        <button
+          onClick={() =>
+            void track({
+              name: 'add_payment_info',
+              properties: {
+                ...cart(),
+                ...checkout,
+                payment_type: 'card',
+                payment_attempt_id: 'pay_demo_0001',
+              },
+            })
+          }
+        >
+          Add payment info
+        </button>
+        <button
+          onClick={() =>
+            void track({
+              name: 'add_to_wishlist',
+              properties: { currency: 'INR', value: 450, items: [item(1)] },
+            })
+          }
+        >
+          Add to wishlist
+        </button>
+      </div>
       <h2>Consumer-defined events</h2>
       <p>
         These definitions are registered once in the lab root. Only non-identifying choices leave

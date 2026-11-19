@@ -43,11 +43,16 @@ describe('first-party visit source capture', () => {
     const sdk = createBrowserSignals({ attribution: { storage }, autoTrack: false });
     disposals.push(sdk.dispose);
     sdk.start();
-    expect(sdk.getAttribution().last).toMatchObject({ source: 'bing', term: 'field notebook' });
+    // R2: nothing is readable while the attribution category is denied.
+    expect(sdk.getAttribution()).toEqual({});
+    expect(sdk.isAttributionCaptured()).toBe(true);
     expect(storage.size()).toBe(0);
     sdk.setConsent({ ...denied, marketing: true });
+    expect(sdk.getAttribution().last).toMatchObject({ source: 'bing', term: 'field notebook' });
     expect(storage.size()).toBe(1);
     sdk.setConsent(denied);
+    expect(sdk.getAttribution()).toEqual({});
+    expect(sdk.isAttributionCaptured()).toBe(true);
     expect(storage.size()).toBe(0);
     sdk.setConsent({ ...denied, analytics: true });
     expect(storage.size()).toBe(0);
@@ -150,5 +155,45 @@ describe('GA4 attribution fields', () => {
     expect(layer).not.toContain('private');
     expect(layer).not.toContain('secret');
     Object.defineProperty(document, 'referrer', { value: '', configurable: true });
+  });
+});
+describe('consent-gated attribution reads (R2, runtime evidence in jsdom)', () => {
+  it('returns {} while denied, then returns and persists the landing touch on grant', () => {
+    const storage = memoryStorage();
+    history.replaceState(null, '', '/landing?utm_source=news&utm_medium=email&fbclid=fb_1');
+    const sdk = createBrowserSignals({ attribution: { storage } });
+    disposals.push(sdk.dispose);
+    history.replaceState(null, '', '/landing');
+    expect(sdk.getAttribution()).toEqual({});
+    expect(sdk.isAttributionCaptured()).toBe(true);
+    expect(storage.size()).toBe(0);
+    sdk.setConsent({ ...denied, analytics: true });
+    expect(sdk.getAttribution()).toEqual({});
+    sdk.setConsent({ ...denied, marketing: true });
+    const { first, last } = sdk.getAttribution();
+    expect(last).toMatchObject({ channel: 'email', source: 'news' });
+    expect(first).toEqual(last);
+    expect(storage.getItem('signalkit.attribution')).toContain('"email"');
+    sdk.setConsent(denied);
+    expect(sdk.getAttribution()).toEqual({});
+    expect(storage.size()).toBe(0);
+  });
+  it('honours the analytics attribution category and reports no capture for direct visits', () => {
+    const storage = memoryStorage();
+    history.replaceState(null, '', '/?gclid=g_1');
+    const sdk = createBrowserSignals({ attribution: { storage, category: 'analytics' } });
+    disposals.push(sdk.dispose);
+    sdk.setConsent({ ...denied, marketing: true });
+    expect(sdk.getAttribution()).toEqual({});
+    sdk.setConsent({ ...denied, analytics: true });
+    expect(sdk.getAttribution().last?.channel).toBe('paid_search');
+    sdk.dispose();
+    history.replaceState(null, '', '/plain');
+    const direct = createBrowserSignals({ consent, attribution: { storage: memoryStorage() } });
+    disposals.push(direct.dispose);
+    expect(direct.isAttributionCaptured()).toBe(false);
+    const off = createBrowserSignals({ consent, autoTrack: false });
+    disposals.push(off.dispose);
+    expect(off.isAttributionCaptured()).toBe(false);
   });
 });

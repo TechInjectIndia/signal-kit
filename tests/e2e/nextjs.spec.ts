@@ -52,9 +52,11 @@ test('landing source survives the router and persists only under marketing conse
 }) => {
   await page.goto('/?utm_source=bing&utm_medium=cpc&utm_term=field%20notebook&msclkid=m1');
   const source = page.getByRole('region', { name: 'Visit source' }).or(page.locator('.source'));
-  await expect(source).toContainText('paid_search · bing / cpc · “field notebook”');
+  // Marketing consent pending: the landing touch is held in memory only and is not exposed.
+  await expect(source).toContainText('direct or not captured');
   expect(await page.evaluate(() => localStorage.getItem('signalkit.attribution'))).toBeNull();
   await page.getByLabel('marketing', { exact: true }).check();
+  await expect(source).toContainText('paid_search · bing / cpc · “field notebook”');
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('signalkit.attribution')))
     .toContain('paid_search');
@@ -95,4 +97,40 @@ test('attribution self-check reports a clean landing and a tainted canonical lin
   await expect(audit.locator('li[data-severity="error"]')).toContainText(
     'canonical-has-tracking-params',
   );
+});
+test('delayed consent sends one GA4 page_view, then one Meta PageView, with no double count', async ({
+  page,
+}) => {
+  await page.route(/googletagmanager\.com\/gtag\/js|fbevents\.js|clarity\.ms\/tag\//, (route) =>
+    route.fulfill({ status: 200, contentType: 'text/javascript', body: '' }),
+  );
+  await page.goto('/?gclid=test');
+  await expect(page.getByRole('status')).toHaveText('SDK ready · fake public provider IDs');
+  // Provider stubs record commands: gtag pushes Arguments objects to dataLayer, fbq queues arrays.
+  const ga4PageViews = () =>
+    page.evaluate(
+      () =>
+        ((window as unknown as { dataLayer?: ArrayLike<unknown>[] }).dataLayer ?? []).filter(
+          (entry) => entry[0] === 'event' && entry[1] === 'page_view',
+        ).length,
+    );
+  const pixelPageViews = () =>
+    page.evaluate(
+      () =>
+        ((window as unknown as { fbq?: { queue?: unknown[][] } }).fbq?.queue ?? []).filter(
+          (entry) => entry[2] === 'PageView',
+        ).length,
+    );
+  // Denied landing: nothing was sent, and nothing is queued for replay.
+  expect(await ga4PageViews()).toBe(0);
+  expect(await pixelPageViews()).toBe(0);
+  await page.getByLabel('analytics', { exact: true }).check();
+  await expect.poll(ga4PageViews).toBe(1);
+  expect(await pixelPageViews()).toBe(0);
+  await page.getByLabel('marketing', { exact: true }).check();
+  await expect.poll(pixelPageViews).toBe(1);
+  // Marketing grant must not repeat the GA4 page_view.
+  await page.waitForTimeout(500);
+  expect(await ga4PageViews()).toBe(1);
+  expect(await pixelPageViews()).toBe(1);
 });

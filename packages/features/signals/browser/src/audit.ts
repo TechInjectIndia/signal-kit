@@ -24,6 +24,8 @@ export type AuditableSignals = {
   getConnections(): { name: string }[];
   isAttributionEnabled?(): boolean;
   getAttributionCategory?(): keyof Consent | undefined;
+  /** Whether a visit source was captured, independent of consent. Older instances lack it. */
+  isAttributionCaptured?(): boolean;
 };
 export type AttributionAuditOptions = {
   signals?: AuditableSignals;
@@ -169,8 +171,14 @@ export function auditAttribution(options: AttributionAuditOptions = {}): Attribu
   });
   check(() => {
     if (!signals || !enabled) return undefined;
-    const touch = signals.getAttribution();
-    if (touch.first || touch.last) return undefined;
+    // getAttribution() is empty while consent is denied, so prefer the consent-independent
+    // capture probe; fall back to the read for instances created by older SDK versions.
+    if (typeof signals.isAttributionCaptured === 'function') {
+      if (signals.isAttributionCaptured()) return undefined;
+    } else {
+      const touch = signals.getAttribution();
+      if (touch.first || touch.last) return undefined;
+    }
     const entry = navigationEntry(performance);
     const landed = hasTrackingParameter(entry?.name, location?.href);
     const current = hasTrackingParameter(location?.href);

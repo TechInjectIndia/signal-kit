@@ -10,8 +10,12 @@
   const client = createSvelteKitClient({
     events: exampleEvents,
     consent: { analytics: false, marketing: false, observability: false },
+    // One consent-time page_view for the newly granted category. It targets providers with an
+    // eventFamily, so the local recorder declares 'ga4' to stand in for a real GA4 provider.
+    // Do not call page() after a grant.
+    pageOnConsent: true,
     providers: [
-      { name: 'local', category: 'analytics', send(event) { events = [...events, event]; } },
+      { name: 'local', category: 'analytics', eventFamily: 'ga4', send(event) { events = [...events, event]; } },
       ...(ENABLE_EXTERNAL_PROVIDERS
         ? [
             createGA4Provider({ measurementId: GA4_MEASUREMENT_ID }),
@@ -24,10 +28,8 @@
   });
   setContext('signals', client);
   onMount(() => { client.mount(); mounted = true; return () => client.dispose(); });
-  async function allow() {
-    const signals = client.getSignals();
-    signals.setConsent({ analytics: true, marketing: false, observability: true });
-    await signals.page(); // Explicit current page after consent; denied pages never replay.
+  function allow() {
+    client.getSignals().setConsent({ analytics: true, marketing: false, observability: true });
   }
 </script>
 <svelte:head><title>SignalKit SvelteKit local lab</title></svelte:head>

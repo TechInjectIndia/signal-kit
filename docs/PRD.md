@@ -38,7 +38,7 @@ Reduce repeated ecommerce instrumentation and debugging effort for developers. P
 
 ## Non-goals for first release
 
-Hosted dashboards, hosted collection service, universal identity/group APIs, extra ad networks, native Python/PHP SDKs, and unverified edge support.
+Hosted dashboards, hosted collection service, SDK-owned identity or group APIs (an optional opaque host user key forwarded under consent is in scope; see the 19 November 2026 amendment), extra ad networks, native Python/PHP SDKs, and unverified edge support.
 
 ## Acceptance evidence required before release
 
@@ -58,7 +58,7 @@ Implemented defaults: three denied-by-default consent categories, dropped precon
 
 ## Implemented review extension — pending product acceptance
 
-The SDK keeps nine predefined events: `page_view`, `product_view`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, `search`, `sign_up` and `login`. Consumer-defined events are registered once at the app root through `defineEvent` and `createSignals({ events: [...] })`; `phone_click`, `whatsapp_click` and generic `custom_event` are app-owned examples. Contact events may carry a non-identifying `channel` (`phone` or `whatsapp`); event contracts exclude raw phone numbers, destinations, and user IDs. Purchases still originate from verified server state, not a browser button. The B5 LLD was approved for implementation before this registry change.
+The review extension kept the original predefined events `page_view`, `product_view`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`, `search`, `sign_up` and `login`; the 19 November 2026 amendment below brings the total to 17. Consumer-defined events are registered once at the app root through `defineEvent` and `createSignals({ events: [...] })`; `phone_click`, `whatsapp_click` and generic `custom_event` are app-owned examples. Contact events may carry a non-identifying `channel` (`phone` or `whatsapp`); event contracts exclude raw phone numbers, destinations, and user IDs. Purchases still originate from verified server state, not a browser button. The B5 LLD was approved for implementation before this registry change.
 
 The consumer-defined `custom_event` example maps a validated, non-identifying `action` name across GA4, Meta Pixel/CAPI and Clarity. The local Next lab shows each configured provider's SDK outcome using fake public IDs; those outcomes are not provider delivery or attribution proof.
 
@@ -92,4 +92,31 @@ Owner requested visibility of the new integrations on the local /connections pag
 
 Owner requested correct UTM, Google/Microsoft/Meta ad click and web-search source tracking for consumer apps. Scope: the GA4 adapter keeps allowlisted campaign and click parameters on page_location and the referrer host on page_referrer so provider-side channel grouping works; an opt-in first-party first/last-touch visit source (channel, source, medium, campaign, paid-search keyword, click IDs, landing path) captured on landing, stored only under the host's chosen consent category and exposed to the host for its own order records; server-only Google Search Console and Bing Webmaster Tools query clients with host-supplied credentials; a public tutorial covering routing, rendering and no-code platform settings. Out of scope: Google Ads/Microsoft UET conversion tags, server-side click-ID conversion upload, any SDK-owned OAuth flow or credential storage, keyword inference for organic search (engines do not expose it) and live attribution proof.
 
-Consumer-defined events share schema validation, unknown-field stripping, privacy checks, consent, bounded dispatch, event IDs and provider fan-out with predefined events. Definitions cannot override predefined events or impersonate their provider names. A configured consented provider without a consumer mapping reports an explicit invalid outcome. No denied event is replayed.
+Consumer-defined events share schema validation, unknown-field stripping, privacy checks, consent, bounded dispatch, event IDs and provider fan-out with predefined events. Definitions cannot override predefined events or impersonate their provider names. A configured consented provider without a consumer mapping reports an explicit `skipped` outcome with reason `event_mapping_missing` (changed from `invalid` on 19 November 2026). No denied event is replayed.
+
+## Commerce lifecycle, identity hook and server GA4 — 19 November 2026
+
+Owner-approved change set from the analytics audit, built on branch `feat/analytics-audit` and unreleased. Detailed engineering choices are documented decisions; the owner decisions are listed here.
+
+Decisions:
+
+- D1. The SDK predefines 17 events. The original nine are joined by `remove_from_cart`, `view_cart`, `add_shipping_info`, `add_payment_info`, `refund`, `view_item_list`, `select_item` and `add_to_wishlist`. Consumer events may not reuse these names or their provider names.
+- D2. Checkout and payment correlation is host supplied: optional `checkout_id`, `payment_attempt_id` and `customer_type` (`guest` or `registered`). The SDK never creates them.
+- D3. Sessions belong to the vendors. The SDK keeps no session of its own.
+- D4. The non-goal "universal identity/group APIs" is narrowed to "no SDK-owned identity". An optional opaque host user key (`setUser`, `resetUser`) is forwarded to providers only while their consent category is granted, never as an event property and never as an email, phone number or name.
+- D5. GA4 purchases can be sent from the server through the Measurement Protocol. When that provider is enabled, GA4 `purchase` is server only and the browser copy is dispatched to every browser provider except GA4, by provider name.
+- D6. A fresh `page_view` on consent (`pageOnConsent`) is opt-in. It is a new event for the current route, not a replay; denied events are still never queued.
+- D7. Basic Google consent mode is kept. Advanced consent mode (cookieless pings before consent) is a host and legal decision the SDK does not make.
+- O1. Identifier fields skip the bare-digit phone heuristic so numeric SKUs and order numbers are not dropped, while email-like, `+`-prefixed, whitespace and formatted phone values are still rejected.
+- O2. Meta has no equivalent for `remove_from_cart`, `view_cart`, `add_shipping_info`, `refund` and list events; they report `skipped`.
+- O3. `product_view` with an empty item list stays accepted. The deprecated single-item shape is accepted and normalised.
+- O4. Provider script preload on consent (`preloadProviders`) is opt-in and off by default. It is a recorded exception to "scripts load only for allowed provider dispatch".
+- O5. Pixel advanced matching and `external_id` are deferred and unsupported in this release.
+- O8. Attaching landing campaign parameters to the consent-time GA4 hit (`landingParams`) stays off by default.
+- O9. The `categories` track option is public API.
+
+New behavior in scope: a `skipped` outcome; per-call server `consent`, `context`, `categories` and `providers`; browser `getProviderIds`; `getAttribution()` returning nothing while the attribution category is denied; a `debug` duplicate-event warning; Meta CAPI per-call matching data and source URL; GA4 `page_location` following the tracked route.
+
+Not in scope: SDK-owned sessions, Pixel advanced matching, hosted storage, payment verification, consent management, and any claim of live delivery or attribution.
+
+Evidence still required before any live claim: GA4 DebugView for the corrected `gtag` command shape, `user_id`, consent-time attribution and Measurement Protocol acceptance; Meta Test Events for deduplication, `AddPaymentInfo` and `AddToWishlist`. Current evidence is fixture, jsdom, injected-transport and local Playwright only. See [compatibility](COMPATIBILITY.md) and [upgrade notes](UPGRADING.md).

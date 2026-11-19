@@ -120,6 +120,7 @@ export function mountConnectionsDashboard(
         failed: 'Send failed',
         dropped: 'Dropped (timeout, capacity or disposed)',
         invalid: 'Invalid event',
+        skipped: 'Not routed to this provider',
       };
       status.textContent = connection.disposed
         ? 'SDK disposed'
@@ -129,7 +130,7 @@ export function mountConnectionsDashboard(
             ? labels[connection.lastStatus]
             : 'Configured · no outcomes yet';
       const detail = document.createElement('p');
-      detail.textContent = `${connection.category} · ${connection.attempts} outcomes · ${connection.sent} completed · ${connection.failed} failed · ${connection.denied} denied · ${connection.dropped} dropped · ${connection.invalid} invalid`;
+      detail.textContent = `${connection.category} · ${connection.attempts} outcomes · ${connection.sent} completed · ${connection.failed} failed · ${connection.denied} denied · ${connection.dropped} dropped · ${connection.invalid} invalid · ${connection.skipped} skipped`;
       const time = document.createElement('p');
       time.textContent = connection.lastUpdated
         ? `Last outcome: ${new Date(connection.lastUpdated).toLocaleString()}`

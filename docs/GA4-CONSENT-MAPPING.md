@@ -41,3 +41,27 @@ The owner confirmed on 12 November 2026 that marketing consent may authorize all
 Browser jsdom tests check the denied defaults, safe behavior for existing marketing-consented hosts, explicit opt-in, saved consent before the first measurement command, analytics-only consent, marketing changes, withdrawal and disposal. They verify queued SDK commands, not live Google tag processing or provider-side delivery.
 
 See the [FRD](frd/signals.md), [integration guide](../packages/features/signals/INTEGRATION.md) and [GA4 setup step](growth/articles/ads-utm-search-attribution.md) for the implementation contract. The release note is in the `@techinject/browser` changelog.
+
+## Server-side Measurement Protocol and advanced consent mode — 19 November 2026
+
+Basic consent mode is kept (decision D7). The browser GA4 adapter does not load or call Google until analytics consent is granted, so no cookieless pings are sent before consent. Advanced consent mode, which sends cookieless pings while denied, is a host and legal decision. The SDK does not implement it and does not take a position on it.
+
+The server `ga4-mp` provider maps consent into the Measurement Protocol `consent` block. It belongs to the analytics category, so it sends only when the event's consent snapshot grants analytics and refuses otherwise.
+
+| Provider configuration                  | Event marketing consent | `ad_user_data` and `ad_personalization` |
+| --------------------------------------- | ----------------------- | --------------------------------------- |
+| Default or `googleAdsConsent: 'denied'` | any                     | `DENIED`                                |
+| `googleAdsConsent: 'marketing'`         | granted                 | `GRANTED`                               |
+| `googleAdsConsent: 'marketing'`         | denied                  | `DENIED`                                |
+
+Use the `'marketing'` opt-in only on hosts whose marketing choice covers both purposes, as for the browser option above. This mapping is fixture-tested with an injected transport only. Check the result in GA4 DebugView before relying on it.
+
+## Running beside a host Google Tag Manager container — unverified
+
+A host may load its own Google Tag Manager container (`gtm.js`) on the same page as SignalKit's GA4 adapter. Both share one `window.dataLayer`. Nothing in this section has been checked in Tag Assistant or GA4 DebugView; it describes what the adapter code does, not what Google records.
+
+- **Shared queue and `gtag`.** The adapter reuses an existing `dataLayer` and defines `window.gtag` only when none exists (`??=`). A host-defined `gtag` is kept and receives the adapter's commands. The adapter's own stub pushes `arguments`, as Google's snippet does, so the earlier host workaround of pre-defining `window.gtag` is no longer needed.
+- **Late `consent default`.** The adapter initializes on its first GA4 send, after analytics consent, and only then queues `gtag('consent', 'default', …)` with all four fields denied, followed by its own update. A host or container that already pushed its own default and update will see the adapter's default arrive later in the queue. A late default is not expected to override an earlier update, but this ordering is unverified. Check it in Tag Assistant before relying on it.
+- **Ad fields.** Without `googleAdsConsent: 'marketing'` the adapter never grants `ad_storage`, `ad_user_data` or `ad_personalization`. On such a host the container or the host's consent code must grant them, if the visitor's choice covers them.
+- **Duplicate GA4 tag.** Do not also configure a Google tag (or GA4 configuration tag) for the same `G-` measurement ID inside the container. Page views and events would then be sent twice, once by each producer. Use the container for other tags, or let it own GA4 and do not configure SignalKit's GA4 adapter.
+- **`dispose()` on a shared queue.** Disposing the SDK (for example on unmount) pushes `analytics_storage: 'denied'` — and the three ad fields when the opt-in is on — onto the shared `dataLayer`. That applies to every Google tag on the page, including the container's. A host that keeps the container running after disposal must re-apply the visitor's consent itself.

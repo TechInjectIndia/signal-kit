@@ -81,5 +81,12 @@ export function createNextRequestErrorHandler(
   };
 }
 
+export { createGA4MeasurementProtocolProvider } from '@techinject/server';
+export type {
+  GA4MeasurementProtocolOptions,
+  DispatchResult,
+  EventContext,
+  TrackOptions,
+} from '@techinject/server';
 export { createSentryObserver, combineObservers } from '@techinject/server';
 export type { SentryClient, SentryEvent, SentryOptions } from '@techinject/server';

@@ -62,6 +62,8 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
       traceOrigins: typeof location === 'undefined' ? [] : [location.origin],
       // Landing UTM/click-ID/referrer capture; persisted in localStorage only under marketing consent.
       attribution: { category: 'marketing' },
+      // One consent-time page_view per newly granted category; do not call page() after a grant.
+      pageOnConsent: true,
       providers,
       observer: {
         record(record) {
@@ -74,7 +76,9 @@ export function DemoShell({ children }: { children: React.ReactNode }) {
         setLines((previous) =>
           [
             ...result.outcomes.map(
-              ({ provider, status }) => `${result.eventId.slice(0, 8)} · ${provider}: ${status}`,
+              ({ provider, status, reason }) =>
+                // "skipped" is not an error: no mapping for that provider, or not targeted.
+                `${result.eventId.slice(0, 8)} · ${provider}: ${status}${status === 'skipped' && reason ? ` (${reason})` : ''}`,
             ),
             ...previous,
           ].slice(0, 30),
@@ -141,8 +145,8 @@ function Lab({
           </div>
           <p className="note">
             All categories start denied. Grant consent, then navigate or emit a new event. Dropped
-            events are never replayed. Grant analytics and marketing to see all three provider
-            outcomes.
+            events are never replayed. Granting analytics or marketing sends one page view for the
+            current page. “skipped” means the provider has no mapping for that event.
           </p>
           <div className="controls">
             <button onClick={() => void fetch('/api/ping')}>Test API</button>
@@ -186,7 +190,7 @@ function Lab({
           ) : null}
           <p className="note">
             Open this lab with ?gclid=test or ?utm_source=bing&utm_medium=cpc&utm_term=notebook to
-            see the source. It persists only while marketing consent is granted.
+            see the source. It is shown and persisted only while marketing consent is granted.
           </p>
           {lines.length ? (
             <ol className="feed" aria-label="Recorded activity">

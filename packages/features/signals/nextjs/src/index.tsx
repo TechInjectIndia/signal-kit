@@ -1,7 +1,16 @@
 'use client';
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+} from 'react';
 import { createBrowserSignals, type BrowserConfig, type BrowserSignals } from '@techinject/browser';
 import type { EventDefinition } from '@techinject/browser';
+// useLayoutEffect warns on the server; consent application is a no-op there.
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 const Context = createContext<BrowserSignals<readonly EventDefinition[]> | null>(null);
 export function SignalKitProvider<const Events extends readonly EventDefinition[] = readonly []>({
   config,
@@ -25,8 +34,17 @@ export function SignalKitProvider<const Events extends readonly EventDefinition[
       });
     };
   }, [signals]);
-  useEffect(() => {
-    if (config.consent) signals.setConsent(config.consent);
+  // Layout effects run before any child passive effect in the same commit, so children
+  // that track on first render or on a consent change never observe stale consent. The
+  // initial consent is already in the instance config; only later changes are applied.
+  // Passive start() runs after this, so the instance is started before a changed consent
+  // can fire a consent-time page view only on updates (already started by then).
+  const applied = useRef(config.consent);
+  useIsomorphicLayoutEffect(() => {
+    if (config.consent && config.consent !== applied.current) {
+      applied.current = config.consent;
+      signals.setConsent(config.consent);
+    }
   }, [signals, config.consent]);
   return (
     <Context.Provider value={signals as BrowserSignals<readonly EventDefinition[]>}>
@@ -51,6 +69,12 @@ export type {
   BrowserSignals,
   AttributionFinding,
   AttributionAuditOptions,
+  BrowserTrackOptions,
+  PageOnConsentOptions,
+  ProviderIds,
+  ProviderIdsOptions,
+  UserIdentity,
+  CustomerType,
 } from '@techinject/browser';
 export { defineEvent } from '@techinject/browser';
 export type { EventDefinition, RegisteredEventInput } from '@techinject/browser';
