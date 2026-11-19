@@ -10,4 +10,4 @@ See [integration reference](../INTEGRATION.md) and [SvelteKit lab](../../../../e
 
 A throwing/rejected config factory disables telemetry for that resolve scope and passes through to the host. Authenticate/authorize in a separate earlier hook; never use the telemetry config callback as an access-control gate.
 
-Unreleased: re-exports `createGA4MeasurementProtocolProvider` and the `DispatchResult`, `EventContext` and `TrackOptions` types. Create the provider per request together with the request's consent. Fixture evidence only; see [server-side GA4 purchases](../INTEGRATION.md#server-side-ga4-purchases).
+Added in 0.1.0-alpha.6: re-exports `createGA4MeasurementProtocolProvider` and the `DispatchResult`, `EventContext` and `TrackOptions` types. Create the provider per request together with the request's consent. Fixture evidence only; see [server-side GA4 purchases](../INTEGRATION.md#server-side-ga4-purchases).

@@ -96,7 +96,7 @@ Consumer-defined events share schema validation, unknown-field stripping, privac
 
 ## Commerce lifecycle, identity hook and server GA4 — 19 November 2026
 
-Owner-approved change set from the analytics audit, built on branch `feat/analytics-audit` and unreleased. Detailed engineering choices are documented decisions; the owner decisions are listed here.
+Owner-approved change set from the analytics audit, released in 0.1.0-alpha.6. Detailed engineering choices are documented decisions; the owner decisions are listed here.
 
 Decisions:
 

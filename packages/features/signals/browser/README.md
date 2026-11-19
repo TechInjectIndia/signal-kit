@@ -10,7 +10,7 @@ payloads, credentials, storage or polling. See the repository's
 
 See https://github.com/TechInjectIndia/signal-kit/tree/main/packages/features/signals/INTEGRATION.md for wiring, consent behavior and verification limits.
 
-## Unreleased additions (fixture evidence only)
+## Added in 0.1.0-alpha.6 (fixture evidence only)
 
 - `track(input, { categories, providers })` and `page(path, eventId, { categories, providers })`: deliver to providers in those consent categories and/or with those names only; the others report `skipped`. Use `providers` to exclude one vendor (for example `['meta-pixel', 'clarity']` to skip `ga4` when the server sends the GA4 purchase). The browser ignores per-call `consent` and `context`.
 - `pageOnConsent: true | { landingParams: true }`: one new `page_view` for the current route when analytics or marketing is granted, sent only to the newly granted categories. Remove any manual post-consent `page()` call. Off by default.
