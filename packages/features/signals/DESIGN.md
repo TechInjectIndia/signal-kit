@@ -209,7 +209,7 @@ Decision D5: with Measurement Protocol enabled, the browser purchase is dispatch
 
 ### Framework adapters
 
-`@techinject/nextjs` applies a changed `config.consent` in a layout effect (an isomorphic variant that uses a passive effect on the server) so child effects see current consent; the initial consent is already in the instance config. `@techinject/sveltekit` starts the client before the host applies consent. The new browser option and identity types are re-exported from `nextjs` and `sveltekit`, and `createGA4MeasurementProtocolProvider` and the context types from `nextjs-server` and `sveltekit-server`. Import boundaries are unchanged: browser and Next client packages do not import the server package, and contracts still depend on Zod only.
+`@techinject/nextjs` applies a changed `config.consent` in a layout effect (an isomorphic variant that uses a passive effect on the server) so child passive effects (`useEffect`) see current consent; child layout effects in the same commit still see the previous consent, because React runs them before the provider's; the initial consent is already in the instance config. `@techinject/sveltekit` starts the client before the host applies consent. The new browser option and identity types are re-exported from `nextjs` and `sveltekit`, and `createGA4MeasurementProtocolProvider` and the context types from `nextjs-server` and `sveltekit-server`. Import boundaries are unchanged: browser and Next client packages do not import the server package, and contracts still depend on Zod only.
 
 ### Host durability example
 
