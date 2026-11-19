@@ -1,5 +1,12 @@
 # @techinject/bun
 
+## 0.1.0-alpha.6
+
+### Patch Changes
+
+- Updated dependencies [b05c304]
+  - @techinject/server@0.1.0-alpha.6
+
 ## 0.1.0-alpha.5
 
 ### Patch Changes
