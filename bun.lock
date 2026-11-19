@@ -79,7 +79,7 @@
     },
     "packages/features/signals/browser": {
       "name": "@techinject/browser",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@techinject/contracts": "workspace:*",
         "@techinject/core": "workspace:*",
@@ -87,28 +87,28 @@
     },
     "packages/features/signals/bun": {
       "name": "@techinject/bun",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@techinject/server": "workspace:*",
       },
     },
     "packages/features/signals/contracts": {
       "name": "@techinject/contracts",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "zod": "4.6.6",
       },
     },
     "packages/features/signals/core": {
       "name": "@techinject/core",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@techinject/contracts": "workspace:*",
       },
     },
     "packages/features/signals/nextjs": {
       "name": "@techinject/nextjs",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@techinject/browser": "workspace:*",
         "@techinject/contracts": "workspace:*",
@@ -126,7 +126,7 @@
     },
     "packages/features/signals/nextjs-server": {
       "name": "@techinject/nextjs-server",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@opentelemetry/api": "1.10.0",
         "@opentelemetry/api-logs": "0.222.0",
@@ -146,7 +146,7 @@
     },
     "packages/features/signals/server": {
       "name": "@techinject/server",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@techinject/contracts": "workspace:*",
         "@techinject/core": "workspace:*",
@@ -154,14 +154,14 @@
     },
     "packages/features/signals/sveltekit": {
       "name": "@techinject/sveltekit",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@techinject/browser": "workspace:*",
       },
     },
     "packages/features/signals/sveltekit-server": {
       "name": "@techinject/sveltekit-server",
-      "version": "0.1.0-alpha.4",
+      "version": "0.1.0-alpha.5",
       "dependencies": {
         "@techinject/server": "workspace:*",
       },

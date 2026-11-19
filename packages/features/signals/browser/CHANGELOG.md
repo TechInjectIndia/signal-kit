@@ -1,5 +1,13 @@
 # @techinject/browser
 
+## 0.1.0-alpha.5
+
+### Patch Changes
+
+- 2707ad3: Change GA4 Consent Mode behavior: queue denied defaults before measurement, apply saved analytics consent before the first event, and stop repeating consent updates for every GA4 event. By default the adapter updates only `analytics_storage` and does not grant Google ad fields for marketing consent. Hosts whose marketing choice covers Google ad storage, user data and personalization can explicitly opt in with `googleAdsConsent: 'marketing'`; only then does marketing consent grant those three fields.
+- @techinject/contracts@0.1.0-alpha.5
+  - @techinject/core@0.1.0-alpha.5
+
 ## 0.1.0-alpha.4
 
 ### Minor Changes

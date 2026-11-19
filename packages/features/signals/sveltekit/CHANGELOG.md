@@ -1,5 +1,12 @@
 # @techinject/sveltekit
 
+## 0.1.0-alpha.5
+
+### Patch Changes
+
+- Updated dependencies [2707ad3]
+  - @techinject/browser@0.1.0-alpha.5
+
 ## 0.1.0-alpha.4
 
 ### Minor Changes
